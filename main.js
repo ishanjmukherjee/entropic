@@ -520,7 +520,7 @@ async function run() {
     els.editor.hidden = true;
     els.result.hidden = false;
     const fb = model !== CONFIG.models[0]
-      ? ` The usual model was busy, so this used ${shortModel(model)}; its scores run a little higher.` : "";
+      ? ` The usual model was busy, so this used ${shortModel(model)}; scores differ slightly between models.` : "";
     setStatus(`scored by ${shortModel(model)}.${fb}${note}`);
   } catch (err) {
     if (err.name !== "AbortError") setStatus(explain(err), true);
