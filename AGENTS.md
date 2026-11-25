@@ -111,15 +111,17 @@ scripts and source URLs remain.
 | `fiction-plays` | fiction, plays, screenplays | 52 | 16 | 36 | 52 |
 | `code-human` | 42 files from before 2021, 28 post files from projects that ban AI-written code | 70 | 28 | 42 | 70 |
 | `prized-ai` | AI writing that people singled out | 23 | 7 | 16 | 23 |
-| `papers` | academic papers | see below | | | 0 |
+| `papers` | academic papers: famous, ordinary, and by distinctive stylists, across twelve disciplines | 61 | 26 | 35 | 0 |
 | `gen-essay` | generated essays | 220 | | | 120 |
 | `gen-poem`, `gen-song`, `gen-fiction`, `gen-play` | generated creative writing | 297 | | | 169 |
 | `gen-code` | generated code | 106 | | | 39 |
 | `gen-paper` | generated paper introductions | 18 | | | 0 |
 
-Every human group above except `papers` and `prized-ai` was reported complete
-by its collector and passed the mechanical check plus a spot read. `prized-ai`
-was stopped before its final self-check. Scoring stopped when the Featherless
+Every human group above except `prized-ai` was reported complete by its
+collector and passed the mechanical check plus a spot read. `prized-ai` was
+stopped before its final self-check. In `papers`, the check flags
+`berger-sweden-mobility` for garbled characters; that file has not been looked
+at. Scoring stopped when the Featherless
 balance reached the $0.40 kept for the public site.
 
 Interim numbers (Kimi K3, bits per token, first 3,000 characters), not yet
@@ -136,7 +138,9 @@ many near 0.1.
    OpenRouter models (`gpt-6.2-astra`, `gpt-6.2-sol`, `gemini-4-neon`,
    `grok-4.7`) and from Claude Opus and Haiku, including all matched essays,
    all paper introductions and most code.
-2. `papers`: read the collector's report or rerun the check, then score.
+2. `papers`: fix or drop `berger-sweden-mobility`, then score the group. Its
+   collector skipped papers that declare AI help in the writing (recorded in
+   `notes`), which removed Terence Tao's and John Baez's recent pieces.
 3. A second scorer for robustness. DeepSeek V4 Flash scored about 390
    documents before it broke; three of those cached scores are garbage (mean
    above 40 bits) and must be dropped. Kimi K2.6 ($0.80 per million tokens) is
