@@ -20,8 +20,7 @@ per token and how often your token was the model's first guess.
 
 The text is the entire prompt: no instructions, no chat formatting. The model
 is `moonshotai/Kimi-K3` served by [Featherless](https://featherless.ai), with
-`moonshotai/Kimi-K2.6` and `deepseek-ai/DeepSeek-V4-Flash` as fallbacks when
-it is busy. These are instruction-tuned models used as plain next-token
+`moonshotai/Kimi-K2.6` as the fallback when it is busy. These are instruction-tuned models used as plain next-token
 predictors. That choice, and the choice of no hidden prompt, came out of a
 preregistered evaluation on recent human writing; see
 [eval/RESULTS.md](eval/RESULTS.md). A pretrained model would be the natural
@@ -41,7 +40,7 @@ Long texts are split into windows of about 24,000 characters, each sent with
 ## Files
 
 - `index.html`, `style.css`, `main.js`, `score.js`: the whole app; there is no
-  build step and no server. `score.js` holds the pure helpers: token
+  build step. `score.js` holds the pure helpers: token
   alignment, windowing, sentence splitting and passage grouping.
 - `samples.js`: the three sample texts and their measured reference scores.
 - `scripts/measure.mjs`: re-measures the reference scores. Run it after
@@ -57,12 +56,23 @@ python3 -m http.server 8000
 
 Then open http://localhost:8000.
 
-## The API key
+## The scoring proxy
 
-The Featherless key in `main.js` is public by design: a static page has
-nowhere to hide it. It is a prepaid key with a small balance, and texts scored
-with it are capped at 60,000 characters. Visitors can supply their own key
-under "settings and privacy"; it is stored only in their browser.
+The page has no key of its own. Shared scoring goes through a small
+Cloudflare Worker (`worker/`) that holds the Featherless key as a secret and
+forwards only the one request the page needs: a known model, one output token,
+at most 30,000 characters. It answers browsers only from this site's origin,
+limits each visitor to 20 requests a minute, and stops for the day after a
+character budget set in `worker/wrangler.toml`. A script can fake the origin,
+so the limits are what bound the cost. Texts on the shared budget are capped at
+60,000 characters. Visitors can supply their own key under "settings and
+privacy"; it is stored only in their browser and used to call Featherless
+directly.
+
+To deploy the Worker: `cd worker`, `npx wrangler deploy`, then
+`npx wrangler secret put FEATHERLESS_KEY`.
+
+An earlier version shipped a key in `main.js`. That key has been revoked.
 
 ## To do
 

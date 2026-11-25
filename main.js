@@ -11,11 +11,14 @@ Featherless only returns logprobs on streamed responses, and only some model
 backends honour `echo`, which is what makes one request per window possible.
 */
 const CONFIG = {
-  endpoint: "https://api.featherless.ai/v1/completions",
-  models: ["moonshotai/Kimi-K3", "moonshotai/Kimi-K2.6", "deepseek-ai/DeepSeek-V4-Flash"],
-  // Public on purpose: this page has no server, so the key ships to every
-  // visitor. It is a prepaid key with a small balance and nothing else on it.
-  key: "rc_e85cf35c1f4d17f3cf1e4fa8bde905e43e43db02fd1cee2617083bece6317ce2",
+  // Shared scoring goes through a small proxy that holds the API key
+  // (worker/). A visitor's own key talks to Featherless directly.
+  proxy: "https://entropic-proxy.ishanjmukherjee.workers.dev/score",
+  direct: "https://api.featherless.ai/v1/completions",
+  models: ["moonshotai/Kimi-K3", "moonshotai/Kimi-K2.6"],
+  // A mean above this many bits per token means the backend is broken, not
+  // that the text is surprising; such a response is discarded.
+  maxSaneBits: 20,
   topK: 5,
   windowChars: 24000,
   contextChars: 4000,
@@ -67,12 +70,15 @@ class ApiError extends Error {
   }
 }
 
+// Refusals from the proxy itself; trying again or another model will not help.
+const PROXY_LIMITS = ["daily_cap", "visitor_limit", "proxy_key_rejected"];
+
 function classify(status, body) {
   const err = (body && body.error) || {};
   const code = err.code || "";
   const message = err.message || `request failed (${status})`;
-  const retryable = status === 429 || status >= 500 ||
-    ["rate_limit_exceeded", "capacity_exhausted", "service_unavailable", "internal_server_error", "no_output"].includes(code);
+  const retryable = !PROXY_LIMITS.includes(code) && (status === 429 || status >= 500 ||
+    ["rate_limit_exceeded", "capacity_exhausted", "service_unavailable", "internal_server_error", "no_output"].includes(code));
   return new ApiError(message, { status, code, retryable });
 }
 
@@ -82,15 +88,23 @@ const sleep = (ms, signal) => new Promise((resolve, reject) => {
 });
 
 async function requestLogprobs(prompt, model, key, signal) {
-  const res = await fetch(CONFIG.endpoint, {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model, prompt, max_tokens: 1, temperature: 0,
-      logprobs: CONFIG.topK, echo: true, stream: true,
-    }),
-    signal,
-  });
+  // The proxy builds the upstream request itself and takes only these two fields.
+  const res = key
+    ? await fetch(CONFIG.direct, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model, prompt, max_tokens: 1, temperature: 0,
+        logprobs: CONFIG.topK, echo: true, stream: true,
+      }),
+      signal,
+    })
+    : await fetch(CONFIG.proxy, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model, prompt }),
+      signal,
+    });
   if (!res.ok) {
     let body = null;
     try { body = await res.json(); } catch (e) { /* non-JSON error body */ }
@@ -148,6 +162,11 @@ async function scoreText(text, key, signal, onProgress) {
           } catch (e) {
             throw new ApiError(e.message, { code: "no_echo" });
           }
+          const scored = aligned.filter((t) => t.lp != null);
+          const mean = scored.reduce((a, t) => a - t.lp / LN2, 0) / Math.max(1, scored.length);
+          if (aligned.length > 20 && (scored.length < aligned.length / 2 || mean > CONFIG.maxSaneBits)) {
+            throw new ApiError("the model returned implausible scores", { code: "bad_scores" });
+          }
           tokens.push(...aligned);
           model = m;
           done = true;
@@ -156,7 +175,7 @@ async function scoreText(text, key, signal, onProgress) {
           if (err.name === "AbortError") throw err;
           lastErr = err;
           if (!(err instanceof ApiError)) throw err;
-          if ([401, 402, 403].includes(err.status)) throw err;
+          if ([401, 402, 403].includes(err.status) || PROXY_LIMITS.includes(err.code)) throw err;
           if (!err.retryable) break;
           if (attempt < delays.length) await sleep(delays[attempt], signal);
         }
@@ -503,6 +522,9 @@ function shortModel(m) { return (m || "").split("/").pop(); }
 
 function explain(err) {
   if (!(err instanceof ApiError)) return "Could not reach the scoring service. Check your connection and try again.";
+  if (err.code === "daily_cap") return "The shared scoring budget for today is used up. It resets at midnight UTC; or add your own Featherless key under settings.";
+  if (err.code === "visitor_limit") return "Too many requests in a short time. Wait a minute and try again.";
+  if (err.code === "proxy_key_rejected") return "The shared scoring key is not working. Add your own Featherless key under settings to keep going.";
   if (err.status === 401) return "The API key was rejected. Check the key under settings.";
   if (err.status === 402 || /credit|balance|billing/i.test(err.message)) return "The shared scoring budget has run out. Add your own Featherless key under settings to keep going.";
   if (err.status === 403) return `The scoring service refused the request: ${err.message}`;
@@ -527,7 +549,7 @@ async function run() {
   state.abort = new AbortController();
   updateCount();
   els.score.textContent = "scoring";
-  const key = ownKey || CONFIG.key;
+  const key = ownKey || null;
   try {
     const { tokens, model } = await scoreText(text, key, state.abort.signal, (p) => {
       const part = p.windows > 1 ? ` part ${p.window + 1} of ${p.windows}` : "";
