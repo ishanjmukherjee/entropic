@@ -10,10 +10,13 @@ Live at https://ishanjmukherjee.github.io/entropic/
 
 The page sends your text to a language model and reads back the
 log-probability the model assigned to each token given everything before it.
-Each token is shaded by its surprisal, `-log2(p)`: 0 bits means the model was
-certain, 10 bits means a one-in-a-thousand guess. The summary reports mean
-surprisal in bits per token and how often your token was the model's first
-guess. Hovering a token shows what the model expected instead.
+Each token has a surprisal, `-log2(p)`: 0 bits means the model was certain,
+10 bits means a one-in-a-thousand guess. Single tokens are noisy, so by
+default the page shades passages of one to three sentences by their mean
+surprisal; hovering a passage shows its mean and the tokens that drove it.
+Ticking "per token" shades every token on its own, and hovering one shows
+what the model expected instead. The summary reports mean surprisal in bits
+per token and how often your token was the model's first guess.
 
 The text is the entire prompt: no instructions, no chat formatting. The model
 is `moonshotai/Kimi-K3` served by [Featherless](https://featherless.ai), with
@@ -38,7 +41,8 @@ Long texts are split into windows of about 24,000 characters, each sent with
 ## Files
 
 - `index.html`, `style.css`, `main.js`, `score.js`: the whole app; there is no
-  build step and no server. `score.js` holds the token alignment and windowing.
+  build step and no server. `score.js` holds the pure helpers: token
+  alignment, windowing, sentence splitting and passage grouping.
 - `samples.js`: the three sample texts and their measured reference scores.
 - `scripts/measure.mjs`: re-measures the reference scores. Run it after
   changing a sample or the model list, and paste its output into `samples.js`.

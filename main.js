@@ -28,8 +28,13 @@ const CONFIG = {
 // Surprisal (bits) at which the colour scale is fully green, neutral, fully red.
 const SCALES = {
   token: { lo: 0, mid: 4, hi: 12 },
-  sentence: { lo: 0.3, mid: 2.5, hi: 6 },
+  passage: { lo: 0.3, mid: 2.5, hi: 6 },
 };
+// Single tokens are too noisy to read, so the default view averages over
+// passages of one to three sentences (Entropic.groupPassages in score.js).
+// Shading pulls each passage towards the document mean with the weight of
+// PASSAGE.prior tokens, so a three-word heading cannot flash bright red.
+const PASSAGE = Entropic.PASSAGE;
 const GREEN = [143, 209, 154];
 const PAPER = [255, 254, 250];
 const RED = [240, 144, 127];
@@ -42,10 +47,10 @@ const els = {
   editor: $("editor"), result: $("result"), stats: $("stats"), ruler: $("ruler"),
   verdict: $("verdict"), legend: $("legend"), heat: $("heat"), lists: $("lists"),
   edit: $("edit"), tip: $("tip"), key: $("key"), keyClear: $("key-clear"),
-  modelName: $("model-name"),
+  modelName: $("model-name"), perToken: $("per-token"),
 };
 
-const state = { view: "token", tokens: [], sentences: [], model: null, busy: false, abort: null };
+const state = { view: "passage", text: "", tokens: [], passages: [], model: null, busy: false, abort: null };
 
 function store(k, v) {
   try {
@@ -178,32 +183,6 @@ function heatColor(bits, scale) {
   return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 }
 
-function segmentSentences(text) {
-  const spans = [];
-  if (typeof Intl !== "undefined" && Intl.Segmenter) {
-    const seg = new Intl.Segmenter(undefined, { granularity: "sentence" });
-    for (const s of seg.segment(text)) spans.push([s.index, s.index + s.segment.length]);
-  } else {
-    const re = /[^.!?\n]+(?:[.!?]+["')\]]*|\n+|$)\s*/g;
-    let m;
-    while ((m = re.exec(text)) && m[0].length) spans.push([m.index, m.index + m[0].length]);
-  }
-  // Paragraph breaks always end a sentence, even without punctuation.
-  const out = [];
-  for (const [a, b] of spans) {
-    let from = a;
-    const chunk = text.slice(a, b);
-    const re = /\n\s*\n/g;
-    let m;
-    while ((m = re.exec(chunk))) {
-      const cut = a + m.index + m[0].length;
-      if (cut > from && cut < b) { out.push([from, cut]); from = cut; }
-    }
-    out.push([from, b]);
-  }
-  return out;
-}
-
 function analyse(tokens) {
   let pos = 0;
   for (const t of tokens) { t.start = pos; pos += t.text.length; t.bits = bitsOf(t.lp); }
@@ -216,29 +195,23 @@ function analyse(tokens) {
       if (beaten < CONFIG.topK) t.rank = beaten + 1;
     }
   }
-  const spans = segmentSentences(text);
-  const sentences = spans.map(([a, b]) => ({ start: a, end: b, sum: 0, n: 0, first: -1, last: -1 }));
-  let si = 0;
-  tokens.forEach((t, i) => {
-    // A token belongs to the sentence holding its first non-space character.
-    const lead = t.text.length - t.text.trimStart().length;
-    const anchor = Math.min(t.start + lead, t.start + Math.max(0, t.text.length - 1));
-    while (si < sentences.length - 1 && anchor >= sentences[si].end) si++;
-    const s = sentences[si];
-    t.sent = si;
-    if (s.first < 0) s.first = i;
-    s.last = i;
-    if (t.bits != null) { s.sum += t.bits; s.n++; }
-  });
-  for (const s of sentences) {
-    s.mean = s.n ? s.sum / s.n : null;
-    s.text = text.slice(s.start, s.end).trim();
-  }
   const scored = tokens.filter((t) => t.bits != null);
   const total = scored.reduce((a, t) => a + t.bits, 0);
   const words = (text.match(/\S+/g) || []).length;
+  const docMean = scored.length ? total / scored.length : 0;
+  const passages = Entropic.groupPassages(tokens);
+  passages.forEach((p, pi) => {
+    p.text = text.slice(p.start, p.end);
+    p.shade = p.n ? (p.sum + PASSAGE.prior * docMean) / (p.n + PASSAGE.prior) : null;
+    const visible = [];
+    for (let i = p.first; i <= p.last; i++) {
+      tokens[i].passage = pi;
+      if (tokens[i].bits != null && tokens[i].text.trim()) visible.push(tokens[i]);
+    }
+    p.top = visible.sort((x, y) => y.bits - x.bits).slice(0, 3);
+  });
   return {
-    text, sentences,
+    text, passages,
     summary: {
       tokens: scored.length,
       words,
@@ -301,7 +274,7 @@ function renderRuler(mean, usedModel) {
   const pct = (b) => Math.min(100, Math.max(0, (b / RULER_MAX) * 100));
   const edge = (p) => (p < 9 ? " left" : p > 91 ? " right" : "");
   const track = el("div", "track");
-  track.style.background = gradient(SCALES.sentence, RULER_MAX);
+  track.style.background = gradient(SCALES.passage, RULER_MAX);
   const kids = [track];
   const refs = (window.REFERENCES || []).filter((r) => r.model === usedModel);
   // References are ticks under the track, named in a line below in the same
@@ -338,42 +311,57 @@ function renderLegend() {
   const bar = el("i");
   bar.style.background = gradient(scale, scale.hi);
   const unit = state.view === "token" ? "bits" : "bits per token";
-  els.legend.title = "0 bits: the model was certain. Each extra bit halves the probability it gave.";
+  els.legend.title = "0 bits: the model was certain. Each extra bit halves the probability it gave."
+    + (state.view === "token" ? "" : " Each passage is shaded by the average over its tokens.");
   els.legend.replaceChildren(el("span", null, `${scale.lo}`), bar, el("span", null, `${scale.hi}+ ${unit}`));
 }
 
-function renderHeat() {
+function renderTokens() {
   const frag = document.createDocumentFragment();
-  const scale = SCALES[state.view];
-  const byToken = state.view === "token";
   state.tokens.forEach((t, i) => {
     const span = el("span");
     span.dataset.i = i;
-    const bits = byToken ? t.bits : state.sentences[t.sent].mean;
-    const blank = !t.text.trim();
-    if (bits == null || blank) {
+    if (t.bits == null || !t.text.trim()) {
       span.textContent = t.text;
-    } else if (byToken) {
+    } else {
       // Shade the word itself and leave its leading space clear, so each token reads as a chip.
       const lead = t.text.length - t.text.trimStart().length;
       if (lead) span.append(t.text.slice(0, lead));
       const chip = el("i", null, t.text.slice(lead));
-      chip.style.background = heatColor(bits, scale);
+      chip.style.background = heatColor(t.bits, SCALES.token);
       span.append(chip);
-    } else {
-      span.textContent = t.text;
-      span.style.background = heatColor(bits, scale);
     }
     frag.append(span);
   });
-  els.heat.replaceChildren(frag);
+  return frag;
+}
+
+function renderPassages() {
+  const frag = document.createDocumentFragment();
+  let pos = 0;
+  state.passages.forEach((p, pi) => {
+    if (p.end <= p.start) return;
+    if (p.start > pos) frag.append(state.text.slice(pos, p.start));
+    const span = el("span", "p", state.text.slice(p.start, p.end));
+    span.dataset.p = pi;
+    if (p.shade != null) span.style.background = heatColor(p.shade, SCALES.passage);
+    frag.append(span);
+    pos = p.end;
+  });
+  if (pos < state.text.length) frag.append(state.text.slice(pos));
+  return frag;
+}
+
+function renderHeat() {
+  els.heat.classList.toggle("tokens", state.view === "token");
+  els.heat.replaceChildren(state.view === "token" ? renderTokens() : renderPassages());
   renderLegend();
 }
 
 function renderLists() {
-  const eligible = state.sentences
-    .map((s, i) => ({ ...s, i }))
-    .filter((s) => s.mean != null && s.n >= 8 && s.text.length >= 30);
+  const eligible = state.passages
+    .map((p, i) => ({ ...p, i }))
+    .filter((p) => p.mean != null && p.n >= PASSAGE.listMinTokens);
   if (eligible.length < 6) { els.lists.replaceChildren(); return; }
   const n = Math.min(5, Math.floor(eligible.length / 2));
   const flat = eligible.slice().sort((a, b) => a.mean - b.mean).slice(0, n);
@@ -382,32 +370,35 @@ function renderLists() {
     const d = el("div");
     d.append(el("h2", null, title), el("p", "hint", hint));
     const ol = el("ol");
-    for (const s of rows) {
+    for (const p of rows) {
       const li = el("li");
-      li.dataset.sent = s.i;
+      li.dataset.passage = p.i;
       li.title = "show in text";
-      const num = el("span", "n", s.mean.toFixed(1));
-      num.style.background = heatColor(s.mean, SCALES.sentence);
-      li.append(num, el("span", "q", s.text.replace(/\s+/g, " ")));
+      const num = el("span", "n", p.mean.toFixed(1));
+      num.style.background = heatColor(p.mean, SCALES.passage);
+      li.append(num, el("span", "q", p.text.replace(/\s+/g, " ")));
       ol.append(li);
     }
     d.append(ol);
     return d;
   };
   els.lists.replaceChildren(
-    col("most predictable sentences", "candidates to cut or sharpen", flat),
-    col("most surprising sentences", "where you add the most", sharp));
+    col("most predictable passages", "candidates to cut or sharpen", flat),
+    col("most surprising passages", "where you add the most", sharp));
 }
 
-function flashSentence(si) {
-  const s = state.sentences[si];
-  if (!s || s.first < 0) return;
-  const spans = els.heat.children;
-  spans[s.first].scrollIntoView({ behavior: "smooth", block: "center" });
-  for (let i = s.first; i <= s.last; i++) {
-    spans[i].classList.remove("flash");
-    void spans[i].offsetWidth;
-    spans[i].classList.add("flash");
+function flashPassage(pi) {
+  const p = state.passages[pi];
+  if (!p) return;
+  const spans = state.view === "token"
+    ? Array.from(els.heat.children).slice(p.first, p.last + 1)
+    : Array.from(els.heat.querySelectorAll(`span[data-p="${pi}"]`));
+  if (!spans.length) return;
+  spans[0].scrollIntoView({ behavior: "smooth", block: "center" });
+  for (const span of spans) {
+    span.classList.remove("flash");
+    void span.offsetWidth;
+    span.classList.add("flash");
   }
 }
 
@@ -417,21 +408,12 @@ function hideTip() {
   tipFor = null;
   els.tip.hidden = true;
 }
-function showTip(span) {
-  const t = state.tokens[Number(span.dataset.i)];
-  if (!t || t.lp == null) { hideTip(); return; }
-  if (tipFor) tipFor.classList.remove("on");
-  tipFor = span;
-  span.classList.add("on");
+function tokenTip(t) {
   const rank = t.rank === 1 ? "the model's first guess" : t.rank ? `guess #${t.rank}` : `not in its top ${CONFIG.topK}`;
   const kids = [
     el("div", "tok", showToken(t.token || t.text)),
     el("div", "meta", `${fmtProb(t.lp)} likely · ${t.bits.toFixed(1)} bits · ${rank}`),
   ];
-  if (state.view === "sentence") {
-    const s = state.sentences[t.sent];
-    if (s && s.mean != null) kids.push(el("div", "meta", `sentence mean ${s.mean.toFixed(2)} bits/token`));
-  }
   const alts = t.top.slice(0, CONFIG.topK);
   if (alts.length) {
     const grid = el("div", "alts");
@@ -447,13 +429,54 @@ function showTip(span) {
     }
     kids.push(grid);
   }
+  return kids;
+}
+
+function passageTip(p) {
+  const kids = [
+    el("div", "tok", `${p.mean.toFixed(2)} bits per token`),
+    el("div", "meta", `mean over this passage · ${p.n.toLocaleString()} tokens`),
+  ];
+  if (p.top.length) {
+    const grid = el("div", "alts");
+    grid.append(el("div", "h", "least expected here"));
+    const max = p.top[0].bits || 1;
+    for (const t of p.top) {
+      const bar = el("div", "b");
+      const fill = el("i");
+      fill.style.width = `${Math.max(2, (t.bits / max) * 100)}%`;
+      bar.append(fill);
+      grid.append(el("div", "t", showToken(t.text)), el("div", "p", `${t.bits.toFixed(1)} bits`), bar);
+    }
+    kids.push(grid);
+  }
+  return kids;
+}
+
+// `point` is where the pointer is; a passage can span several lines, so its
+// tooltip sits by the line being pointed at.
+function showTip(span, point) {
+  let kids = null;
+  if (span.dataset.p != null) {
+    const p = state.passages[Number(span.dataset.p)];
+    if (p && p.mean != null) kids = passageTip(p);
+  } else {
+    const t = state.tokens[Number(span.dataset.i)];
+    if (t && t.lp != null) kids = tokenTip(t);
+  }
+  if (!kids) { hideTip(); return; }
+  if (tipFor) tipFor.classList.remove("on");
+  tipFor = span;
+  span.classList.add("on");
   els.tip.replaceChildren(...kids);
   els.tip.hidden = false;
-  const r = span.getClientRects()[0] || span.getBoundingClientRect();
+  const rects = Array.from(span.getClientRects());
+  const r = (point && rects.find((q) => point.y >= q.top - 1 && point.y <= q.bottom + 1))
+    || rects[0] || span.getBoundingClientRect();
+  const cx = span.dataset.p != null && point ? point.x : r.left + r.width / 2;
   const tw = els.tip.offsetWidth, th = els.tip.offsetHeight;
   const vw = document.documentElement.clientWidth;
-  let x = r.left + r.width / 2 - tw / 2;
-  x = Math.max(8, Math.min(vw - tw - 8, x));
+  const x = Math.max(8, Math.min(vw - tw - 8, cx - tw / 2));
   let y = r.top - th - 8;
   if (y < 8) y = r.bottom + 8;
   els.tip.style.left = `${x + window.scrollX}px`;
@@ -511,8 +534,8 @@ async function run() {
       const wait = p.attempt > 0 ? ", model is busy, retrying" : "";
       setStatus(`reading${part} with ${shortModel(p.model)}${wait}…`);
     });
-    const { sentences, summary } = analyse(tokens);
-    state.tokens = tokens; state.sentences = sentences; state.model = model;
+    const { text: scoredText, passages, summary } = analyse(tokens);
+    state.text = scoredText; state.tokens = tokens; state.passages = passages; state.model = model;
     renderStats(summary);
     renderRuler(summary.mean, model);
     renderHeat();
@@ -553,12 +576,14 @@ function init() {
     updateCount();
     run();
   }));
-  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => {
-    state.view = b.dataset.view;
-    document.querySelectorAll("[data-view]").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+  els.perToken.checked = store("entropic:view") === "token";
+  state.view = els.perToken.checked ? "token" : "passage";
+  els.perToken.addEventListener("change", () => {
+    state.view = els.perToken.checked ? "token" : "passage";
+    store("entropic:view", els.perToken.checked ? "token" : null);
     hideTip();
     renderHeat();
-  }));
+  });
   els.key.addEventListener("change", () => store("entropic:key", els.key.value.trim() || null));
   els.keyClear.addEventListener("click", () => { els.key.value = ""; store("entropic:key", null); });
 
@@ -568,20 +593,20 @@ function init() {
   els.heat.addEventListener("pointerdown", (e) => { tapped = e.pointerType !== "mouse"; });
   els.heat.addEventListener("pointerover", (e) => {
     if (e.pointerType !== "mouse") return;
-    const span = e.target.closest("span[data-i]");
-    if (span) showTip(span);
+    const span = e.target.closest("span[data-i], span[data-p]");
+    if (span) showTip(span, { x: e.clientX, y: e.clientY });
   });
   els.heat.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hideTip(); });
   els.heat.addEventListener("click", (e) => {
     if (!tapped) return;
-    const span = e.target.closest("span[data-i]");
-    if (span && span !== tipFor) showTip(span); else hideTip();
+    const span = e.target.closest("span[data-i], span[data-p]");
+    if (span && span !== tipFor) showTip(span, { x: e.clientX, y: e.clientY }); else hideTip();
   });
   document.addEventListener("click", (e) => { if (!els.heat.contains(e.target)) hideTip(); });
   window.addEventListener("resize", hideTip);
   els.lists.addEventListener("click", (e) => {
-    const li = e.target.closest("li[data-sent]");
-    if (li) flashSentence(Number(li.dataset.sent));
+    const li = e.target.closest("li[data-passage]");
+    if (li) flashPassage(Number(li.dataset.passage));
   });
 }
 

@@ -121,10 +121,9 @@ button.link:hover { text-decoration-color: var(--ink); }
 .verdict b { color: var(--ink); font-weight: 500; }
 
 .tools { margin: 0 0 12px; }
-.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
-.seg button { background: none; border: 0; padding: 4px 12px; color: var(--soft); }
-.seg button + button { border-left: 1px solid var(--rule); }
-.seg button[aria-pressed="true"] { background: var(--wash); color: var(--ink); font-weight: 500; }
+.check { display: inline-flex; align-items: center; gap: 7px; color: var(--soft); cursor: pointer; user-select: none; }
+.check input { margin: 0; width: 14px; height: 14px; accent-color: var(--ink); cursor: pointer; }
+.check:has(input:checked) { color: var(--ink); }
 .legend { display: inline-flex; align-items: center; gap: 8px; color: var(--soft); font-size: 12px; }
 .legend i { display: inline-block; width: 120px; height: 10px; border-radius: 2px; }
 
@@ -140,7 +139,8 @@ button.link:hover { text-decoration-color: var(--ink); }
 }
 .heat span, .heat i { border-radius: 2px; padding: 2px 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .heat i { font-style: normal; }
-.heat span.on > i, .heat span.on:not(:has(i)) { box-shadow: 0 0 0 1.5px var(--ink); }
+.heat span.on > i, .heat span.on:not(:has(i)):not(.p) { box-shadow: 0 0 0 1.5px var(--ink); }
+.heat span.p.on { box-shadow: 0 1.5px 0 var(--ink); }
 .heat span.flash { animation: flash 1.6s ease-out; }
 @keyframes flash { 0%, 45% { box-shadow: 0 -2px 0 var(--ink) inset; } 100% { box-shadow: 0 -2px 0 transparent inset; } }
 

@@ -55,15 +55,12 @@
     <p class="verdict" id="verdict"></p>
 
     <div class="bar tools">
-      <span class="seg" role="group" aria-label="Granularity">
-        <button type="button" data-view="token" aria-pressed="true">tokens</button>
-        <button type="button" data-view="sentence" aria-pressed="false">sentences</button>
-      </span>
+      <label class="check" title="Shade every token on its own instead of averaging over passages"><input id="per-token" type="checkbox"> per token</label>
       <span class="legend" id="legend"></span>
       <button id="edit" class="link push" type="button">edit text</button>
     </div>
 
-    <div id="heat" class="heat" tabindex="0" aria-label="Your text, shaded by how predictable each token was"></div>
+    <div id="heat" class="heat" tabindex="0" aria-label="Your text, shaded by how predictable each passage was"></div>
 
     <div class="lists" id="lists"></div>
   </section>
@@ -71,7 +68,8 @@
   <details class="note">
     <summary>how to read this</summary>
     <p>Underneath, a language model is a next-word predictor trained on a large slice of the public internet. For every token of your text (a word or a piece of one), we ask how much probability the model gave to the token you actually wrote, given everything before it. That probability is turned into <em>surprisal</em>: 0 bits means the model was certain, each extra bit means half as likely. A token at 10 bits was a one-in-a-thousand guess.</p>
-    <p>If the page is mostly green, you are restating what the model already knows, and a reader could have gotten it by asking one. Red is where you are adding something: a claim, a detail, a turn of phrase it had no way to anticipate. Hover or tap any token to see what the model expected instead.</p>
+    <p>Single tokens are noisy: any name or number is a surprise. So the page shades <em>passages</em> of one to three sentences by their average surprisal, which is steadier and easier to read. Hover or tap a passage to see its average and the tokens that drove it. Tick "per token" to shade every token on its own and see what the model expected at each one.</p>
+    <p>If the page is mostly green, you are restating what the model already knows, and a reader could have gotten it by asking one. Red is where you are adding something: a claim, a detail, a turn of phrase it had no way to anticipate.</p>
     <p>Caveats worth keeping in mind. Names, numbers, and typos are surprising without being insightful, so read red as "information", not "quality". Famous passages the model has memorized come out green even though a person wrote them. Later parts of a text are judged knowing the earlier parts, so a term you coined turns green once you have used it a few times. And the score depends on the model: this one is <span id="model-name"></span>, given your text with no instructions and no chat formatting, so it acts as a plain next-word predictor. That setup was chosen by <a href="https://github.com/ishanjmukherjee/entropic/blob/main/eval/RESULTS.md" target="_blank" rel="noopener">a preregistered test</a> on recent human writing no model had seen.</p>
     <p>The idea follows Gwern's advice on <a href="https://gwern.net/llm-writing" target="_blank" rel="noopener">writing for LLMs</a>: the text worth publishing is the text a model could not have produced on its own.</p>
   </details>
