@@ -66,7 +66,8 @@ under "settings and privacy"; it is stored only in their browser.
 
 ## To do
 
-- Add more authors to the baseline.
+- Add more writings to the baseline.
   - https://diffuse.one/
   - Claude's Constitution(s)
   - Frontier and neolab blog posts
+  - Wikipedia and other encyclopedia articles
