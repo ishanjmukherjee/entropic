@@ -1,0 +1,345 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"sync"
+	"syscall"
+)
+
+// fileInfo describes a regular file discovered during the directory walk.
+type fileInfo struct {
+	path string
+	size int64
+	info fs.FileInfo
+}
+
+// duplicateGroup is a set of files sharing identical content.
+type duplicateGroup struct {
+	hash  string
+	size  int64
+	paths []string
+}
+
+// options holds validated command-line configuration.
+type options struct {
+	roots   []string
+	minSize int64
+	workers int
+}
+
+// hashResult is the outcome of hashing a single candidate file.
+type hashResult struct {
+	file fileInfo
+	hash string
+	err  error
+}
+
+// groupKey identifies files that are candidates for being duplicates.
+type groupKey struct {
+	size int64
+	hash string
+}
+
+func main() {
+	opts, err := parseFlags(os.Args[1:], os.Stderr)
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			os.Exit(0)
+		}
+		fmt.Fprintln(os.Stderr, "dupes:", err)
+		os.Exit(2)
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := run(ctx, opts, os.Stdout, os.Stderr); err != nil {
+		fmt.Fprintln(os.Stderr, "dupes:", err)
+		os.Exit(1)
+	}
+}
+
+// parseFlags parses and validates command-line arguments.
+func parseFlags(args []string, errOut io.Writer) (options, error) {
+	flagSet := flag.NewFlagSet("dupes", flag.ContinueOnError)
+	flagSet.SetOutput(errOut)
+
+	minSize := flagSet.Int64("min-size", 1, "ignore files smaller than this many bytes")
+	workers := flagSet.Int("workers", runtime.NumCPU(), "number of concurrent hashing workers")
+
+	flagSet.Usage = func() {
+		out := flagSet.Output()
+		fmt.Fprintf(out, "Usage: %s [flags] [DIR ...]\n\n", flagSet.Name())
+		fmt.Fprintln(out, "Recursively scans directories and reports files with identical content (SHA-256).")
+		fmt.Fprintln(out, "Symbolic links and non-regular files are skipped. Hard links are not reported as duplicates.")
+		fmt.Fprintln(out, "\nFlags:")
+		flagSet.PrintDefaults()
+	}
+
+	if err := flagSet.Parse(args); err != nil {
+		return options{}, err
+	}
+
+	if *minSize < 0 {
+		return options{}, errors.New("-min-size must be non-negative")
+	}
+	if *workers < 1 {
+		return options{}, errors.New("-workers must be at least 1")
+	}
+
+	roots := flagSet.Args()
+	if len(roots) == 0 {
+		roots = []string{"."}
+	}
+
+	return options{
+		roots:   roots,
+		minSize: *minSize,
+		workers: *workers,
+	}, nil
+}
+
+// run executes the full scan and writes the report to stdout.
+func run(ctx context.Context, opts options, stdout, stderr io.Writer) error {
+	for _, root := range opts.roots {
+		info, err := os.Stat(root)
+		if err != nil {
+			return fmt.Errorf("%s: %w", root, err)
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("%s: not a directory", root)
+		}
+	}
+
+	bySize, err := collectBySize(ctx, opts, stderr)
+	if err != nil {
+		return err
+	}
+
+	// Only files sharing a size with at least one other file can be duplicates.
+	var candidates []fileInfo
+	for _, bucket := range bySize {
+		if len(bucket) > 1 {
+			candidates = append(candidates, bucket...)
+		}
+	}
+
+	groups, err := findDuplicates(ctx, candidates, opts.workers, stderr)
+	if err != nil {
+		return err
+	}
+
+	bw := bufio.NewWriter(stdout)
+	writeReport(bw, groups)
+	return bw.Flush()
+}
+
+// collectBySize walks all roots and buckets regular files by size.
+// Hard links to an already-seen file are skipped so they are not reported as copies.
+func collectBySize(ctx context.Context, opts options, stderr io.Writer) (map[int64][]fileInfo, error) {
+	buckets := make(map[int64][]fileInfo)
+
+	for _, root := range opts.roots {
+		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if walkErr != nil {
+				fmt.Fprintf(stderr, "warning: %s: %v\n", path, walkErr)
+				return nil
+			}
+			if d.IsDir() {
+				return nil
+			}
+			if !d.Type().IsRegular() {
+				return nil // skip symlinks, devices, sockets, pipes, etc.
+			}
+
+			info, err := d.Info()
+			if err != nil {
+				fmt.Fprintf(stderr, "warning: %s: %v\n", path, err)
+				return nil
+			}
+
+			size := info.Size()
+			if size < opts.minSize {
+				return nil
+			}
+
+			bucket := buckets[size]
+			for _, existing := range bucket {
+				if os.SameFile(existing.info, info) {
+					return nil // same underlying inode (hard link or overlapping roots)
+				}
+			}
+			buckets[size] = append(bucket, fileInfo{path: path, size: size, info: info})
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return buckets, nil
+}
+
+// findDuplicates hashes candidate files concurrently and returns groups of identical files.
+func findDuplicates(parent context.Context, candidates []fileInfo, workers int, stderr io.Writer) ([]duplicateGroup, error) {
+	if len(candidates) == 0 {
+		return nil, nil
+	}
+
+	ctx, cancel := context.WithCancel(parent)
+	defer cancel()
+
+	jobs := make(chan fileInfo)
+	results := make(chan hashResult)
+
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for fi := range jobs {
+				sum, err := hashFile(ctx, fi.path)
+				select {
+				case results <- hashResult{file: fi, hash: sum, err: err}:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
+
+	go func() {
+		defer close(jobs)
+		for _, fi := range candidates {
+			select {
+			case jobs <- fi:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	byKey := make(map[groupKey][]string)
+	for r := range results {
+		if r.err != nil {
+			fmt.Fprintf(stderr, "warning: %s: %v\n", r.file.path, r.err)
+			continue
+		}
+		k := groupKey{size: r.file.size, hash: r.hash}
+		byKey[k] = append(byKey[k], r.file.path)
+	}
+
+	if err := parent.Err(); err != nil {
+		return nil, err
+	}
+
+	var groups []duplicateGroup
+	for k, paths := range byKey {
+		if len(paths) < 2 {
+			continue
+		}
+		sort.Strings(paths)
+		groups = append(groups, duplicateGroup{hash: k.hash, size: k.size, paths: paths})
+	}
+
+	// Largest reclaimable space first; ties broken by path for stable output.
+	sort.Slice(groups, func(i, j int) bool {
+		wi := groups[i].size * int64(len(groups[i].paths)-1)
+		wj := groups[j].size * int64(len(groups[j].paths)-1)
+		if wi != wj {
+			return wi > wj
+		}
+		return groups[i].paths[0] < groups[j].paths[0]
+	})
+
+	return groups, nil
+}
+
+// hashFile computes the SHA-256 digest of a file, honoring context cancellation.
+func hashFile(ctx context.Context, path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, ctxReader{ctx: ctx, r: f}); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// ctxReader aborts reads once its context is canceled.
+type ctxReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (c ctxReader) Read(p []byte) (int, error) {
+	if err := c.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return c.r.Read(p)
+}
+
+// writeReport prints duplicate groups and a summary.
+func writeReport(w io.Writer, groups []duplicateGroup) {
+	if len(groups) == 0 {
+		fmt.Fprintln(w, "No duplicate files found.")
+		return
+	}
+
+	var reclaimable int64
+	var redundant int
+
+	for _, g := range groups {
+		copies := len(g.paths)
+		reclaimable += g.size * int64(copies-1)
+		redundant += copies - 1
+
+		fmt.Fprintf(w, "%s  (%s each, %d copies)\n", g.hash, humanSize(g.size), copies)
+		for _, p := range g.paths {
+			fmt.Fprintf(w, "  %s\n", p)
+		}
+		fmt.Fprintln(w)
+	}
+
+	fmt.Fprintf(w, "%d duplicate group(s), %d redundant file(s), %s reclaimable\n",
+		len(groups), redundant, humanSize(reclaimable))
+}
+
+// humanSize formats a byte count using binary units.
+func humanSize(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for m := n / unit; m >= unit; m /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
+}

@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "craft",
+ "prompt": "Write the lyrics of a pop song about a breakup.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 900,
+ "id": "song-breakup-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "We're standing by the Shell on 42nd\nYou're tapping out a Camel on your phone\nThe sign is turning half your jacket green\nYou're telling me you're driving back alone\nYou still got my mechanic's number written\nIn blue ink on the back of your left hand\nYou climb into the Civic, lock the doors\nAnd pull out past the taco stand\n\nRoll the window up, the heater's broke\nTake the bypass by the Dairy Queen\nI don't need to know who's waiting up\nJust tell me when you're off the street\nJust tell me when you're off the street\n\nIt's Tuesday and your brother brought his Ford\nYou're carrying the speakers down the stairs\nYou left the plastic shower curtain hanging\nAnd took the yellow cushions off the chairs\nYou're taping up a box of pans with duct tape\nThe silver roll we bought up at Menards\nYou ask me if I want the old transistor\nThat only gets the station for the Cards\n\nRoll the window up, the heater's broke\nTake the bypass by the Dairy Queen\nI don't need to know who's waiting up\nJust tell me when you're off the street\nJust tell me when you're off the street\n\nYour Lands' End catalogs keep showing up\nI stack them by the radiator pipe\nIt's raining hard enough to flood the alley\nAnd I keep checking if my screen is bright\n\nRoll the window up, the heater's broke\nTake the bypass by the Dairy Queen\nI don't need to know who's waiting up\nJust tell me when you're off the street\nJust tell me when you're off the street",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 170,
+  "completion_tokens": 4821,
+  "total_tokens": 4991,
+  "cost": 0.072825,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.072825,
+   "upstream_inference_prompt_cost": 0.00051,
+   "upstream_inference_completions_cost": 0.072315
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 4457,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

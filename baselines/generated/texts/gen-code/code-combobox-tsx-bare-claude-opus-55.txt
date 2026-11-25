@@ -1,0 +1,771 @@
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+/* -------------------------------------------------------------------------- */
+/*                                    Types                                   */
+/* -------------------------------------------------------------------------- */
+
+export interface RenderOptionState {
+  /** Whether the option is the currently highlighted (aria-activedescendant) option. */
+  active: boolean;
+  /** Whether the option is the currently selected value. */
+  selected: boolean;
+  /** Whether the option is disabled. */
+  disabled: boolean;
+  /** The current text in the input, useful for highlighting matches. */
+  inputValue: string;
+}
+
+export interface ComboboxProps<T> {
+  /** Full list of options. Filtering is applied via `filterOptions`. */
+  options: readonly T[];
+  /** Returns the human-readable label for an option. */
+  getOptionLabel: (option: T) => string;
+  /** Returns a stable, unique key for an option. Defaults to the label. */
+  getOptionKey?: (option: T) => string;
+  /** Returns true if an option should be non-selectable. */
+  isOptionDisabled?: (option: T) => boolean;
+  /**
+   * Custom filter. Defaults to a case- and diacritic-insensitive substring match.
+   * Pass `(options) => options` when filtering is performed server-side.
+   */
+  filterOptions?: (options: readonly T[], inputValue: string) => readonly T[];
+
+  /** Controlled selected value. Use `null` for "no selection". */
+  value?: T | null;
+  /** Initial selected value when uncontrolled. */
+  defaultValue?: T | null;
+  /** Called when the selected value changes. */
+  onChange?: (value: T | null) => void;
+
+  /** Controlled text input value. */
+  inputValue?: string;
+  /** Initial text when uncontrolled. */
+  defaultInputValue?: string;
+  /** Called whenever the text in the input changes. */
+  onInputChange?: (inputValue: string, reason: InputChangeReason) => void;
+
+  /** Visible label text. Required for accessibility. */
+  label: React.ReactNode;
+  /** Visually hide the label while keeping it available to assistive technology. */
+  hideLabel?: boolean;
+  /** Optional helper/description text, linked via aria-describedby. */
+  description?: React.ReactNode;
+  /** Optional error message. When present the input is marked aria-invalid. */
+  error?: React.ReactNode;
+
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
+  /** When provided, a hidden input with the selected option's key is rendered for form submission. */
+  name?: string;
+  /** Explicit id for the input. Auto-generated if omitted. */
+  id?: string;
+  className?: string;
+
+  /** Display a loading indicator and announce it to screen readers. */
+  loading?: boolean;
+  loadingText?: string;
+  noOptionsText?: string;
+  /** Open the listbox when the input receives focus. */
+  openOnFocus?: boolean;
+  /** Automatically highlight the first enabled option as the user types. */
+  autoHighlight?: boolean;
+  /** Show a button that clears the current value. */
+  clearable?: boolean;
+  /** Custom option renderer. Must not render interactive elements. */
+  renderOption?: (option: T, state: RenderOptionState) => React.ReactNode;
+
+  /** Called when the popup opens or closes. */
+  onOpenChange?: (open: boolean) => void;
+}
+
+export type InputChangeReason = "input" | "select" | "clear" | "reset";
+
+/* -------------------------------------------------------------------------- */
+/*                                   Helpers                                  */
+/* -------------------------------------------------------------------------- */
+
+const normalize = (text: string): string =>
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase()
+    .trim();
+
+function createDefaultFilter<T>(getLabel: (option: T) => string) {
+  return (options: readonly T[], inputValue: string): readonly T[] => {
+    const query = normalize(inputValue);
+    if (!query) return options;
+    return options.filter((option) => normalize(getLabel(option)).includes(query));
+  };
+}
+
+function useControllableState<V>(
+  controlled: V | undefined,
+  defaultValue: V,
+): [V, (next: V) => void, boolean] {
+  const isControlled = controlled !== undefined;
+  const [internal, setInternal] = useState<V>(defaultValue);
+  const value = isControlled ? (controlled as V) : internal;
+
+  const setValue = useCallback(
+    (next: V) => {
+      if (!isControlled) setInternal(next);
+    },
+    [isControlled],
+  );
+
+  return [value, setValue, isControlled];
+}
+
+function findEnabledIndex<T>(
+  options: readonly T[],
+  start: number,
+  direction: 1 | -1,
+  isDisabled: (option: T) => boolean,
+  wrap = true,
+): number {
+  const count = options.length;
+  if (count === 0) return -1;
+
+  let index = start;
+  for (let step = 0; step < count; step += 1) {
+    index += direction;
+    if (index >= count) {
+      if (!wrap) return -1;
+      index = 0;
+    } else if (index < 0) {
+      if (!wrap) return -1;
+      index = count - 1;
+    }
+    if (!isDisabled(options[index])) return index;
+  }
+  return -1;
+}
+
+function assignRef<V>(ref: React.Ref<V> | undefined, value: V | null): void {
+  if (typeof ref === "function") ref(value);
+  else if (ref && typeof ref === "object") {
+    (ref as React.MutableRefObject<V | null>).current = value;
+  }
+}
+
+const visuallyHidden: React.CSSProperties = {
+  border: 0,
+  clip: "rect(0 0 0 0)",
+  height: 1,
+  margin: -1,
+  overflow: "hidden",
+  padding: 0,
+  position: "absolute",
+  whiteSpace: "nowrap",
+  width: 1,
+};
+
+const neverDisabled = (): boolean => false;
+
+/* -------------------------------------------------------------------------- */
+/*                                  Component                                 */
+/* -------------------------------------------------------------------------- */
+
+function ComboboxInner<T>(
+  props: ComboboxProps<T>,
+  forwardedRef: React.ForwardedRef<HTMLInputElement>,
+): React.ReactElement {
+  const {
+    options,
+    getOptionLabel,
+    getOptionKey = getOptionLabel,
+    isOptionDisabled = neverDisabled,
+    filterOptions,
+    value: valueProp,
+    defaultValue = null,
+    onChange,
+    inputValue: inputValueProp,
+    defaultInputValue,
+    onInputChange,
+    label,
+    hideLabel = false,
+    description,
+    error,
+    placeholder,
+    disabled = false,
+    required = false,
+    name,
+    id: idProp,
+    className,
+    loading = false,
+    loadingText = "Loading…",
+    noOptionsText = "No results found",
+    openOnFocus = false,
+    autoHighlight = false,
+    clearable = true,
+    renderOption,
+    onOpenChange,
+  } = props;
+
+  /* ---------------------------------- IDs --------------------------------- */
+
+  const reactId = useId();
+  const baseId = idProp ?? `combobox-${reactId.replace(/:/g, "")}`;
+  const inputId = baseId;
+  const labelId = `${baseId}-label`;
+  const listboxId = `${baseId}-listbox`;
+  const descriptionId = `${baseId}-description`;
+  const errorId = `${baseId}-error`;
+  const statusId = `${baseId}-status`;
+  const optionId = (index: number) => `${baseId}-option-${index}`;
+
+  /* --------------------------------- Refs --------------------------------- */
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
+
+  const setInputRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      inputRef.current = node;
+      assignRef(forwardedRef, node);
+    },
+    [forwardedRef],
+  );
+
+  /* --------------------------------- State -------------------------------- */
+
+  const [value, setValueState] = useControllableState<T | null>(valueProp, defaultValue);
+  const [inputValue, setInputValueState] = useControllableState<string>(
+    inputValueProp,
+    defaultInputValue ?? (defaultValue != null ? getOptionLabel(defaultValue) : ""),
+  );
+  const [open, setOpenState] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [statusMessage, setStatusMessage] = useState("");
+
+  const selectedKey = value != null ? getOptionKey(value) : null;
+
+  const filter = useMemo(
+    () => filterOptions ?? createDefaultFilter(getOptionLabel),
+    [filterOptions, getOptionLabel],
+  );
+
+  // When the input exactly reflects the current selection, show all options
+  // so the user can browse alternatives rather than seeing a single match.
+  const showingSelection = value != null && inputValue === getOptionLabel(value);
+  const filteredOptions = useMemo(
+    () => (showingSelection ? options : filter(options, inputValue)),
+    [filter, options, inputValue, showingSelection],
+  );
+
+  const hasOptions = filteredOptions.length > 0;
+  const expanded = open && !disabled;
+
+  /* ------------------------------- Setters -------------------------------- */
+
+  const setOpen = useCallback(
+    (next: boolean) => {
+      setOpenState((prev) => {
+        if (prev !== next) onOpenChange?.(next);
+        return next;
+      });
+      if (!next) setActiveIndex(-1);
+    },
+    [onOpenChange],
+  );
+
+  const setInputValue = useCallback(
+    (next: string, reason: InputChangeReason) => {
+      setInputValueState(next);
+      onInputChange?.(next, reason);
+    },
+    [setInputValueState, onInputChange],
+  );
+
+  const setValue = useCallback(
+    (next: T | null) => {
+      const nextKey = next != null ? getOptionKey(next) : null;
+      setValueState(next);
+      if (nextKey !== selectedKey) onChange?.(next);
+    },
+    [getOptionKey, onChange, selectedKey, setValueState],
+  );
+
+  /* ------------------------------ Selection ------------------------------- */
+
+  const selectOption = useCallback(
+    (option: T) => {
+      if (isOptionDisabled(option)) return;
+      setValue(option);
+      setInputValue(getOptionLabel(option), "select");
+      setOpen(false);
+    },
+    [getOptionLabel, isOptionDisabled, setInputValue, setOpen, setValue],
+  );
+
+  const clear = useCallback(() => {
+    setValue(null);
+    setInputValue("", "clear");
+    setActiveIndex(-1);
+    inputRef.current?.focus();
+  }, [setInputValue, setValue]);
+
+  const revertInput = useCallback(() => {
+    const expected = value != null ? getOptionLabel(value) : "";
+    if (inputValue !== expected) setInputValue(expected, "reset");
+  }, [getOptionLabel, inputValue, setInputValue, value]);
+
+  /* ------------------------------- Effects -------------------------------- */
+
+  // Keep the input text in sync when the selected value changes externally.
+  const prevSelectedKey = useRef(selectedKey);
+  useEffect(() => {
+    if (prevSelectedKey.current === selectedKey) return;
+    prevSelectedKey.current = selectedKey;
+    const nextLabel = value != null ? getOptionLabel(value) : "";
+    if (nextLabel !== inputValue && document.activeElement !== inputRef.current) {
+      setInputValue(nextLabel, "reset");
+    }
+  }, [selectedKey, value, getOptionLabel, inputValue, setInputValue]);
+
+  // Clamp the active index if the filtered list shrinks or changes.
+  useEffect(() => {
+    if (activeIndex >= filteredOptions.length) {
+      setActiveIndex(-1);
+    } else if (activeIndex >= 0 && isOptionDisabled(filteredOptions[activeIndex])) {
+      setActiveIndex(-1);
+    }
+  }, [activeIndex, filteredOptions, isOptionDisabled]);
+
+  // Keep the active option scrolled into view.
+  useEffect(() => {
+    if (!expanded || activeIndex < 0) return;
+    const element = document.getElementById(optionId(activeIndex));
+    element?.scrollIntoView?.({ block: "nearest" });
+    // optionId is derived from baseId, which is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, expanded]);
+
+  // Announce result counts politely, debounced to avoid chatter while typing.
+  useEffect(() => {
+    if (!expanded) {
+      setStatusMessage("");
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      if (loading) {
+        setStatusMessage(loadingText);
+      } else if (filteredOptions.length === 0) {
+        setStatusMessage(noOptionsText);
+      } else {
+        const count = filteredOptions.length;
+        setStatusMessage(
+          `${count} ${count === 1 ? "result" : "results"} available. Use up and down arrows to navigate.`,
+        );
+      }
+    }, 400);
+    return () => window.clearTimeout(handle);
+  }, [expanded, loading, loadingText, noOptionsText, filteredOptions.length]);
+
+  // Close when a pointer interaction occurs outside the component.
+  useEffect(() => {
+    if (!expanded) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const root = rootRef.current;
+      if (root && event.target instanceof Node && !root.contains(event.target)) {
+        setOpen(false);
+        revertInput();
+      }
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [expanded, revertInput, setOpen]);
+
+  /* -------------------------------- Handlers ------------------------------ */
+
+  const firstEnabled = useCallback(
+    () => findEnabledIndex(filteredOptions, -1, 1, isOptionDisabled),
+    [filteredOptions, isOptionDisabled],
+  );
+  const lastEnabled = useCallback(
+    () => findEnabledIndex(filteredOptions, filteredOptions.length, -1, isOptionDisabled),
+    [filteredOptions, isOptionDisabled],
+  );
+
+  const openWithHighlight = useCallback(
+    (target: "first" | "last" | "selected" | "none") => {
+      setOpen(true);
+      if (target === "none") {
+        setActiveIndex(-1);
+        return;
+      }
+      if (target === "selected" && selectedKey != null) {
+        const idx = filteredOptions.findIndex((o) => getOptionKey(o) === selectedKey);
+        if (idx >= 0 && !isOptionDisabled(filteredOptions[idx])) {
+          setActiveIndex(idx);
+          return;
+        }
+      }
+      setActiveIndex(target === "last" ? lastEnabled() : firstEnabled());
+    },
+    [filteredOptions, firstEnabled, getOptionKey, isOptionDisabled, lastEnabled, selectedKey, setOpen],
+  );
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const next = event.target.value;
+    setInputValue(next, "input");
+
+    if (next === "" && value != null) {
+      setValue(null);
+    }
+
+    setOpen(true);
+    if (autoHighlight && next !== "") {
+      const nextFiltered = filter(options, next);
+      setActiveIndex(findEnabledIndex(nextFiltered, -1, 1, isOptionDisabled));
+    } else {
+      setActiveIndex(-1);
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    // Don't interfere with IME composition.
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+
+    switch (event.key) {
+      case "ArrowDown": {
+        event.preventDefault();
+        if (!expanded) {
+          openWithHighlight(event.altKey ? "none" : "selected");
+          return;
+        }
+        if (event.altKey) return;
+        setActiveIndex((current) =>
+          findEnabledIndex(filteredOptions, current, 1, isOptionDisabled),
+        );
+        return;
+      }
+      case "ArrowUp": {
+        event.preventDefault();
+        if (!expanded) {
+          openWithHighlight(event.altKey ? "none" : "last");
+          return;
+        }
+        if (event.altKey) {
+          // Alt+ArrowUp: commit highlighted option (if any) and close.
+          if (activeIndex >= 0) selectOption(filteredOptions[activeIndex]);
+          else setOpen(false);
+          return;
+        }
+        setActiveIndex((current) =>
+          findEnabledIndex(
+            filteredOptions,
+            current < 0 ? filteredOptions.length : current,
+            -1,
+            isOptionDisabled,
+          ),
+        );
+        return;
+      }
+      case "PageDown": {
+        if (!expanded || !hasOptions) return;
+        event.preventDefault();
+        setActiveIndex((current) => {
+          const target = Math.min(filteredOptions.length - 1, Math.max(current, 0) + 10);
+          return isOptionDisabled(filteredOptions[target])
+            ? findEnabledIndex(filteredOptions, target, -1, isOptionDisabled)
+            : target;
+        });
+        return;
+      }
+      case "PageUp": {
+        if (!expanded || !hasOptions) return;
+        event.preventDefault();
+        setActiveIndex((current) => {
+          const target = Math.max(0, (current < 0 ? 0 : current) - 10);
+          return isOptionDisabled(filteredOptions[target])
+            ? findEnabledIndex(filteredOptions, target, 1, isOptionDisabled)
+            : target;
+        });
+        return;
+      }
+      case "Enter": {
+        if (expanded && activeIndex >= 0) {
+          event.preventDefault();
+          selectOption(filteredOptions[activeIndex]);
+        }
+        return;
+      }
+      case "Escape": {
+        if (expanded) {
+          event.preventDefault();
+          setOpen(false);
+          revertInput();
+        } else if (inputValue !== "" || value != null) {
+          event.preventDefault();
+          clear();
+        }
+        return;
+      }
+      case "Tab": {
+        if (expanded) {
+          setOpen(false);
+          revertInput();
+        }
+        return;
+      }
+      default:
+        return;
+    }
+  };
+
+  const handleFocus = () => {
+    if (openOnFocus && !expanded) openWithHighlight("none");
+  };
+
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    const next = event.relatedTarget;
+    if (next instanceof Node && rootRef.current?.contains(next)) return;
+    setOpen(false);
+    if (inputValue.trim() === "") {
+      if (value != null) setValue(null);
+      if (inputValue !== "") setInputValue("", "reset");
+    } else {
+      revertInput();
+    }
+  };
+
+  const handleToggleClick = () => {
+    if (disabled) return;
+    if (expanded) {
+      setOpen(false);
+    } else {
+      openWithHighlight("selected");
+    }
+    inputRef.current?.focus();
+  };
+
+  // Prevent mousedown inside the popup/buttons from blurring the input.
+  const preventBlur = (event: React.MouseEvent) => event.preventDefault();
+
+  /* -------------------------------- Render -------------------------------- */
+
+  const describedBy =
+    [description ? descriptionId : null, error ? errorId : null].filter(Boolean).join(" ") ||
+    undefined;
+
+  const activeDescendant =
+    expanded && activeIndex >= 0 && activeIndex < filteredOptions.length
+      ? optionId(activeIndex)
+      : undefined;
+
+  const showPopup = expanded && (hasOptions || loading || inputValue !== "");
+  const showClear = clearable && !disabled && (inputValue !== "" || value != null);
+
+  return (
+    <div
+      ref={rootRef}
+      className={["combobox", className].filter(Boolean).join(" ")}
+      data-state={expanded ? "open" : "closed"}
+      data-disabled={disabled || undefined}
+      data-invalid={error ? true : undefined}
+      style={{ position: "relative" }}
+    >
+      <label
+        id={labelId}
+        htmlFor={inputId}
+        className="combobox__label"
+        style={hideLabel ? visuallyHidden : undefined}
+      >
+        {label}
+        {required ? (
+          <span aria-hidden="true" className="combobox__required">
+            {" *"}
+          </span>
+        ) : null}
+      </label>
+
+      <div className="combobox__control">
+        <input
+          ref={setInputRef}
+          id={inputId}
+          className="combobox__input"
+          type="text"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={showPopup && hasOptions}
+          aria-controls={listboxId}
+          aria-activedescendant={activeDescendant}
+          aria-describedby={describedBy}
+          aria-invalid={error ? true : undefined}
+          aria-required={required || undefined}
+          aria-busy={loading || undefined}
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required && name === undefined}
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onClick={() => {
+            if (!expanded && !disabled) openWithHighlight("selected");
+          }}
+        />
+
+        {loading ? (
+          <span className="combobox__spinner" aria-hidden="true" />
+        ) : null}
+
+        {showClear ? (
+          <button
+            type="button"
+            className="combobox__clear"
+            tabIndex={-1}
+            aria-label="Clear selection"
+            onMouseDown={preventBlur}
+            onClick={clear}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        ) : null}
+
+        <button
+          type="button"
+          className="combobox__toggle"
+          tabIndex={-1}
+          aria-label={expanded ? "Hide suggestions" : "Show suggestions"}
+          aria-controls={listboxId}
+          aria-expanded={expanded}
+          disabled={disabled}
+          onMouseDown={preventBlur}
+          onClick={handleToggleClick}
+        >
+          <span aria-hidden="true">{expanded ? "▴" : "▾"}</span>
+        </button>
+      </div>
+
+      {name !== undefined ? (
+        <input
+          type="hidden"
+          name={name}
+          value={value != null ? getOptionKey(value) : ""}
+          disabled={disabled}
+        />
+      ) : null}
+
+      <div
+        className="combobox__popup"
+        hidden={!showPopup}
+        onMouseDown={preventBlur}
+      >
+        <ul
+          ref={listboxRef}
+          id={listboxId}
+          role="listbox"
+          aria-labelledby={labelId}
+          className="combobox__listbox"
+          tabIndex={-1}
+        >
+          {filteredOptions.map((option, index) => {
+            const key = getOptionKey(option);
+            const isActive = index === activeIndex;
+            const isSelected = key === selectedKey;
+            const isDisabled = isOptionDisabled(option);
+
+            return (
+              <li
+                key={key}
+                id={optionId(index)}
+                role="option"
+                aria-selected={isSelected}
+                aria-disabled={isDisabled || undefined}
+                className="combobox__option"
+                data-active={isActive || undefined}
+                data-selected={isSelected || undefined}
+                data-disabled={isDisabled || undefined}
+                onMouseMove={() => {
+                  if (!isDisabled && activeIndex !== index) setActiveIndex(index);
+                }}
+                onClick={() => {
+                  if (!isDisabled) {
+                    selectOption(option);
+                    inputRef.current?.focus();
+                  }
+                }}
+              >
+                {renderOption
+                  ? renderOption(option, {
+                      active: isActive,
+                      selected: isSelected,
+                      disabled: isDisabled,
+                      inputValue,
+                    })
+                  : getOptionLabel(option)}
+              </li>
+            );
+          })}
+        </ul>
+
+        {!hasOptions ? (
+          <div className="combobox__empty" aria-hidden="true">
+            {loading ? loadingText : noOptionsText}
+          </div>
+        ) : null}
+      </div>
+
+      {description ? (
+        <div id={descriptionId} className="combobox__description">
+          {description}
+        </div>
+      ) : null}
+
+      {error ? (
+        <div id={errorId} className="combobox__error">
+          {error}
+        </div>
+      ) : null}
+
+      <div
+        id={statusId}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        style={visuallyHidden}
+      >
+        {statusMessage}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * An accessible autocomplete combobox implementing the WAI-ARIA 1.2
+ * "Combobox with List Autocomplete" pattern.
+ *
+ * Keyboard support:
+ * - ArrowDown / ArrowUp: open the listbox or move the highlighted option.
+ * - Alt+ArrowDown: open without moving highlight. Alt+ArrowUp: commit and close.
+ * - PageDown / PageUp: move highlight by 10 options.
+ * - Enter: select the highlighted option.
+ * - Escape: close the listbox; if already closed, clear the input.
+ * - Tab: close the listbox and move focus.
+ */
+export const Combobox = forwardRef(ComboboxInner) as <T>(
+  props: ComboboxProps<T> & { ref?: React.Ref<HTMLInputElement> },
+) => React.ReactElement;
+
+(Combobox as unknown as { displayName: string }).displayName = "Combobox";
+
+export default Combobox;

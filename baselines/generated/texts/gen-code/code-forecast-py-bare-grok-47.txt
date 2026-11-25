@@ -1,0 +1,128 @@
+"""Daily sales cleaning and seasonal forecast evaluation.
+
+Expects a CSV with a date column and a numeric sales column. Fits a
+seasonal ARIMA model and reports holdout metrics.
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+logger = logging.getLogger(__name__)
+
+DATE_CANDIDATES = ("date", "day", "ds", "timestamp", "order_date")
+SALES_CANDIDATES = ("sales", "revenue", "amount", "units", "quantity", "y")
+SEASONAL_PERIOD = 7
+MIN_HISTORY = SEASONAL_PERIOD * 4
+HOLDOUT_DAYS = 28
+
+
+def _resolve_column(columns: pd.Index, candidates: tuple[str, ...], kind: str) -> str:
+    lowered = {c.lower().strip(): c for c in columns}
+    for name in candidates:
+        if name in lowered:
+            return lowered[name]
+    raise ValueError(
+        f"Could not find a {kind} column. Looked for {candidates}; got {list(columns)}."
+    )
+
+
+def load_sales(path: Path) -> pd.DataFrame:
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    frame = pd.read_csv(path)
+    if frame.empty:
+        raise ValueError(f"CSV is empty: {path}")
+    date_col = _resolve_column(frame.columns, DATE_CANDIDATES, "date")
+    sales_col = _resolve_column(frame.columns, SALES_CANDIDATES, "sales")
+    out = frame[[date_col, sales_col]].copy()
+    out.columns = ["date", "sales"]
+    return out
+
+
+def clean_sales(frame: pd.DataFrame) -> pd.Series:
+    cleaned = frame.copy()
+    cleaned["date"] = pd.to_datetime(cleaned["date"], errors="coerce", utc=False)
+    cleaned["sales"] = pd.to_numeric(cleaned["sales"], errors="coerce")
+    cleaned = cleaned.dropna(subset=["date", "sales"])
+    cleaned = cleaned[np.isfinite(cleaned["sales"])]
+    cleaned["sales"] = cleaned["sales"].clip(lower=0)
+    cleaned["date"] = cleaned["date"].dt.normalize()
+    cleaned = cleaned.groupby("date", as_index=False)["sales"].sum()
+    cleaned = cleaned.sort_values("date").set_index("date")
+    full_index = pd.date_range(cleaned.index.min(), cleaned.index.max(), freq="D")
+    series = cleaned["sales"].reindex(full_index)
+    missing = int(series.isna().sum())
+    if missing:
+        logger.info("Filled %s missing calendar days with time interpolation.", missing)
+        series = series.interpolate(method="time").ffill().bfill()
+    series.index.name = "date"
+    series.name = "sales"
+    if len(series) < MIN_HISTORY:
+        raise ValueError(
+            f"Need at least {MIN_HISTORY} daily observations after cleaning; got {len(series)}."
+        )
+    return series.astype(float)
+
+
+def evaluate_forecast(series: pd.Series, holdout_days: int = HOLDOUT_DAYS) -> dict[str, float]:
+    if holdout_days < 1 or holdout_days >= len(series) // 2:
+        raise ValueError("holdout_days must be positive and leave a usable training window.")
+    train = series.iloc[:-holdout_days]
+    test = series.iloc[-holdout_days:]
+    model = SARIMAX(
+        train,
+        order=(1, 1, 1),
+        seasonal_order=(1, 1, 1, SEASONAL_PERIOD),
+        enforce_stationarity=False,
+        enforce_invertibility=False,
+    )
+    fitted = model.fit(disp=False, maxiter=200)
+    forecast = fitted.get_forecast(steps=holdout_days)
+    predicted = pd.Series(forecast.predicted_mean.to_numpy(), index=test.index, name="forecast")
+    predicted = predicted.clip(lower=0)
+    error = test.to_numpy() - predicted.to_numpy()
+    mae = float(np.mean(np.abs(error)))
+    rmse = float(np.sqrt(np.mean(error**2)))
+    denom = np.maximum(np.abs(test.to_numpy()), 1e-8)
+    mape = float(np.mean(np.abs(error) / denom) * 100.0)
+    seasonal = seasonal_decompose(train, model="additive", period=SEASONAL_PERIOD, extrapolate_trend="freq")
+    seasonal_strength = float(
+        1.0
+        - np.var(seasonal.resid.dropna())
+        / max(np.var((seasonal.seasonal + seasonal.resid).dropna()), 1e-12)
+    )
+    return {
+        "n_train": float(len(train)),
+        "n_test": float(len(test)),
+        "mae": mae,
+        "rmse": rmse,
+        "mape": mape,
+        "aic": float(fitted.aic),
+        "seasonal_strength": seasonal_strength,
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Clean daily sales and evaluate a seasonal forecast.")
+    parser.add_argument("csv", type=Path, help="Path to a daily sales CSV.")
+    parser.add_argument("--holdout-days", type=int, default=HOLDOUT_DAYS)
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    series = clean_sales(load_sales(args.csv))
+    metrics = evaluate_forecast(series, holdout_days=args.holdout_days)
+    for key, value in metrics.items():
+        print(f"{key}: {value:.4f}" if isinstance(value, float) else f"{key}: {value}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

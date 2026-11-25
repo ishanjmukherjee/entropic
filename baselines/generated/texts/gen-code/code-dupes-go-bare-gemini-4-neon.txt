@@ -1,0 +1,388 @@
+package main
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"sync"
+	"syscall"
+)
+
+const partialHashSize = 8 * 1024
+
+type config struct {
+	minSize    int64
+	workers    int
+	jsonOutput bool
+	paths      []string
+}
+
+type duplicateGroup struct {
+	Hash  string   `json:"hash"`
+	Size  int64    `json:"size"`
+	Paths []string `json:"paths"`
+}
+
+type report struct {
+	Groups      []duplicateGroup `json:"groups"`
+	TotalGroups int              `json:"total_groups"`
+	TotalFiles  int              `json:"total_files"`
+	WastedBytes int64            `json:"wasted_bytes"`
+}
+
+type hashJob struct {
+	path  string
+	size  int64
+	limit int64
+}
+
+type hashResult struct {
+	path string
+	size int64
+	hash string
+	err  error
+}
+
+func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	cfg, err := parseFlags(os.Args[1:], os.Stderr)
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			os.Exit(0)
+		}
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(2)
+	}
+
+	if err := run(ctx, cfg, os.Stdout, os.Stderr); err != nil {
+		if errors.Is(err, context.Canceled) {
+			fmt.Fprintln(os.Stderr, "operation canceled")
+			os.Exit(130)
+		}
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func parseFlags(args []string, stderr io.Writer) (config, error) {
+	var cfg config
+	fs := flag.NewFlagSet("dupfinder", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+
+	fs.Int64Var(&cfg.minSize, "min-size", 1, "minimum file size in bytes to consider")
+	fs.IntVar(&cfg.workers, "workers", runtime.NumCPU(), "number of concurrent hashing workers")
+	fs.BoolVar(&cfg.jsonOutput, "json", false, "output results in JSON format")
+
+	fs.Usage = func() {
+		fmt.Fprintf(stderr, "Usage: %s [options] [dir...]\n\n", fs.Name())
+		fmt.Fprintln(stderr, "Walks directory trees and reports duplicate files by SHA-256 content hash.")
+		fmt.Fprintln(stderr, "\nOptions:")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return cfg, err
+	}
+
+	if cfg.minSize < 0 {
+		return cfg, errors.New("min-size must be non-negative")
+	}
+	if cfg.workers < 1 {
+		return cfg, errors.New("workers must be at least 1")
+	}
+
+	cfg.paths = fs.Args()
+	if len(cfg.paths) == 0 {
+		cfg.paths = []string{"."}
+	}
+
+	return cfg, nil
+}
+
+func run(ctx context.Context, cfg config, stdout, stderr io.Writer) error {
+	bySize, err := collectBySize(ctx, cfg.paths, cfg.minSize, stderr)
+	if err != nil {
+		return err
+	}
+
+	var partialJobs []hashJob
+	var fullJobs []hashJob
+
+	for size, paths := range bySize {
+		if len(paths) < 2 {
+			continue
+		}
+		if size > partialHashSize {
+			for _, p := range paths {
+				partialJobs = append(partialJobs, hashJob{
+					path:  p,
+					size:  size,
+					limit: partialHashSize,
+				})
+			}
+		} else {
+			for _, p := range paths {
+				fullJobs = append(fullJobs, hashJob{
+					path:  p,
+					size:  size,
+					limit: 0,
+				})
+			}
+		}
+	}
+
+	if len(partialJobs) > 0 {
+		partialGroups, err := executeHashJobs(ctx, partialJobs, cfg.workers, stderr)
+		if err != nil {
+			return err
+		}
+		for _, entries := range partialGroups {
+			if len(entries) < 2 {
+				continue
+			}
+			for _, e := range entries {
+				fullJobs = append(fullJobs, hashJob{
+					path:  e.path,
+					size:  e.size,
+					limit: 0,
+				})
+			}
+		}
+	}
+
+	var rep report
+	if len(fullJobs) > 0 {
+		fullGroups, err := executeHashJobs(ctx, fullJobs, cfg.workers, stderr)
+		if err != nil {
+			return err
+		}
+
+		for hash, entries := range fullGroups {
+			if len(entries) < 2 {
+				continue
+			}
+			paths := make([]string, len(entries))
+			for i, e := range entries {
+				paths[i] = e.path
+			}
+			sort.Strings(paths)
+
+			size := entries[0].size
+			rep.Groups = append(rep.Groups, duplicateGroup{
+				Hash:  hash,
+				Size:  size,
+				Paths: paths,
+			})
+			rep.TotalFiles += len(paths)
+			rep.WastedBytes += int64(len(paths)-1) * size
+		}
+
+		sort.Slice(rep.Groups, func(i, j int) bool {
+			if rep.Groups[i].Size != rep.Groups[j].Size {
+				return rep.Groups[i].Size > rep.Groups[j].Size
+			}
+			return rep.Groups[i].Hash < rep.Groups[j].Hash
+		})
+		rep.TotalGroups = len(rep.Groups)
+	}
+
+	return writeReport(stdout, rep, cfg.jsonOutput)
+}
+
+func collectBySize(ctx context.Context, roots []string, minSize int64, stderr io.Writer) (map[int64][]string, error) {
+	bySize := make(map[int64][]string)
+	visited := make(map[string]struct{})
+
+	for _, root := range roots {
+		absRoot, err := filepath.Abs(root)
+		if err != nil {
+			fmt.Fprintf(stderr, "warning: cannot resolve path %q: %v\n", root, err)
+			continue
+		}
+
+		err = filepath.WalkDir(absRoot, func(path string, d fs.DirEntry, walkErr error) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if walkErr != nil {
+				fmt.Fprintf(stderr, "warning: skipping %q: %v\n", path, walkErr)
+				return nil
+			}
+			if !d.Type().IsRegular() {
+				return nil
+			}
+			if _, seen := visited[path]; seen {
+				return nil
+			}
+			visited[path] = struct{}{}
+
+			info, err := d.Info()
+			if err != nil {
+				fmt.Fprintf(stderr, "warning: cannot stat %q: %v\n", path, err)
+				return nil
+			}
+			size := info.Size()
+			if size < minSize {
+				return nil
+			}
+
+			bySize[size] = append(bySize[size], path)
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return bySize, nil
+}
+
+func executeHashJobs(ctx context.Context, jobs []hashJob, workers int, stderr io.Writer) (map[string][]hashResult, error) {
+	jobCh := make(chan hashJob)
+	resCh := make(chan hashResult)
+
+	if workers > len(jobs) {
+		workers = len(jobs)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	for i := 0; i < workers; i++ {
+		go func() {
+			defer wg.Done()
+			for job := range jobCh {
+				if ctx.Err() != nil {
+					return
+				}
+				h, err := hashFile(job.path, job.limit)
+				res := hashResult{
+					path: job.path,
+					size: job.size,
+					hash: h,
+					err:  err,
+				}
+				select {
+				case resCh <- res:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
+
+	go func() {
+		defer close(jobCh)
+		for _, job := range jobs {
+			select {
+			case jobCh <- job:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	go func() {
+		wg.Wait()
+		close(resCh)
+	}()
+
+	grouped := make(map[string][]hashResult)
+	for res := range resCh {
+		if res.err != nil {
+			fmt.Fprintf(stderr, "warning: cannot hash %q: %v\n", res.path, res.err)
+			continue
+		}
+		key := fmt.Sprintf("%d:%s", res.size, res.hash)
+		grouped[key] = append(grouped[key], res)
+	}
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	// Re-key by hash only for callers when all entries in a bucket share the same size and hash.
+	byHash := make(map[string][]hashResult, len(grouped))
+	for _, entries := range grouped {
+		if len(entries) > 0 {
+			byHash[entries[0].hash] = entries
+		}
+	}
+
+	return byHash, nil
+}
+
+func hashFile(path string, limit int64) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	var r io.Reader = f
+	if limit > 0 {
+		r = io.LimitReader(f, limit)
+	}
+
+	if _, err := io.Copy(h, r); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func writeReport(w io.Writer, rep report, asJSON bool) error {
+	if asJSON {
+		if rep.Groups == nil {
+			rep.Groups = []duplicateGroup{}
+		}
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		return enc.Encode(rep)
+	}
+
+	if rep.TotalGroups == 0 {
+		fmt.Fprintln(w, "No duplicate files found.")
+		return nil
+	}
+
+	for i, g := range rep.Groups {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintf(w, "Hash: %s  Size: %s (%d bytes)  Count: %d\n", g.Hash, formatBytes(g.Size), g.Size, len(g.Paths))
+		for _, p := range g.Paths {
+			fmt.Fprintf(w, "  %s\n", p)
+		}
+	}
+
+	fmt.Fprintf(w, "\nSummary: %d duplicate groups, %d files, %s wasted space\n",
+		rep.TotalGroups, rep.TotalFiles, formatBytes(rep.WastedBytes))
+	return nil
+}
+
+func formatBytes(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.2f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
+}

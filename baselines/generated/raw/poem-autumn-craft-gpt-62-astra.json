@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: autumn. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 700,
+ "id": "poem-autumn-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "At four on Boston Common a man folds a chessboard\nwith the pieces still on it, and has to open it again.\nA rook rolls under the bench.\nHis opponent stops it with her shoe.\n\nThe elms have dropped enough leaves\nto hide the squares somebody chalked on the path.\nA boy hops anyway, both feet down\nwhere he remembers eight.\n\n“My hen laid that one in the laundry.”\nThe woman has an egg in her coat pocket.\nShe takes it out to reach the bag for the pieces\nand the man holds out his hand.\n\nHe sits with the egg while she counts pawns.\nA bus kneels on Tremont Street.\nWind pushes a row of elm leaves\nagainst the boy’s bare ankle.\n\nThe woman turns the bag inside out.\nIn the crease at the bottom, a black pawn,\na shirt button threaded with blue.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 180,
+  "completion_tokens": 178,
+  "total_tokens": 358,
+  "cost": 0.00856,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.00856,
+   "upstream_inference_prompt_cost": 0.00144,
+   "upstream_inference_completions_cost": 0.00712
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

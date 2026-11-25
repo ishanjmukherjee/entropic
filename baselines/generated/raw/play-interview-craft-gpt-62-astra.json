@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-interview",
+ "style": "craft",
+ "prompt": "Write a scene for a stage play, about 700 words. Situation: a job interview goes wrong.\n\nWrite it as a skilled playwright would. Each character wants something from the other and will not say what; the scene is the manoeuvring. Lines should be short and speakable, with people cutting across each other, changing the subject, answering the question they wish they had been asked. Keep stage directions few and physical. Let one object on stage matter. No speech that explains a feeling or a history, and no tidy resolution: end on an action or a line that leaves the question open.\n\nFormat: character names in capitals on their own line, the speech on the next line, stage directions in parentheses. Output only the script, with no title or cast list.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1500,
+ "id": "play-interview-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "(A municipal interview room. A brass handbell on the table. ELLIS sits. JO stands.)\n\nELLIS\nYou can sit.\n\nJO\nIs that part of it?\n\nELLIS\nSitting?\n\nJO\nChoosing when.\n\nELLIS\nNot for this grade.\n\n(JO sits.)\n\nELLIS\nYou found us all right.\n\nJO\nYou still have to come through Rates.\n\nELLIS\nYou've been before.\n\nJO\nEverybody's been through Rates.\n\nELLIS\nNot everybody says still.\n\nJO\nIs that the bell from the counter?\n\nELLIS\nWe'll come to the counter.\n\nJO\nSomebody's polished it.\n\nELLIS\nTuesday to Saturday. Eight fifteen, not eight thirty.\n\nJO\nWhat's the quarter hour for?\n\nELLIS\nGetting ready to open.\n\nJO\nPaid?\n\nELLIS\nIt says from eight fifteen.\n\nJO\nOn the door it says from eight thirty.\n\nELLIS\nThe door isn't applying.\n\nJO\nGood. It'd get it.\n\nELLIS\nWhy would it get it?\n\nJO\nAlready knows everybody.\n\n(ELLIS turns the bell a little.)\n\nELLIS\nSay I'm a woman at the counter.\n\nJO\nAll right.\n\nELLIS\nMy appointment was ten. It's twenty past. I've a child in a buggy.\n\nJO\nWhat's your name?\n\nELLIS\nThe child is crying.\n\nJO\nI can hear. What's your name?\n\nELLIS\nI don't care for that.\n\nJO\nWhich bit?\n\nELLIS\nI can hear.\n\nJO\nThen don't tell me the child's crying.\n\nELLIS\nIt's a circumstance.\n\nJO\nIt's not a name.\n\nELLIS\nMrs Vale.\n\nJO\nWhich office are you here for, Mrs Vale?\n\nELLIS\nI was told to wait.\n\nJO\nBy who?\n\nELLIS\nWhom.\n\nJO\nThat's an unusual name.\n\nELLIS\nWould you make a joke at the counter?\n\nJO\nDepends if it worked in here.\n\nELLIS\nIt didn't.\n\nJO\nThen no.\n\nELLIS\nShe won't leave. There's a queue behind her. You have that.\n\nJO\nThe bell.\n\nELLIS\nThat's what it's there for.\n\nJO\nWho comes?\n\nELLIS\nYou're at the counter. What do you do?\n\nJO\nI want to know who comes.\n\nELLIS\nSomeone from the back.\n\nJO\nYou?\n\nELLIS\nNot necessarily.\n\nJO\nBecause you've got a very particular woman in mind.\n\nELLIS\nI've got four more people to see.\n\nJO\nHave any of them got my name?\n\nELLIS\nIt's a common name.\n\nJO\nYou picked Vale.\n\nELLIS\nI had to pick something.\n\nJO\nYou didn't have to give her the buggy.\n\nELLIS\nYou're welcome to pick another circumstance.\n\nJO\nSame woman. No buggy. She's got both hands free. Does that change what you do?\n\nELLIS\nIt's what you'd do.\n\nJO\nShe's not even at the counter yet. She's only coming through Rates.\n\nELLIS\nThere's no line of sight from the counter into Rates.\n\nJO\nThere. That's the first useful thing.\n\nELLIS\nUseful for the job?\n\nJO\nI can do Saturdays.\n\nELLIS\nThat wasn't in doubt.\n\nJO\nYou haven't asked for a reference.\n\nELLIS\nWould you like me to?\n\nJO\nI'd like the same questions the others get.\n\nELLIS\nNone of the others have asked to see me in particular.\n\nJO\nIt was a box on the form.\n\nELLIS\nIt said particular requirements.\n\nJO\nAnd here you are.\n\nELLIS\nYes. Here I am. Shall we do the part where you take the bell?\n\n(JO picks it up, holding the clapper.)\n\nELLIS\nNot much use like that.\n\nJO\nIt's heavier than I thought.\n\nELLIS\nThey're waiting.\n\nJO\nLet them.\n\nELLIS\nMrs Vale is leaning over now. She's trying to see who's in the back.\n\nJO\nYou said twenty past.\n\nELLIS\nYes.\n\nJO\nAt twenty past I was at school.\n\nELLIS\nIn this exercise you're employed here.\n\nJO\nWas it twenty past?\n\nELLIS\nI can give you till the end of the minute.\n\nJO\nShe'd have had to get me by half three.\n\nELLIS\nYou're holding it wrong.\n\nJO\nShow me.\n\nELLIS\nThere's nothing to show.\n\nJO\nThen how can I be holding it wrong?\n\n(ELLIS puts a hand over JO's hand.)\n\nELLIS\nYou don't have to shake it. Just let that drop.\n\nJO\nDid you?\n\nELLIS\nYour thumb. Move your thumb.\n\nJO\nYou've got hold of it now.\n\n(From outside, two knocks.)\n\nELLIS\nWe're not finished.\n\nJO\nThey can't hear you through that.\n\n(Neither lets go. The bell rings once.)",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 162,
+  "completion_tokens": 981,
+  "total_tokens": 1143,
+  "cost": 0.040536,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.040536,
+   "upstream_inference_prompt_cost": 0.001296,
+   "upstream_inference_completions_cost": 0.03924
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

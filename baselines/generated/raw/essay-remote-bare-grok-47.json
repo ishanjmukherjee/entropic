@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-remote",
+ "style": "bare",
+ "prompt": "Write an essay arguing for or against the claim that remote work is better than office work for software teams. About 800 words. Output only the essay, with no title.",
+ "model": "grok-4.7",
+ "max_tokens": 1600,
+ "id": "essay-remote-bare-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "Remote work is better than office work for most software teams, not because offices are useless, but because the work itself rewards focus, written clarity, and access to talent more than it rewards proximity. Code, design documents, pull requests, and incident timelines are already asynchronous artifacts. The teams that treat those artifacts as the real workplace tend to ship more reliably, retain people longer, and waste less of the day on coordination theater. The office still has a role, but as a default it is the weaker arrangement.\n\nThe strongest case starts with attention. Software work is deep work punctuated by short bursts of collaboration. A developer debugging a race condition or designing an interface does not need a desk near colleagues; they need an uninterrupted stretch of time. Open offices, and even quiet ones with frequent “quick questions,” fragment that stretch. Remote teams that protect calendars, batch meetings, and default to written updates recover hours that offices routinely spend on commuting, desk-hopping, and status conversations that could have been a paragraph in a ticket. Those recovered hours are not a lifestyle perk. They are capacity.\n\nTalent follows the same logic. A team limited to people who will relocate, or who live within a commuting radius of one building, is choosing from a smaller pool for every role. Remote hiring widens that pool across cities and, with care about time zones, across countries. For specialized skills—security, compilers, accessibility, data infrastructure—the difference between “someone nearby” and “the person who has done this before” shows up in fewer incidents and faster reviews. Retention improves for the same reason. Parents, caregivers, people with disabilities, and people who simply work better outside a fluorescent room stay when the job does not require them to perform presence. Turnover is expensive in software because context lives in people’s heads. Keeping that context is a productivity strategy, not a benefit brochure.\n\nCommunication, often cited as the office’s advantage, is where remote work forces a healthier discipline. In an office, decisions leak through hallway talk and then surprise the people who were not standing there. Remote teams that work well write decisions down: problem, options, choice, owner, and date. That record is searchable, reviewable, and fair to people in other time zones. Code review, design docs, and incident write-ups become the meeting. Synchronous time is reserved for ambiguity—architecture disputes, hiring debriefs, hard feedback—not for reading a document aloud. Offices can do this too, but proximity tempts teams to skip the writing. Remote work makes the skip expensive, so good teams stop skipping.\n\nManagement quality matters more remotely, and that is a feature. Weak management hides in an office behind visible busyness. Remote work exposes unclear goals, missing ownership, and meetings with no decision. Teams that respond by defining interfaces between groups, measuring outcomes rather than hours online, and running short, purposeful standups outperform office teams that confuse attendance with progress. The tools are mature enough: version control, issue trackers, shared documents, and chat with threads. The constraint is habit, not technology.\n\nNone of this denies what offices do well. New hires learn culture faster when they can overhear how seniors handle a tense review. Whiteboarding a fuzzy problem is sometimes faster in person than in a shared canvas. Trust between people who have never met can be thinner, and conflict can fester in text. Those are real costs. They are also solvable without making five days in a building the price of employment. Intentional onsites—quarterly planning, onboarding weeks, incident rehearsals—capture most of the social and creative benefit while leaving ordinary weeks free for concentrated work. Hybrid that means “remote, plus planned gatherings” preserves the advantage. Hybrid that means “three mandated office days with no change in meeting culture” keeps the commute and loses the focus.\n\nThe claim should not be absolutist. Some teams—those doing heavy hardware integration, classified work, or early-stage discovery that truly depends on constant physical presence—may still be better in an office. Some remote teams fail because they imported office habits without the office: all-day meetings, no documentation, surveillance software instead of trust. Failure of practice is not failure of the model. When software teams compare like with like—clear goals, skilled managers, and respect for deep work—the remote arrangement wins on focus, hiring, documentation, and retention. The office remains a useful place to gather. It is no longer the best place to do the work.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1277,
+  "completion_tokens": 1116,
+  "total_tokens": 2393,
+  "cost": 0.007522,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.007522,
+   "upstream_inference_prompt_cost": 0.000826,
+   "upstream_inference_completions_cost": 0.006696
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 210,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

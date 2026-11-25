@@ -1,0 +1,207 @@
+import * as React from "react";
+
+export interface AutocompleteOption {
+  /** Must be unique and stable across renders. */
+  id: string;
+  label: string;
+  disabled?: boolean;
+}
+
+export interface AutocompleteProps {
+  label: string;
+  options: readonly AutocompleteOption[];
+  /** Controlled editor text, not an option ID. */
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+  onOptionSelect?: (option: AutocompleteOption) => void;
+  filterOption?: (option: AutocompleteOption, query: string) => boolean;
+  noResultsText?: string;
+  id?: string;
+  name?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
+  className?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: React.AriaAttributes["aria-invalid"];
+}
+
+function defaultFilter(option: AutocompleteOption, query: string): boolean {
+  return option.label.toLowerCase().includes(query.trim().toLowerCase());
+}
+
+/** Editable, single-select combobox. Free text is allowed. */
+export default function Autocomplete({
+  label,
+  options,
+  value,
+  defaultValue = "",
+  onValueChange,
+  onOptionSelect,
+  filterOption = defaultFilter,
+  noResultsText = "No matches found.",
+  id,
+  name,
+  placeholder,
+  disabled = false,
+  required = false,
+  className,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid,
+}: AutocompleteProps): React.ReactElement {
+  const generatedId = React.useId();
+  const inputId = id ?? `${generatedId}-input`;
+  const listId = `${generatedId}-list`;
+  const labelId = `${generatedId}-label`;
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const activeRef = React.useRef<HTMLLIElement>(null);
+  const [draft, setDraft] = React.useState(defaultValue);
+  const [open, setOpen] = React.useState(false);
+  const [activeId, setActiveId] = React.useState<string | null>(null);
+  const text = value ?? draft;
+  const expanded = open && !disabled;
+  const matches = React.useMemo(
+    () => options.filter((option) => filterOption(option, text)),
+    [options, filterOption, text],
+  );
+  const activeIndex = expanded
+    ? matches.findIndex((option) => !option.disabled && option.id === activeId)
+    : -1;
+
+  React.useEffect(() => {
+    if (disabled) {
+      setOpen(false);
+      setActiveId(null);
+    }
+  }, [disabled]);
+
+  React.useEffect(() => {
+    activeRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [activeIndex, activeId]);
+
+  function close(): void {
+    setOpen(false);
+    setActiveId(null);
+  }
+
+  function update(next: string): void {
+    if (value === undefined) setDraft(next);
+    if (next !== text) onValueChange?.(next);
+  }
+
+  function select(option: AutocompleteOption): void {
+    if (disabled || option.disabled) return;
+    inputRef.current?.focus({ preventScroll: true });
+    close();
+    update(option.label);
+    onOptionSelect?.(option);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {
+    if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+
+    switch (event.key) {
+      case "ArrowDown":
+      case "ArrowUp": {
+        event.preventDefault();
+        setOpen(true);
+        const step = event.key === "ArrowDown" ? 1 : -1;
+        const start = activeIndex >= 0 ? activeIndex : step > 0 ? -1 : 0;
+        for (let offset = 1; offset <= matches.length; offset++) {
+          const index = (start + offset * step + matches.length) % matches.length;
+          const option = matches[index];
+          if (option && !option.disabled) {
+            setActiveId(option.id);
+            break;
+          }
+        }
+        break;
+      }
+      case "Enter": {
+        const option = matches[activeIndex];
+        if (option) {
+          event.preventDefault();
+          select(option);
+        } else {
+          close();
+        }
+        break;
+      }
+      case "Escape":
+        if (expanded) {
+          event.preventDefault();
+          event.stopPropagation();
+          close();
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  return (
+    <div className={className}>
+      <label id={labelId} htmlFor={inputId}>
+        {label}
+      </label>
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="text"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={expanded}
+        aria-controls={listId}
+        aria-activedescendant={
+          activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined
+        }
+        aria-describedby={describedBy}
+        aria-invalid={invalid}
+        autoComplete="off"
+        name={name}
+        placeholder={placeholder}
+        disabled={disabled}
+        required={required}
+        value={text}
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        onBlur={close}
+        onKeyDown={handleKeyDown}
+        onChange={(event) => {
+          setOpen(true);
+          setActiveId(null);
+          update(event.currentTarget.value);
+        }}
+      />
+      <ul id={listId} role="listbox" aria-labelledby={labelId} hidden={!expanded}>
+        {expanded &&
+          matches.map((option, index) => {
+            const active = index === activeIndex;
+            return (
+              <li
+                key={option.id}
+                id={`${listId}-${index}`}
+                ref={active ? activeRef : undefined}
+                role="option"
+                aria-selected={active}
+                aria-disabled={option.disabled || undefined}
+                style={{
+                  backgroundColor: active ? "Highlight" : undefined,
+                  color: active ? "HighlightText" : option.disabled ? "GrayText" : undefined,
+                }}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => select(option)}
+              >
+                {option.label}
+              </li>
+            );
+          })}
+      </ul>
+      <div role="status">
+        {expanded && matches.length === 0 ? noResultsText : null}
+      </div>
+    </div>
+  );
+}

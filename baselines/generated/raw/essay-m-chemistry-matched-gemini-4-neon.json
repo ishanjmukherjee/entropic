@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-chemistry",
+ "style": "matched",
+ "prompt": "Write an essay titled “A New Kind of Chemistry”. It explains how nuclear reactions, which rearrange the inside of the atom, differ from ordinary chemical reactions, and traces how people learned to use them. About 800 words. Output only the essay, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "matched_to": "blogs-tech/potter-a-new-kind-of-chemistry",
+ "id": "essay-m-chemistry-matched-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "For almost all of human history, the transformations we could perform on the material world were confined to the outer edges of the atom. Whether smelting iron, baking bread, burning wood, or synthesizing life-saving pharmaceuticals, ordinary chemistry is strictly a game of electrons. Atoms link together, break apart, and swap their outer electron shells, forming new molecules while their fundamental identities remain untouched. Carbon stays carbon; oxygen stays oxygen. Yet, at the dawn of the twentieth century, physicists peered deeper into matter and discovered a far more potent realm hidden at the atom’s core. By learning to manipulate the nucleus itself, humanity unlocked a new kind of chemistry—one that could transmute the elements and release energy on a scale previously seen only in the stars.\n\nThe difference between ordinary chemical reactions and nuclear reactions is a difference of both location and magnitude. An atom is mostly empty space, with a cloud of negatively charged electrons orbiting a tiny, extraordinarily dense nucleus made of positively charged protons and neutral neutrons. Chemical reactions rearrange the electron cloud, governed by the electromagnetic force. Because electrons are relatively easy to nudge, these reactions involve modest amounts of energy. Burning a ton of coal, for instance, breaks and reforms chemical bonds to release heat, leaving behind ash and gases made of the exact same atoms that existed before.\n\nNuclear reactions, by contrast, ignore the electrons and strike directly at the nucleus. Here, protons and neutrons are bound together by the strong nuclear force, the most powerful force in nature. Rearranging the nucleus changes the number of protons, which literally transforms one element into another—fulfilling the ancient alchemists' dream of transmutation. More importantly, nuclear reactions tap into Albert Einstein’s famous equivalence of mass and energy. When a nucleus splits or fuses, a tiny fraction of its mass vanishes, converted directly into pure energy. Pound for pound, a nuclear reaction releases millions of times more energy than a chemical one.\n\nHumans did not invent this new chemistry; we first stumbled upon nature performing it spontaneously. In 1896, Henri Becquerel noticed that uranium salts emitted mysterious rays capable of fogging photographic plates. Marie and Pierre Curie soon isolated even more active elements, polonium and radium, coining the term \"radioactivity.\" It was Ernest Rutherford who realized what was happening: unstable nuclei were decaying, spitting out particles and transforming into entirely different elements. In 1919, Rutherford went a step further, bombarding nitrogen gas with alpha particles and turning it into oxygen. For the first time, humans had deliberately altered an atomic nucleus.\n\nThe key to unlocking practical nuclear reactions arrived in 1932, when James Chadwick discovered the neutron. Because protons and alpha particles carry a positive charge, they are repelled by the positively charged nucleus, making them difficult to fire into an atom's core. Neutrons, having no electric charge, could slip effortlessly into a nucleus. Scientists quickly began using neutrons as subatomic bullets to probe and alter heavy elements.\n\nIn late 1938, Otto Hahn and Fritz Strassmann bombarded uranium with neutrons and were baffled to find barium—a much lighter element—in the residue. Physicists Lise Meitner and Otto Frisch soon explained the puzzle: the uranium nucleus had not merely chipped; it had split nearly in half, a process they named nuclear fission. Crucially, splitting a uranium nucleus also released additional neutrons, raising the possibility of a self-sustaining chain reaction.\n\nThe outbreak of World War II accelerated this science from laboratory curiosity to world-altering technology. In December 1942, Enrico Fermi and his team achieved the first controlled nuclear chain reaction beneath the stands of a football stadium in Chicago. Just three years later, the Manhattan Project harnessed an uncontrolled chain reaction to create the atomic bomb, ushering in the nuclear age with devastating force over Hiroshima and Nagasaki.\n\nIn the decades that followed, humanity learned to tame this fire for peaceful purposes. Nuclear power plants began using controlled fission to boil water, spin turbines, and generate vast amounts of carbon-free electricity. Meanwhile, the ability to create custom radioactive isotopes revolutionized medicine, enabling doctors to image the inside of the human body and target cancerous tumors with precision.\n\nToday, the story of this new chemistry continues to evolve. While nuclear fission splits heavy atoms, scientists are working to master nuclear fusion—the process of fusing light hydrogen nuclei together, which powers the sun. If achieved reliably on Earth, fusion promises a nearly limitless, clean energy source without long-lived radioactive waste. From the accidental fogging of a photographic plate to the reactors powering modern cities, learning to rearrange the inside of the atom has fundamentally reshaped civilization. By stepping past the electron shell and into the nucleus, we gained access to the universe’s deepest reservoir of power, forever changing how we light our world, heal our bodies, and understand our place in the cosmos.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 90,
+  "completion_tokens": 3096,
+  "total_tokens": 3186,
+  "cost": 0.04671,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.04671,
+   "upstream_inference_prompt_cost": 0.00027,
+   "upstream_inference_completions_cost": 0.04644
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2105,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

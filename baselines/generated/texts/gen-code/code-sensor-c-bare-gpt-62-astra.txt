@@ -1,0 +1,166 @@
+/*
+ * sht31.c - Bare-metal Sensirion SHT31 I2C temperature/humidity driver.
+ *
+ * C99, no heap, no floating point. Supply blocking, timeout-bounded I2C
+ * callbacks using 7-bit addresses. Each transfer must end with STOP; return
+ * zero only when the entire transfer succeeds. The time callback must return
+ * monotonic milliseconds modulo 2^32. Serialize calls for each instance and
+ * arbitrate the bus externally if shared. Do not call from concurrent ISRs.
+ *
+ * Start with a powered, idle sensor (allow >= 2 ms after power-up). Call
+ * sht31_start(), then sht31_poll() until it no longer returns SHT31_WAIT.
+ * Successful completion appends a sample, overwriting the oldest if full.
+ * Poll within one clock wrap. Following an I/O error, restore the bus and
+ * ensure the sensor is idle before retrying (allow >= 16 ms for conversion).
+ */
+
+#include <stddef.h>
+#include <stdint.h>
+
+#ifndef SHT31_RING_CAPACITY
+#define SHT31_RING_CAPACITY 16u
+#endif
+
+#if SHT31_RING_CAPACITY < 1 || SHT31_RING_CAPACITY > 65535
+#error "SHT31_RING_CAPACITY must be in [1, 65535]"
+#endif
+
+typedef enum {
+    SHT31_OK = 0,
+    SHT31_WAIT,
+    SHT31_BUSY,
+    SHT31_IDLE,
+    SHT31_EMPTY,
+    SHT31_BAD_ARGUMENT,
+    SHT31_IO_ERROR,
+    SHT31_CRC_ERROR
+} sht31_status;
+
+typedef struct {
+    void *context;
+    int (*write)(void *, uint8_t, const uint8_t *, size_t);
+    int (*read)(void *, uint8_t, uint8_t *, size_t);
+    uint32_t (*millis)(void *);
+} sht31_bus;
+
+typedef struct {
+    uint32_t started_ms;
+    int32_t temperature_millicelsius;
+    uint32_t humidity_millipercent;
+} sht31_reading;
+
+typedef struct {
+    sht31_bus bus;
+    uint8_t address;
+    uint8_t pending;
+    uint32_t started_ms;
+    size_t oldest;
+    size_t count;
+    sht31_reading samples[SHT31_RING_CAPACITY];
+} sht31_device;
+
+static uint8_t sht31_crc(const uint8_t *word)
+{
+    uint8_t crc = 0xffu;
+    unsigned i, bit;
+
+    for (i = 0; i < 2u; ++i) {
+        crc ^= word[i];
+        for (bit = 0; bit < 8u; ++bit) {
+            unsigned polynomial = (crc & 0x80u) ? 0x31u : 0u;
+            crc = (uint8_t)(((unsigned)crc << 1) ^ polynomial);
+        }
+    }
+    return crc;
+}
+
+/* Software initialization only; does not probe or reset the sensor. */
+sht31_status sht31_init(sht31_device *dev, const sht31_bus *bus,
+                        uint8_t address)
+{
+    if (!dev || !bus || !bus->write || !bus->read || !bus->millis ||
+        (address != 0x44u && address != 0x45u)) {
+        return SHT31_BAD_ARGUMENT;
+    }
+
+    dev->bus = *bus;
+    dev->address = address;
+    dev->pending = 0;
+    dev->started_ms = 0;
+    dev->oldest = 0;
+    dev->count = 0;
+    return SHT31_OK;
+}
+
+/* All operations below require a successfully initialized device. */
+sht31_status sht31_start(sht31_device *dev)
+{
+    /* Single shot, high repeatability, clock stretching disabled. */
+    static const uint8_t command[] = { 0x24u, 0x00u };
+
+    if (!dev)
+        return SHT31_BAD_ARGUMENT;
+    if (dev->pending)
+        return SHT31_BUSY;
+    if (dev->bus.write(dev->bus.context, dev->address,
+                       command, sizeof command) != 0)
+        return SHT31_IO_ERROR;
+
+    dev->started_ms = dev->bus.millis(dev->bus.context);
+    dev->pending = 1;
+    return SHT31_OK;
+}
+
+sht31_status sht31_poll(sht31_device *dev)
+{
+    uint8_t data[6];
+    uint32_t raw_t, raw_h;
+    size_t slot;
+    sht31_reading sample;
+
+    if (!dev)
+        return SHT31_BAD_ARGUMENT;
+    if (!dev->pending)
+        return SHT31_IDLE;
+
+    /* 15 ms maximum conversion time plus one tick for quantization. */
+    if ((uint32_t)(dev->bus.millis(dev->bus.context) - dev->started_ms) < 16u)
+        return SHT31_WAIT;
+
+    dev->pending = 0;
+    if (dev->bus.read(dev->bus.context, dev->address, data, sizeof data) != 0)
+        return SHT31_IO_ERROR;
+    if (sht31_crc(data) != data[2] || sht31_crc(data + 3) != data[5])
+        return SHT31_CRC_ERROR;
+
+    raw_t = ((uint32_t)data[0] << 8) | data[1];
+    raw_h = ((uint32_t)data[3] << 8) | data[4];
+    sample.started_ms = dev->started_ms;
+    sample.temperature_millicelsius =
+        (int32_t)((UINT64_C(175000) * raw_t + 32767u) / 65535u) - 45000;
+    sample.humidity_millipercent =
+        (uint32_t)((UINT64_C(100000) * raw_h + 32767u) / 65535u);
+
+    slot = (dev->oldest + dev->count) % SHT31_RING_CAPACITY;
+    dev->samples[slot] = sample;
+    if (dev->count == SHT31_RING_CAPACITY)
+        dev->oldest = (dev->oldest + 1u) % SHT31_RING_CAPACITY;
+    else
+        ++dev->count;
+
+    return SHT31_OK;
+}
+
+/* Remove the oldest sample. Output is unchanged on failure. */
+sht31_status sht31_pop(sht31_device *dev, sht31_reading *out)
+{
+    if (!dev || !out)
+        return SHT31_BAD_ARGUMENT;
+    if (!dev->count)
+        return SHT31_EMPTY;
+
+    *out = dev->samples[dev->oldest];
+    dev->oldest = (dev->oldest + 1u) % SHT31_RING_CAPACITY;
+    --dev->count;
+    return SHT31_OK;
+}

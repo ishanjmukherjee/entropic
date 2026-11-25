@@ -1,0 +1,201 @@
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <optional>
+#include <random>
+#include <stdexcept>
+#include <vector>
+
+namespace falling_blocks {
+
+enum class Piece : std::uint8_t { I, J, L, O, S, T, Z };
+enum class Turn { clockwise, counterclockwise };
+
+struct Point {
+    int x;
+    int y;
+};
+
+using Cells = std::array<Point, 4>;
+
+struct ActivePiece {
+    Piece type;
+    Point origin;
+    unsigned rotation; // Quarter turns clockwise from spawn, modulo four.
+};
+
+// Coordinates increase rightward and downward. The board contains only locked
+// pieces. A failed downward step locks the active piece and spawns the next.
+class Game {
+public:
+    explicit Game(int width = 10, int height = 20,
+                  std::uint32_t seed = std::random_device{}())
+        : width_(width), height_(height), board_(board_size(width, height)),
+          rng_(seed) {
+        spawn();
+    }
+
+    int width() const noexcept { return width_; }
+    int height() const noexcept { return height_; }
+    bool game_over() const noexcept { return !active_; }
+    std::uint64_t lines_cleared() const noexcept { return lines_; }
+    std::optional<ActivePiece> active_piece() const noexcept { return active_; }
+
+    std::optional<Piece> cell(int x, int y) const {
+        if (!inside(x, y)) {
+            throw std::out_of_range("board coordinate out of range");
+        }
+        return board_[index(x, y)];
+    }
+
+    std::optional<Cells> active_cells() const noexcept {
+        if (!active_) return std::nullopt;
+        return cells(*active_);
+    }
+
+    bool move_left() noexcept { return shift(-1, 0); }
+    bool move_right() noexcept { return shift(1, 0); }
+
+    // Simple deterministic wall/floor kicks, not Guideline SRS.
+    bool rotate(Turn turn) noexcept {
+        if (!active_) return false;
+        auto candidate = *active_;
+        candidate.rotation =
+            (candidate.rotation + (turn == Turn::clockwise ? 1u : 3u)) % 4u;
+        constexpr Point kicks[] = {{0, 0}, {-1, 0}, {1, 0},
+                                    {-2, 0}, {2, 0}, {0, -1}, {0, -2}};
+        for (Point kick : kicks) {
+            candidate.origin = {active_->origin.x + kick.x,
+                                active_->origin.y + kick.y};
+            if (fits(candidate)) {
+                active_ = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Returns true only if the current piece descended without locking.
+    bool step() {
+        if (!active_) return false;
+        if (shift(0, 1)) return true;
+        lock();
+        return false;
+    }
+
+    int hard_drop() {
+        if (!active_) return 0;
+        int distance = 0;
+        while (shift(0, 1)) ++distance;
+        lock();
+        return distance;
+    }
+
+private:
+    static std::size_t board_size(int w, int h) {
+        // Leave headroom for candidate origins, kick offsets and local cells.
+        constexpr int limit = std::numeric_limits<int>::max() - 8;
+        if (w < 4 || h < 4 || w > limit || h > limit) {
+            throw std::invalid_argument("invalid board dimensions");
+        }
+        const auto max_cells = std::vector<std::optional<Piece>>{}.max_size();
+        if (static_cast<std::uintmax_t>(w) > max_cells / static_cast<unsigned>(h)) {
+            throw std::length_error("board too large");
+        }
+        return static_cast<std::size_t>(w) * static_cast<std::size_t>(h);
+    }
+
+    static Cells cells(const ActivePiece& p) noexcept {
+        static constexpr Cells shapes[] = {
+            {{{0, 1}, {1, 1}, {2, 1}, {3, 1}}},
+            {{{0, 0}, {0, 1}, {1, 1}, {2, 1}}},
+            {{{2, 0}, {0, 1}, {1, 1}, {2, 1}}},
+            {{{1, 0}, {2, 0}, {1, 1}, {2, 1}}},
+            {{{1, 0}, {2, 0}, {0, 1}, {1, 1}}},
+            {{{1, 0}, {0, 1}, {1, 1}, {2, 1}}},
+            {{{0, 0}, {1, 0}, {1, 1}, {2, 1}}}
+        };
+        Cells result = shapes[static_cast<unsigned>(p.type)];
+        for (auto& q : result) {
+            if (p.type != Piece::O) {
+                const int last = p.type == Piece::I ? 3 : 2;
+                for (unsigned i = 0; i < p.rotation; ++i) {
+                    q = {last - q.y, q.x};
+                }
+            }
+            q.x += p.origin.x;
+            q.y += p.origin.y;
+        }
+        return result;
+    }
+
+    bool inside(int x, int y) const noexcept {
+        return x >= 0 && x < width_ && y >= 0 && y < height_;
+    }
+
+    std::size_t index(int x, int y) const noexcept {
+        return static_cast<std::size_t>(y) * static_cast<std::size_t>(width_)
+               + static_cast<std::size_t>(x);
+    }
+
+    bool fits(const ActivePiece& p) const noexcept {
+        for (Point q : cells(p)) {
+            if (!inside(q.x, q.y) || board_[index(q.x, q.y)]) return false;
+        }
+        return true;
+    }
+
+    bool shift(int dx, int dy) noexcept {
+        if (!active_) return false;
+        auto next = *active_;
+        next.origin.x += dx;
+        next.origin.y += dy;
+        if (!fits(next)) return false;
+        active_ = next;
+        return true;
+    }
+
+    void spawn() {
+        if (cursor_ == bag_.size()) {
+            std::shuffle(bag_.begin(), bag_.end(), rng_);
+            cursor_ = 0;
+        }
+        ActivePiece next{bag_[cursor_++], {(width_ - 4) / 2, 0}, 0};
+        if (fits(next)) active_ = next;
+        else active_.reset();
+    }
+
+    void lock() {
+        for (Point q : cells(*active_)) {
+            board_[index(q.x, q.y)] = active_->type;
+        }
+        // Compact surviving rows downward, preserving their relative order.
+        int dst = height_ - 1;
+        for (int src = height_ - 1; src >= 0; --src) {
+            auto first = board_.begin() + index(0, src);
+            auto last = first + width_;
+            if (std::all_of(first, last, [](const auto& c) { return c.has_value(); })) {
+                ++lines_;
+                continue;
+            }
+            if (dst != src) std::copy(first, last, board_.begin() + index(0, dst));
+            --dst;
+        }
+        std::fill(board_.begin(), board_.begin() + index(0, dst + 1), std::nullopt);
+        spawn();
+    }
+
+    int width_;
+    int height_;
+    std::vector<std::optional<Piece>> board_;
+    std::mt19937 rng_;
+    std::array<Piece, 7> bag_{Piece::I, Piece::J, Piece::L, Piece::O,
+                              Piece::S, Piece::T, Piece::Z};
+    std::size_t cursor_ = bag_.size();
+    std::optional<ActivePiece> active_;
+    std::uint64_t lines_ = 0;
+};
+
+} // namespace falling_blocks

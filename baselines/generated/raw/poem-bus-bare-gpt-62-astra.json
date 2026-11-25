@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "bare",
+ "prompt": "Write a poem about a city bus at night. Output only the poem, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 700,
+ "id": "poem-bus-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "At midnight the bus kneels down\nfor a nurse with a sack of pears.\nOne pear rolls under a seat.\nA boy stops it with his shoe.\n\n“Good catch,” she says, and for a block\nthey ride with the same small smile.\nOutside, the laundromat windows\nturn blue, then black, behind them.\n\nAt her corner the driver waits\nuntil she gets her key to turn.\nThen the doors fold up the cold\nand carry the boy toward morning.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 25,
+  "completion_tokens": 103,
+  "total_tokens": 128,
+  "cost": 0.00432,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.00432,
+   "upstream_inference_prompt_cost": 0.0002,
+   "upstream_inference_completions_cost": 0.00412
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

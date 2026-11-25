@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-city",
+ "style": "bare",
+ "prompt": "Write a personal essay about moving to a new city. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "id": "essay-city-bare-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "The first thing I bought in my new city was a plunger. I had imagined a more dignified beginning: a walk along the river, perhaps, followed by coffee in a place where I would eventually become a regular. Instead, twenty minutes after the movers left, I was standing in a hardware store trying to remember whether I had ever purchased a plunger or whether they simply came with the places where I had lived.\n\n“Sink or toilet?” the man behind the counter asked.\n\nI told him.\n\n“Then not that one,” he said.\n\nFor weeks afterward, whenever someone from home asked how I was settling in, I thought of that exchange. It remained the most useful conversation I’d had.\n\nI’d moved for a job, which was the answer I gave people who asked why. The longer answer was that I had begun to feel embarrassed by how little I needed to explain myself at home. My sister knew not to call me on Sunday mornings. The woman at the bakery knew I wanted the darker loaf. If I ran into someone from high school, I could ask about their parents and expect to recognize the names of whatever ailments they listed. I used to think of all this as a kind of frictionlessness. Then, for reasons I couldn’t articulate even to myself, I started to want a little friction.\n\nI got plenty. My apartment was on the third floor above a laundromat, and the stairwell smelled of dryer sheets until the laundromat closed, at which point it smelled like the stairwell. At night, I could hear the bus announce the name of my street. The recorded voice stressed the second syllable. I’d been stressing the first. For a while I practiced saying it correctly before I called to order takeout.\n\nWhat I missed most about home turned out to be errands with my sister. We had never made plans to go to the pharmacy together; one of us would just be in the car when the other remembered she needed toothpaste. In the new city, I had to ask people to spend time with me on purpose. I invited a woman from work to dinner and spent so long trying to make the invitation sound casual that she thought I was asking for a restaurant recommendation. She gave me three, all good.\n\nThat first winter, my sister mailed me the spare key to my old apartment. I’d asked her to leave it with the landlord, but the landlord had changed the locks, and she thought I might want it. I called to ask what she expected me to do with a key that didn’t open anything.\n\n“Throw it out,” she said. “I just didn’t want to.”\n\nI put it in the dish by my new front door. For months I picked it up by mistake on my way out.\n\nThere was no single day when the city began to feel like mine. There was, however, a Tuesday when I went to the grocery store in slippers. I didn’t realize until I was standing in the produce aisle, deciding whether I was the sort of person who would use an entire cabbage. The slippers were blue and had a rip in one toe. I bought the cabbage anyway. On the walk home, I passed the hardware store and saw the man who had sold me the plunger out front, sweeping a mush of old leaves into the gutter. He lifted his broom to let me pass. Neither of us said anything. I liked that he’d seen me in my slippers and I didn’t have to tell him why.\n\nBy spring the woman from work and I were having dinner most Thursdays. One evening she came over early because she needed to buy a shower curtain, and there was a shop near me that sold them. We walked there together. She spent twenty minutes choosing between two shades of white, then bought the clear one. On the way back I remembered I needed toothpaste. She came into the pharmacy with me and stood beside me while I considered a sale on a brand neither of us had ever heard of.\n\n“Get the one you like,” she said. “You can afford the extra dollar.”\n\nIt was exactly the sort of thing my sister would have said, and for a moment I wanted badly for my sister to be there. I bought the toothpaste and called her after dinner. She was in the car outside the bakery, waiting for them to open because she’d gotten the hours wrong. We talked until someone came to unlock the door, and then she asked me to stay on the line while she went inside. I listened to her order a loaf and tell the woman behind the counter that no, the light one was fine. She hung up when she needed both hands to pay. I put my phone in my pocket and went downstairs to see if the laundromat was still open. For once, I had remembered to bring quarters.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 31,
+  "completion_tokens": 973,
+  "total_tokens": 1004,
+  "cost": 0.009792,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009792,
+   "upstream_inference_prompt_cost": 6.2e-05,
+   "upstream_inference_completions_cost": 0.00973
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

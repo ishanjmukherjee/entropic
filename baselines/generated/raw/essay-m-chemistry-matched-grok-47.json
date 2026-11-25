@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-chemistry",
+ "style": "matched",
+ "prompt": "Write an essay titled “A New Kind of Chemistry”. It explains how nuclear reactions, which rearrange the inside of the atom, differ from ordinary chemical reactions, and traces how people learned to use them. About 800 words. Output only the essay, with no title.",
+ "model": "grok-4.7",
+ "max_tokens": 1600,
+ "matched_to": "blogs-tech/potter-a-new-kind-of-chemistry",
+ "id": "essay-m-chemistry-matched-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "Nuclear reactions differ from ordinary chemistry because they rearrange the nucleus itself, not merely the cloud of electrons that surrounds it. In a chemical reaction, atoms keep the same nuclei. Bonds break and form as electrons are shared, transferred, or rearranged, and the elements that enter the reaction are the same elements that leave it. Energy changes are real, sometimes large enough to heat a furnace or drive an engine, but they are small beside the energies locked in the nucleus. A nuclear reaction changes the composition or the energy state of that nucleus. Protons and neutrons may be added, removed, or converted from one into the other. One element can become another. Mass and energy are exchanged according to the relation Einstein wrote down early in the twentieth century: a tiny loss of mass corresponds to a very large release of energy.\n\nThe difference is visible in the scales involved. Chemical energies are measured in electron-volts per atom. Nuclear energies are measured in millions of electron-volts. That is why a few kilograms of uranium can release as much energy as thousands of tons of chemical fuel, and why the radiation from a decaying nucleus can pass through matter that would stop any ordinary flame. It is also why nuclear change is not governed by temperature and pressure in the way a campfire is. Heating a substance makes its atoms collide harder and can speed a chemical reaction. It does not, by itself, force nuclei to fuse or split. Those processes depend on the forces inside the nucleus and, for charged particles, on overcoming the electrical repulsion between protons.\n\nPeople did not begin with a theory of the nucleus. They began with puzzles. In 1896 Henri Becquerel found that uranium salts darkened photographic plates even in the dark. Marie and Pierre Curie isolated new elements, polonium and radium, whose rays were far stronger. The rays were soon sorted into types: some stopped by paper, some by metal, some able to penetrate much farther. Ernest Rutherford and his collaborators showed that the atom was mostly empty space, with its positive charge concentrated in a tiny central nucleus. By 1919 Rutherford had produced the first artificial nuclear transmutation, turning nitrogen into oxygen by bombarding it with alpha particles. What alchemists had imagined as a chemical art turned out to require a different kind of change altogether.\n\nThe neutron, identified by James Chadwick in 1932, made the new chemistry practical. Being uncharged, neutrons are not repelled by the nucleus and can enter it at modest energies. In the 1930s Enrico Fermi and others used them to produce artificial radioactivity in many elements. In late 1938 Otto Hahn and Fritz Strassmann found barium among the products of uranium bombarded by neutrons, a result that chemical analysis made unmistakable. Lise Meitner and Otto Frisch interpreted the finding: the uranium nucleus had split. Frisch named the process fission, borrowing a word from biology. Each fission released energy and, crucially, more neutrons. A chain reaction became conceivable.\n\nWartime governments turned that possibility into weapons and, soon after, into the first controlled reactors. The destruction of Hiroshima and Nagasaki in 1945 showed what an uncontrolled release could do. The same physics, constrained by design, moderators, and control systems, could also sustain a steady chain reaction and boil water for electricity. After the war, reactors spread as sources of power, of neutrons for research, and of isotopes for medicine and industry. Radioactive tracers let biologists follow atoms through living systems. Beams and implanted sources treated cancer. Carbon-14 dating rewrote parts of archaeology. None of this was chemistry in the old sense. It was the controlled use of nuclear change.\n\nFusion followed a different path into public life. In the 1920s and 1930s physicists argued that the sun’s energy comes from the fusion of light nuclei, principally hydrogen into helium. On Earth, the same reaction powered thermonuclear weapons in the 1950s. Peaceful fusion, which would require holding a plasma at extreme temperature long enough for nuclei to collide and stick, has proved far harder. Decades of experiments have produced brief bursts of fusion energy and a growing engineering literature, but not yet a commercial power plant. The scientific point, however, was settled earlier: the most common energy source in the universe is nuclear, not chemical.\n\nLearning to use these reactions also meant learning their costs. Fission products remain radioactive for years to millennia. Accidents at civilian plants, and the testing of weapons in the atmosphere, showed how radioactive material can move through air, water, and food. International rules grew up around safeguards, waste, and the separation of civilian programs from weapons. Medicine and industry adopted dose limits and shielding. The public argument has never been only technical. It has been about whether a source of energy and knowledge whose misuse is catastrophic can be governed well enough to justify its benefits.\n\nWhat remains distinctive is the boundary the twentieth century drew. Ordinary chemistry still organizes most of daily life: fuels, medicines, plastics, food, the metabolism of the body. Nuclear reactions sit underneath that world, powering stars, heating planetary interiors, and supplying, where societies choose to use them, electricity, isotopes, and weapons. They rearrange the atom’s interior rather than its outer shell. Once that distinction was clear, a new kind of chemistry had a name, a set of methods, and a history that could not be separated from both discovery and responsibility.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1296,
+  "completion_tokens": 1202,
+  "total_tokens": 2498,
+  "cost": 0.008076,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.008076,
+   "upstream_inference_prompt_cost": 0.000864,
+   "upstream_inference_completions_cost": 0.007212
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 105,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-city",
+ "style": "styled",
+ "prompt": "Write an essay of about 800 words on the subject below.\n\nWrite it the way an excellent, idiosyncratic human essayist would: someone with real expertise and strong opinions, writing in the first person for their own blog. Commit to a specific thesis that a thoughtful reader might disagree with. Use concrete particulars (names, numbers, incidents, things only someone who had done the work would know) in place of general statements. Vary sentence length. No headings, no bullet points, no summary paragraph at the end, and none of the stock phrases of AI writing.\n\nOutput only the essay, with no title.\n\nSubject: a personal essay about moving to a new city",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-city-styled-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "The standard advice for moving to a new city is terrible. Join a kickball league. Find a coffee shop and sit at the same table at 8:00 AM until the barista knows your name. Say yes to every invitation, even the ones from your cousin’s former roommate who sells artisanal soap. \n\nWhen I moved from Chicago to Pittsburgh in October 2021, I did the exact opposite. For the first nine months, I didn’t try to meet a single person. I didn’t download a single app, didn’t go to a single happy hour, didn’t join a single run club. I talked to my landlord, a retired electrician named Sal who communicated almost exclusively in sighs and invoice numbers, and I talked to the guy behind the deli counter at the Bloomfield Groceria. That was it.\n\nPeople think this sounds grim, or like some kind of weird monastic flex. It isn’t. It’s a practical rule: trying to make friends in your first year in a new city is a form of self-sabotage. \n\nEarly friends are an anesthetic. They dull the only real gift a new place gives you, which is the temporary, painful clarity of not knowing how anything works. If you latch onto a social group in month two, you immediately inherit their map. You start going to their bars in Lawrenceville. You adopt their lazy, tribal opinions about the South Hills. You let them drive you to the grocery store, and you nod along when they complain about the mayor. You bypass the friction, and the friction is the entire point.\n\nI came from Chicago, a city laid out like a spreadsheet. If you understand the numbering system and you know which way the lake is, you can never truly be lost. Pittsburgh is a plate of dropped spaghetti poured over three rivers and a series of vertical cliffs. There are over seven hundred sets of public staircases here, many of them crumbling into the sumac, which count as legal city streets. In my third week, I tried to walk from my apartment on Liberty Avenue to a hardware store in the Strip District—a distance of maybe a mile and a half—and ended up trapped on a pedestrian bridge over a rail yard, staring at a brick wall. Google Maps had lied to me. It happens constantly here. The satellite view doesn’t understand elevation.\n\nIf I’d had a local friend driving me around in a Subaru, I would have missed that. Instead, I spent the winter learning the machine of the place by breaking my shins against it. I learned the bizarre, bunched-up rhythms of the 61C bus. I learned that when the Fern Hollow Bridge collapsed into Frick Park in January 2022—just hours before the President was supposed to drive over it to give a speech about infrastructure, a bit of dark comedy so broad a novelist would have cut it—the entire East End’s circulatory system clotted. Forbes Avenue turned into a parking lot. I spent two weeks walking the detours, watching how the traffic bled into the narrow, brick-paved side streets of Squirrel Hill. You don’t learn a city’s anatomy when it’s healthy. You learn it when an artery bursts.\n\nI’m not romanticizing isolation. There was a Tuesday in February when the sky was the color of wet drywall, and I stood in my kitchen eating cold rotisserie chicken straight off the carcass over the sink, wondering if I’d lost my mind. My radiator clanked like someone hitting a pipe with a wrench. Nobody within a three-hundred-mile radius knew my middle name. It was miserable.\n\nBut loneliness is just the tax you pay for unmediated attention. Because I had nobody to text, I looked up. I noticed the way the fog sits in the Monongahela valley until eleven in the morning, swallowing the steel mills in Braddock. I noticed the exact smell of wet limestone and old coal dust that rises out of the hillsides after a thaw. I learned which cashiers at the Giant Eagle on Shakespeare Street were fast and which ones would stop to inspect every single bruised plum. I was an unpaid, mildly alienated anthropologist, and my notebook was full.\n\nEventually, I did make friends. Around month ten, I started going to a trivia night in Polish Hill, and I met a couple of architects and a guy who repairs vintage synthesizers. I like them very much. But I’m glad I didn’t meet them in October. By the time we sat down at a sticky table at Gooski’s, I wasn’t a tourist asking them to explain their home to me. I had my own opinions about the Squirrel Hill Tunnel. I knew which side of the street gets the afternoon sun in March.\n\nLast week, a woman with a rolling suitcase stopped me near the corner of Baum and Negley, holding up her phone and squinting at the little blue dot. She was trying to get to a hotel in Shadyside, and the map was telling her to walk straight through a ravine. I didn’t even look at her screen. I told her to ignore the app, take the left at the weirdly angled gas station, cut behind the church, and follow the brick sidewalk until she smelled the bakery. She thanked me and walked off, already trusting the wrong tool a little less than she had a minute ago.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 171,
+  "completion_tokens": 4007,
+  "total_tokens": 4178,
+  "cost": 0.060618,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.060618,
+   "upstream_inference_prompt_cost": 0.000513,
+   "upstream_inference_completions_cost": 0.060105
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2901,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

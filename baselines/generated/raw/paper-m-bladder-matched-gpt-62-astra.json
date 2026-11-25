@@ -1,0 +1,39 @@
+{
+ "set": "paper",
+ "kind": "paper",
+ "prompt_id": "paper-m-bladder",
+ "style": "matched",
+ "prompt": "Write the introduction section of an academic paper titled “Fixing a Model That Learned Worse Cancer Means Lower Risk: Monotonic Constraints in Bladder Cancer Recurrence Prediction”. The paper is in clinical machine learning. About 700 words. Output only the text of the introduction, with no heading.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1500,
+ "matched_to": "papers/abbas-monotonic-bladder",
+ "id": "paper-m-bladder-matched-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "An increase in tumor burden should not, by itself, reassure a clinician assessing the likelihood of bladder cancer recurrence. Yet a prediction model can offer precisely that reassurance: changing an input from one tumor to several, while leaving the rest of a patient’s record unchanged, can lower its estimated probability of recurrence. Such a reversal need not make the model perform poorly on average. It may affect only a small subset of patients whose predictions contribute little to an overall measure of discrimination. For a clinician deciding whether a patient can safely undergo less frequent cystoscopy, however, the direction of the change matters as much as it would if the error were common.\n\nThis problem is particularly relevant to non–muscle-invasive bladder cancer, for which recurrence after transurethral resection is a central concern of follow-up care. Surveillance can detect recurrent disease before symptoms develop, but repeated cystoscopy imposes discomfort, cost, and a substantial burden over years of care. Established clinical risk tools use features such as tumor number, size, and prior recurrence history to distinguish patients with different surveillance needs. Machine learning models can make finer distinctions by representing nonlinear associations and interactions that point-based scores simplify. That flexibility also permits a familiar risk factor to change direction over part of its range, even when there is little clinical or statistical support for the reversal.\n\nSeveral features of clinical data make such reversals plausible. Patients with greater tumor burden may receive more intensive intravesical therapy, so their observed outcomes reflect both their disease and the response it prompted. Surveillance frequency affects whether and when a recurrence is documented. In addition, some combinations of tumor characteristics occur infrequently, leaving a flexible model to estimate local relationships from few observations. A lower prediction for a patient with ostensibly worse disease may therefore reflect effective treatment, differences in ascertainment, or sampling variation. These explanations have different implications: a model intended to predict outcomes under usual care should not automatically discard a genuine treatment-related association, whereas a model used to inform a decision before treatment should not rely on treatment information unavailable at that time.\n\nMonotonic constraints offer a way to specify which directional relationships a model must preserve. For example, constraining the prediction to be nondecreasing in tumor number means that, for otherwise identical inputs, adding a tumor may raise the predicted risk or leave it unchanged, but cannot lower it. The constraint does not prescribe the size of the increase. The model may learn that the difference between one and two tumors matters more than the difference between six and seven, or that the magnitude of either difference depends on prior recurrence history. Crucially, monotonicity is a property of the prediction function, not a claim about what would happen if a patient’s tumor count could be altered experimentally.\n\nThe clinical challenge is thus to identify a limited set of defensible constraints rather than to impose a single ordering of cancer severity. Recurrence is not synonymous with progression. A feature associated with progression to muscle-invasive disease need not have the same relationship with a documented bladder recurrence, particularly when definitive treatment removes the opportunity to observe that endpoint. The prediction horizon, the timing of assessment, and the population remaining under surveillance all bear on whether a proposed direction is appropriate. Constraining the wrong relationship can replace a local anomaly with a systematic error that is harder to recognize because it appears clinically intuitive.\n\nIn this study, we examine whether targeted monotonic constraints can correct clinically discordant predictions of bladder cancer recurrence without sacrificing useful distinctions among patients. We compare constrained and unconstrained models in terms of discrimination and calibration, alongside paired predictions that isolate a change in one ordered feature within clinically plausible profiles. These comparisons distinguish small numerical reversals from changes large enough to cross a risk threshold relevant to surveillance. They also address a question that aggregate performance metrics cannot resolve: when two otherwise similar patients differ in a feature for which a directional expectation is justified, does the model give a clinician a defensible reason to regard one as being at lower risk?",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 65,
+  "completion_tokens": 791,
+  "total_tokens": 856,
+  "cost": 0.03216,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.03216,
+   "upstream_inference_prompt_cost": 0.00052,
+   "upstream_inference_completions_cost": 0.03164
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

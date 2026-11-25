@@ -1,0 +1,235 @@
+#!/usr/bin/env bash
+#
+# PostgreSQL to S3 Backup Script with Rotation and Error Handling
+#
+# Required Environment Variables:
+#   PGDATABASE      - Name of the PostgreSQL database to back up
+#   S3_BUCKET       - Target S3 bucket name
+#
+# Optional Environment Variables:
+#   PGHOST          - PostgreSQL host (default: localhost)
+#   PGPORT          - PostgreSQL port (default: 5432)
+#   PGUSER          - PostgreSQL user (default: postgres)
+#   PGPASSWORD      - PostgreSQL password (or use ~/.pgpass)
+#   S3_PREFIX       - S3 key prefix (default: postgres-backups/<PGDATABASE>)
+#   S3_STORAGE_CLASS- S3 storage class (default: STANDARD_IA)
+#   S3_SSE          - Server-side encryption algorithm (default: AES256)
+#   AWS_REGION      - AWS region (uses AWS CLI default if unset)
+#   RETENTION_DAYS  - Number of days to retain backups in S3 (default: 30)
+#   LOCK_FILE       - Path to flock lock file (default: /tmp/pg_s3_backup_<PGDATABASE>.lock)
+
+set -Eeuo pipefail
+IFS=$'\n\t'
+
+readonly SCRIPT_NAME="$(basename "$0")"
+readonly TIMESTAMP="$(date -u +"%Y%m%dT%H%M%SZ")"
+
+# Configuration with defaults
+export PGHOST="${PGHOST:-localhost}"
+export PGPORT="${PGPORT:-5432}"
+export PGUSER="${PGUSER:-postgres}"
+export PGDATABASE="${PGDATABASE:-}"
+
+S3_BUCKET="${S3_BUCKET:-}"
+S3_PREFIX="${S3_PREFIX:-postgres-backups/${PGDATABASE}}"
+S3_PREFIX="${S3_PREFIX#/}"
+S3_PREFIX="${S3_PREFIX%/}"
+S3_STORAGE_CLASS="${S3_STORAGE_CLASS:-STANDARD_IA}"
+S3_SSE="${S3_SSE:-AES256}"
+AWS_REGION="${AWS_REGION:-}"
+RETENTION_DAYS="${RETENTION_DAYS:-30}"
+LOCK_FILE="${LOCK_FILE:-/tmp/pg_s3_backup_${PGDATABASE:-default}.lock}"
+
+TMP_DIR=""
+AWS_ARGS=()
+if [[ -n "$AWS_REGION" ]]; then
+    AWS_ARGS+=(--region "$AWS_REGION")
+fi
+
+# Logging helpers
+log() {
+    local level="$1"
+    shift
+    printf '[%s] [%s] [%s] %s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" "$level" "$SCRIPT_NAME" "$*" >&2
+}
+
+log_info()  { log "INFO"  "$@"; }
+log_warn()  { log "WARN"  "$@"; }
+log_error() { log "ERROR" "$@"; }
+
+# Cleanup and error handling
+cleanup() {
+    local exit_code=$?
+    if [[ -n "$TMP_DIR" && -d "$TMP_DIR" ]]; then
+        rm -rf "$TMP_DIR"
+    fi
+    exit "$exit_code"
+}
+
+on_error() {
+    local line_no="$1"
+    local exit_code="$2"
+    log_error "Command failed at line ${line_no} with exit code ${exit_code}."
+}
+
+trap cleanup EXIT
+trap 'on_error ${LINENO} $?' ERR
+trap 'log_warn "Received interrupt signal. Exiting..."; exit 130' INT TERM
+
+# Validation
+check_dependencies() {
+    local deps=(pg_dump aws date flock)
+    for cmd in "${deps[@]}"; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            log_error "Required dependency not found: ${cmd}"
+            exit 1
+        fi
+    done
+
+    if ! command -v sha256sum >/dev/null 2>&1 && ! command -v shasum >/dev/null 2>&1; then
+        log_error "Required dependency not found: sha256sum or shasum"
+        exit 1
+    fi
+}
+
+validate_config() {
+    if [[ -z "$PGDATABASE" ]]; then
+        log_error "PGDATABASE environment variable is required."
+        exit 1
+    fi
+
+    if [[ -z "$S3_BUCKET" ]]; then
+        log_error "S3_BUCKET environment variable is required."
+        exit 1
+    fi
+
+    if ! [[ "$RETENTION_DAYS" =~ ^[0-9]+$ ]] || (( RETENTION_DAYS < 1 )); then
+        log_error "RETENTION_DAYS must be a positive integer (got: '${RETENTION_DAYS}')."
+        exit 1
+    fi
+}
+
+acquire_lock() {
+    exec 200>"$LOCK_FILE"
+    if ! flock -n 200; then
+        log_error "Another backup instance is already running (lock: ${LOCK_FILE})."
+        exit 1
+    fi
+}
+
+compute_sha256() {
+    local file="$1"
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$file"
+    else
+        shasum -a 256 "$file"
+    fi
+}
+
+get_cutoff_date() {
+    if date -u -d "1 day ago" +"%Y-%m-%dT%H:%M:%SZ" >/dev/null 2>&1; then
+        date -u -d "${RETENTION_DAYS} days ago" +"%Y-%m-%dT%H:%M:%SZ"
+    else
+        date -u -v-"${RETENTION_DAYS}"d +"%Y-%m-%dT%H:%M:%SZ"
+    fi
+}
+
+perform_backup() {
+    local backup_file="$1"
+    local checksum_file="$2"
+
+    log_info "Starting PostgreSQL backup for database '${PGDATABASE}' on ${PGHOST}:${PGPORT}..."
+
+    pg_dump \
+        --format=custom \
+        --compress=6 \
+        --no-password \
+        --file="$backup_file" \
+        "$PGDATABASE"
+
+    if [[ ! -s "$backup_file" ]]; then
+        log_error "Backup file is empty: ${backup_file}"
+        exit 1
+    fi
+
+    (
+        cd "$(dirname "$backup_file")"
+        compute_sha256 "$(basename "$backup_file")" > "$checksum_file"
+    )
+
+    local size_human
+    size_human="$(du -h "$backup_file" | cut -f1)"
+    log_info "Backup created successfully: $(basename "$backup_file") (${size_human})"
+}
+
+upload_to_s3() {
+    local backup_file="$1"
+    local checksum_file="$2"
+    local s3_base="s3://${S3_BUCKET}/${S3_PREFIX}"
+
+    log_info "Uploading backup and checksum to ${s3_base}/..."
+
+    aws "${AWS_ARGS[@]}" s3 cp "$backup_file" "${s3_base}/$(basename "$backup_file")" \
+        --storage-class "$S3_STORAGE_CLASS" \
+        --sse "$S3_SSE" \
+        --only-show-errors
+
+    aws "${AWS_ARGS[@]}" s3 cp "$checksum_file" "${s3_base}/$(basename "$checksum_file")" \
+        --storage-class "$S3_STORAGE_CLASS" \
+        --sse "$S3_SSE" \
+        --only-show-errors
+
+    log_info "Upload completed successfully."
+}
+
+rotate_old_backups() {
+    local cutoff_date
+    cutoff_date="$(get_cutoff_date)"
+
+    log_info "Rotating backups older than ${RETENTION_DAYS} days (before ${cutoff_date}) in s3://${S3_BUCKET}/${S3_PREFIX}/..."
+
+    local old_keys
+    old_keys="$(aws "${AWS_ARGS[@]}" s3api list-objects-v2 \
+        --bucket "$S3_BUCKET" \
+        --prefix "${S3_PREFIX}/" \
+        --query "Contents[?LastModified<='${cutoff_date}'].Key" \
+        --output text | tr '\t' '\n')"
+
+    if [[ -z "$old_keys" || "$old_keys" == "None" ]]; then
+        log_info "No expired backups found."
+        return 0
+    fi
+
+    local deleted_count=0
+    while IFS= read -r key; do
+        [[ -z "$key" || "$key" == "None" ]] && continue
+        log_info "Deleting expired object: s3://${S3_BUCKET}/${key}"
+        aws "${AWS_ARGS[@]}" s3api delete-object \
+            --bucket "$S3_BUCKET" \
+            --key "$key" >/dev/null
+        ((deleted_count++))
+    done <<< "$old_keys"
+
+    log_info "Rotation completed. Deleted ${deleted_count} expired object(s)."
+}
+
+main() {
+    check_dependencies
+    validate_config
+    acquire_lock
+
+    TMP_DIR="$(mktemp -d)"
+    chmod 700 "$TMP_DIR"
+
+    local base_name="${PGDATABASE}_${TIMESTAMP}.dump"
+    local backup_file="${TMP_DIR}/${base_name}"
+    local checksum_file="${TMP_DIR}/${base_name}.sha256"
+
+    perform_backup "$backup_file" "$checksum_file"
+    upload_to_s3 "$backup_file" "$checksum_file"
+    rotate_old_backups
+
+    log_info "PostgreSQL backup job finished successfully."
+}
+
+main "$@"

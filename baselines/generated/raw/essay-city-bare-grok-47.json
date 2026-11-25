@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-city",
+ "style": "bare",
+ "prompt": "Write a personal essay about moving to a new city. About 800 words. Output only the essay, with no title.",
+ "model": "grok-4.7",
+ "max_tokens": 1600,
+ "id": "essay-city-bare-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "The boxes arrived two days before I did, which meant the apartment already knew me better than the street did. I stood in the doorway with the keys still warm from the landlord’s hand and listened to the radiator knock, a sound that would become the city’s first sentence to me. Outside, traffic moved in a rhythm I had not yet learned. Inside, my books were stacked like temporary furniture, spines facing the wrong way, as if they too were unsure which direction was home.\n\nI had told people I was moving for work, and that was true enough to pass at dinner. What I did not say was that I wanted a city that did not already contain every version of me. In the place I left, the grocery store still knew which aisle I would drift toward when I was tired. Friends finished my sentences. Even the mistakes had addresses. A new city offered the small mercy of anonymity: no one would watch me fail at the ordinary tasks of beginning again and then remind me, kindly, that I had always been like this.\n\nThe first week was a sequence of errands that felt larger than they were. I bought a lamp because the overhead light made the room look like a waiting area. I learned which train door opened closest to the stairs, then forgot and stood in the wrong car like a tourist who had studied the map too carefully. At the corner store the cashier asked how I was, and I answered with more honesty than the question required. She nodded anyway. That nod, brief and uninvested, was a kind of welcome.\n\nMornings were the hardest. I woke to a ceiling I did not recognize and reached for a switch that was not where my hand expected it. For a few seconds I was nowhere. Then the street noise assembled itself—bus brakes, a dog, someone arguing into a phone about a delivery—and I remembered the decision I had made with such confidence on a Tuesday in another kitchen. Confidence does not travel as well as clothes. It wrinkles. It needs to be shaken out.\n\nI walked more than I needed to. Walking was how I bargained with the map. I took the long way to the office so I could pass the bakery that smelled like butter at seven-thirty and the park where people let their dogs off leash before the signs said they should. I learned the names of nothing at first, only the feelings of blocks: this one windy, this one bright, this one where the sidewalk buckled and everyone stepped left without looking. A city becomes yours not when you can recite its history but when your body starts making small, correct predictions.\n\nWork gave me a schedule, which I mistook for a life. I ate lunch at my desk and told myself I was being efficient. In the evenings I unpacked one box and then sat on the floor among paper and twine, scrolling through photos of rooms I no longer lived in. Nostalgia is a poor interior designer. It kept suggesting I recreate the old apartment exactly, as if sameness could be shipped. I put the couch against a different wall on purpose. The room looked wrong for three days and then, abruptly, possible.\n\nLoneliness arrived without drama. It was not the cinematic kind, rain on a window and a single lamp. It was standing in a grocery aisle holding two kinds of olive oil and realizing there was no one to text about the difference. It was weekends with clean laundry and no plans that required me to leave the building. I had imagined independence as a wide street. Some days it was a narrow hallway with good light and very little company.\n\nI started saying yes to things that would have bored me at home. A coworker’s birthday drinks in a bar with sticky tables. A neighborhood meeting about a crosswalk. A pottery class where my bowl collapsed and the instructor said, cheerfully, that collapse was information. I met people in fragments: a name, a job, a complaint about the landlord, a recommendation for a dentist. Friendship, I was learning, does not arrive as a finished room. It arrives as repeated proximity. You see the same person at the same hour often enough that nodding becomes talking, and talking becomes the kind of text that begins with “are you around.”\n\nThere was a night in late October when the heat finally worked and I cooked something that required more than one pan. I opened the window because the kitchen grew too warm, and the cold came in carrying the smell of someone else’s dinner and the sound of a basketball on concrete. I ate standing up, which I never do when I am sad, and noticed that I knew, without checking, what time the bus would sigh at the corner. The knowledge felt small and then enormous. I had been collecting the city in pieces—routes, noises, the particular blue of the hour before the streetlights fully commit—and those pieces had started to hold.\n\nI still get lost, though less often, and when I do I no longer treat it as evidence that I chose wrong. Wrongness and unfamiliarity are not the same thing. The apartment has acquired the ordinary debris of a life: a jacket on the chair, a mug I should wash, a plant that is either thriving or performing. My books face the right way now. When I come home late, the radiator knocks as if it has been waiting to finish a sentence, and I answer by turning on the lamp, the one I bought because the other light was too honest.\n\nMoving did not remake me. I brought my habits, my hesitations, the way I over-explain at checkout counters. What changed was the background against which those things occurred. In a new city, even repetition feels like discovery for a while. You buy the same coffee and notice, on the fourth morning, the crack in the tile by the register. You take the same train and one day recognize the man who always stands by the door with a paperback folded wrong. These are not achievements. They are the quiet proof that time has been spent somewhere specific.\n\nI do not know yet whether I will stay. Staying is a decision that accumulates rather than announces itself. For now I am learning the winter here, how early the dark arrives, which coat is enough, which streets ice first. I keep a list on my phone of places I mean to go and another, shorter list of places I have already returned to without planning to. The second list matters more. A city stops being a destination when you start leaving it in the morning with the unremarkable certainty that you will find your way back before the lamps in other windows go out.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1267,
+  "completion_tokens": 1382,
+  "total_tokens": 2649,
+  "cost": 0.009098,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009098,
+   "upstream_inference_prompt_cost": 0.000806,
+   "upstream_inference_completions_cost": 0.008292
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 49,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

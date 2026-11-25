@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-house",
+ "style": "craft",
+ "prompt": "Write a short story of about 800 words. Premise: two siblings clearing out their late mother's house.\n\nWrite it as a fine literary short-story writer would. Open in the middle of a particular moment, not with scene-setting or weather. Give each character a want that is never stated. Let the important thing happen slightly off the page or in what goes unsaid, and trust the reader. Use precise, unglamorous physical detail in place of adjectives; dialogue people would actually say, oblique and at cross purposes; and at least one turn the premise does not predict. Choose names a census would contain. No sentence that explains what a moment meant, and no ending on a lesson, a reconciliation or a sunrise.\n\nOutput only the story, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "story-house-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "“Tip your end up,” Ruth said, and a tooth fell out of the sofa.\n\nPaul put his foot on it before they set the sofa down. Through the hole in his sock he could feel the little ridges on top.\n\n“What have you got?”\n\n“Nothing you’d want.”\n\nIt was a molar, white on one side and gray on the other, with a length of pink thread wound round the roots. He dropped it in his shirt pocket. They took the sofa out feet first, past the place in the hall where their mother had kept a telephone on a shelf barely deep enough for it. The cord had worn a black quarter circle in the paint.\n\nAt the curb Paul lifted his end onto the pile.\n\n“Not there,” Ruth said.\n\n“It’s got a vein of piss running the length of it.”\n\n“She paid to have it done.”\n\n“In what, piss?”\n\nRuth went in without him. He sat on the arm a minute. Across the street a man was washing a baking sheet with the hose, taking care of something he couldn’t take care of in the sink.\n\nInside, the telephone was ringing.\n\nRuth had taken the receiver off the hook and stood with it against her stomach. The ringing continued. It came from upstairs.\n\n“Somebody’s left a phone,” Paul said.\n\nTheir mother’s bedroom had been stripped down to the curtain rods. In the small bedroom a pressed-board wardrobe stood with its doors open. Paul moved it forward on one corner and found a beige wall phone screwed to the baseboard. The handset had a strip of sticking plaster across the mouthpiece. He picked it up on the last ring.\n\nA woman said, “Did he go?”\n\nPaul looked at Ruth. She was holding out her hand.\n\n“He’s gone,” he said.\n\nThere was a click. He kept the phone to his ear.\n\n“Who was it?” Ruth said.\n\n“Wrong number.”\n\nShe leaned over him and worked the plug out of the jack with her thumbnail.\n\nBy three they had the kitchen to do. The Realtor wanted the cupboards empty, including paper. Their mother had fitted the paper herself, cutting small notches for the hinges. Ruth loosened it with water from a cereal bowl. Paul opened the drawer under the oven and took out the broiler tray, a birthday candle shaped like a five and a cloth bank bag that gave a short, expensive clank.\n\n“Here we go,” he said.\n\nIt held keys. On each key a paper tab had been folded over the bow and secured with tape gone the color of earwax. PAULA. DENISE. MRS HENLEY. One said simply BACK. There were twenty or thirty.\n\nRuth kept at the shelf paper. “Those go to the locksmith. You don’t put keys in the garbage.”\n\n“Where’s Paula live?”\n\n“Christ, Paul. Where’s anybody live?”\n\nHe turned the bag inside out. A wadded slip of paper came away from the stitched seam. In their mother’s printing: *Paul—get the good tongs from Denise.*\n\nHe passed it to Ruth.\n\n“She had other people named Paul,” Ruth said.\n\n“Did she have other good tongs?”\n\nThe doorbell gave its old two notes, the second hardly there.\n\nOn the step stood a woman in a supermarket apron with a fleece zipped over it. She held out a pair of kitchen tongs. One red rubber grip had split and been bound up in white tape.\n\n“I went round back,” she said. “You’ve got all that stuff there.”\n\nPaul took the tongs. “Denise?”\n\n“No, Denise is dead.”\n\n“Oh,” he said. “Well. So’s our mother.”\n\n“I went.”\n\nRuth was behind him now, close enough that her wristwatch caught on the back of his shirt. The woman looked over his shoulder.\n\n“Is Thursday any good?” she said.\n\n“House closes Tuesday,” Paul said.\n\n“Thursday’s fine,” Ruth said. “Same time.”\n\nThe woman went down the steps sideways, favoring a knee. At the curb she tested one of the sofa cushions with the flat of her hand and walked on.\n\nRuth took the bank bag out to her car. Paul stood at the sink working the tongs open and shut. The spring was still good. He used them to lift the sodden paper from the cereal bowl, letting it drain before he put it in the trash.\n\nWhen Ruth came back he had the sofa halfway up the front steps. She took the low end without asking. They left it standing on its side in the hall, where there wasn’t room to get around it without turning your shoulders.\n\nUpstairs he plugged the wall phone in again. He sat on the floor beside it and unwound the thread from the tooth. Underneath, in blue ink, someone had written a price.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 162,
+  "completion_tokens": 983,
+  "total_tokens": 1145,
+  "cost": 0.040616,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.040616,
+   "upstream_inference_prompt_cost": 0.001296,
+   "upstream_inference_completions_cost": 0.03932
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

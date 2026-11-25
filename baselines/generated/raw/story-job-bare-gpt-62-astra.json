@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-job",
+ "style": "bare",
+ "prompt": "Write a short story about a first day at a new job. About 800 words. Output only the story, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "story-job-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "On her first morning at the county lost-property office, Nina arrived wearing one black shoe and one navy shoe. She noticed in the lift. For the remaining three floors she stood with her feet crossed, as though waiting to be photographed beside a horse.\n\nThe man training her was called Geoff. He wore a cardigan with a burn hole over the heart and did not look at her feet.\n\n“First thing,” he said, unlocking the grille, “never suggest the answer.”\n\nHe took a green umbrella from the rack. “Someone says they’ve lost an umbrella. You don’t say, ‘Was it green?’ You ask what colour.”\n\n“What if they don’t remember?”\n\n“People remember all sorts of things instead.”\n\nAt nine fifteen a girl came in for a flute. She couldn’t name the manufacturer or describe the case, but said if you opened the little pocket there would be three loose raisins and a note from her mother saying DON’T FORGET FLUTE. There were four raisins. Geoff let her have it.\n\nAt ten, a cyclist claimed a set of false teeth. He put them in to prove ownership, smiled beautifully, then took them out again because, he explained, he didn’t like to cycle in them.\n\nBy lunchtime Nina had forgotten her shoes.\n\nShe had been out of work for eleven months. During that time her sister had started paying for lunch whenever they met, doing it early, on the way back from the toilets, so there could be no argument. Nina had come to hate the sight of her sister getting up from a restaurant table. Now, eating an egg sandwich at a desk with her own extension number, she sent a message: Friday lunch? My treat.\n\nAt two Geoff went downstairs to argue about shelving. At two minutes past, an elderly woman in a yellow raincoat approached the counter.\n\n“I left something on the number six,” she said. “A voice.”\n\nNina waited.\n\n“My husband’s voice. In a machine.”\n\n“A recorder?”\n\n“That would be the word.”\n\nThere were eight recorders in the database. Nina asked when it had been lost.\n\n“Tuesday. Unless today is Tuesday.”\n\n“Today is Thursday.”\n\n“Then Tuesday.”\n\nOne recorder had arrived on Wednesday morning, listed as having been found at the bus depot. Nina fetched it in its clear plastic bag.\n\n“Could you describe what’s recorded on it?”\n\nThe woman considered this. “A man saying the word ‘screwdriver’ rather more often than you’d wish.”\n\nNina put in the office headphones and pressed play.\n\nA drawer opened. Metal implements knocked together. A man said, “Not that screwdriver. The little screwdriver. If I’d meant the great bloody screwdriver I’d have said.”\n\nThen a woman’s voice, unmistakably the one across the counter: “Well, you married me. You could have had Pauline with the toolbox.”\n\nThe man laughed until he coughed.\n\nNina stopped the recording. The woman had unbuttoned her raincoat. Under it she wore a jumper darned at both elbows in different reds.\n\n“He was teaching me to mend the kitchen radio,” she said. “He thought I ought to learn a few things.”\n\nNina slid the claim form across the counter and showed her where to sign.\n\n“Did you mend it?” she asked.\n\n“Oh no. We ruined it. Is there much on there after that bit?”\n\n“The counter says forty minutes.”\n\n“Good,” the woman said. “I’ve never got past the screwdriver.”\n\nShe tucked the recorder into an inside pocket and patted it twice. At the door she turned back.\n\n“One of your shoes is blue, dear.”\n\nWhen Geoff returned, Nina was entering the claim. Under *identifying detail* she had typed *contents of recording*, which seemed enough.\n\n“Any trouble?” he asked.\n\n“None.”\n\nAt four thirty a boy came in looking for a brown glove. There were seventeen brown gloves, none of them pairs. Asked for a distinguishing feature, he said, “It’s the left one.”\n\n“That narrows it down,” Nina said, and laid out nine.\n\nHe tried them one at a time. The eighth fitted. He pulled a second glove from his pocket and held his hands up together. The gloves were different shades of brown, with different stitching at the wrists.\n\n“Ah,” said Nina.\n\n“No, that’s them,” the boy said. “They’ve always been like that.”\n\nShe gave him the form.\n\nOn the bus home her sister replied that Friday would be lovely. Nina booked the little Turkish place near the station. She would get there ten minutes early and give the waiter her card.\n\nAcross the aisle, a tired-looking man was feeding his daughter pieces of peeled orange. The girl dropped a segment. It landed on Nina’s navy shoe, leaving a bright wet crescent on the toe.\n\n“Sorry,” the man said.\n\nNina bent to pick it up. For the first time that day she looked at her shoes side by side without moving either foot. Both needed polishing. The black one, she saw now, had begun to split along the seam.\n\n“Never mind,” she said, and rode on to her stop.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 33,
+  "completion_tokens": 1046,
+  "total_tokens": 1079,
+  "cost": 0.042104,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.042104,
+   "upstream_inference_prompt_cost": 0.000264,
+   "upstream_inference_completions_cost": 0.04184
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

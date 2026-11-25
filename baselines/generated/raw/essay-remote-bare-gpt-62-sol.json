@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-remote",
+ "style": "bare",
+ "prompt": "Write an essay arguing for or against the claim that remote work is better than office work for software teams. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "id": "essay-remote-bare-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "The strongest argument for remote work is not that software engineers dislike commuting, though many do. It is that the conditions under which people write good software are not always the conditions an office provides. Software development requires long stretches of concentration, but it also depends on candid feedback, shared judgment, and the ability to ask for help before a small problem becomes a large one. Offices make some of that collaboration easier. Remote teams, however, can protect concentration while making collaboration more deliberate and accessible. For most software teams, that makes remote work the better default, provided the team is willing to change how it works rather than simply move the office onto video calls.\n\nConsider a developer trying to understand why a service occasionally returns stale data. Solving the problem might require tracing a request across several systems, comparing logs, and holding competing explanations in mind. A five-minute interruption can cost considerably more than five minutes if the developer has to reconstruct the reasoning afterward. Remote work does not eliminate interruptions: a crowded home or a relentless stream of messages can be just as distracting as an open office. What it offers is more control. A team can agree that messages need not receive immediate replies, reserve hours for uninterrupted work, and make exceptions for incidents that genuinely demand attention.\n\nRemote work also gives teams a reason to write down decisions they might otherwise convey in passing. After a hallway conversation, two engineers may know why they abandoned a proposed database migration, but everyone else sees only that the project stalled. A short note recording the decision and its trade-offs helps a teammate in another time zone today and a new hire six months from now. Office teams can keep equally good records, of course. The difference is that a remote team feels the cost of relying on informal conversations sooner. Done well, written communication does not mean documenting everything. It means preserving the reasoning someone will need when the people who made a decision are unavailable or no longer remember it.\n\nThe strongest case for the office is that not all useful conversations begin with a clear question. A junior engineer may spend hours on a problem without realizing that a colleague could see the mistake in seconds. In an office, the colleague might notice the frustration or hear enough of a conversation to step in. Remote work removes many of those chances to intervene, and telling new hires to “reach out anytime” does not bring them back. They may not know whom to ask, or they may worry that asking will make them look unprepared. Remote teams have to make help routine through pairing sessions, named mentors, and regular check-ins where unfinished work is welcome. That takes effort, but it also means access to guidance depends less on who sits nearby.\n\nSome work does benefit from getting people into the same room. A team deciding how to split a fragile system may make more progress in an afternoon around a whiteboard than in a week of comments on a proposal. The conversation involves not only technical facts but also disagreements about risk, ownership, and what the team can realistically maintain. Face-to-face discussion can surface those disagreements quickly. But that is a case for using an office when it helps, not for requiring everyone to commute every day. An occasional gathering built around a difficult decision can deliver more value than a week of office attendance spent on calls with colleagues elsewhere.\n\nRemote work also widens the pool of people who can join a team. A company hiring near one office may miss a strong candidate who cannot relocate because a partner has a job, a parent needs care, or local housing is unaffordable. But geographic flexibility can become a burden if it means someone is always joining meetings before breakfast or after dinner. Managers can also favor employees who are more visible, even when those employees contribute no more than their quieter colleagues. A credible remote policy therefore needs realistic overlap hours and clear standards for evaluating work. Neither the speed of a chat reply nor the number of hours spent at a desk tells a manager much about whether someone made the software more reliable or helped the team avoid a costly mistake.\n\nThe choice ultimately turns on which parts of the work should happen together and which are better done independently. An office is useful when people need to build trust, learn from one another, or resolve an ambiguous problem quickly. It offers much less when everyone needs three quiet hours to think. Remote work is the better default because it gives teams more room to make that distinction. Its success depends on whether people can get help without hesitation, understand decisions they did not witness, and finish demanding work without constant interruption. A team that can do those things has little reason to make sharing a building the price of working together.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 41,
+  "completion_tokens": 923,
+  "total_tokens": 964,
+  "cost": 0.009312,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009312,
+   "upstream_inference_prompt_cost": 8.2e-05,
+   "upstream_inference_completions_cost": 0.00923
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-sensor-c",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality C source file that is a driver for an I2C temperature and humidity sensor on a bare-metal ARM microcontroller, keeping a ring buffer of readings. Output only the code.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 3000,
+ "domain": "embedded",
+ "language": "C",
+ "id": "code-sensor-c-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "/*\n * sht31.c - Bare-metal Sensirion SHT31 I2C temperature/humidity driver.\n *\n * C99, no heap, no floating point. Supply blocking, timeout-bounded I2C\n * callbacks using 7-bit addresses. Each transfer must end with STOP; return\n * zero only when the entire transfer succeeds. The time callback must return\n * monotonic milliseconds modulo 2^32. Serialize calls for each instance and\n * arbitrate the bus externally if shared. Do not call from concurrent ISRs.\n *\n * Start with a powered, idle sensor (allow >= 2 ms after power-up). Call\n * sht31_start(), then sht31_poll() until it no longer returns SHT31_WAIT.\n * Successful completion appends a sample, overwriting the oldest if full.\n * Poll within one clock wrap. Following an I/O error, restore the bus and\n * ensure the sensor is idle before retrying (allow >= 16 ms for conversion).\n */\n\n#include <stddef.h>\n#include <stdint.h>\n\n#ifndef SHT31_RING_CAPACITY\n#define SHT31_RING_CAPACITY 16u\n#endif\n\n#if SHT31_RING_CAPACITY < 1 || SHT31_RING_CAPACITY > 65535\n#error \"SHT31_RING_CAPACITY must be in [1, 65535]\"\n#endif\n\ntypedef enum {\n    SHT31_OK = 0,\n    SHT31_WAIT,\n    SHT31_BUSY,\n    SHT31_IDLE,\n    SHT31_EMPTY,\n    SHT31_BAD_ARGUMENT,\n    SHT31_IO_ERROR,\n    SHT31_CRC_ERROR\n} sht31_status;\n\ntypedef struct {\n    void *context;\n    int (*write)(void *, uint8_t, const uint8_t *, size_t);\n    int (*read)(void *, uint8_t, uint8_t *, size_t);\n    uint32_t (*millis)(void *);\n} sht31_bus;\n\ntypedef struct {\n    uint32_t started_ms;\n    int32_t temperature_millicelsius;\n    uint32_t humidity_millipercent;\n} sht31_reading;\n\ntypedef struct {\n    sht31_bus bus;\n    uint8_t address;\n    uint8_t pending;\n    uint32_t started_ms;\n    size_t oldest;\n    size_t count;\n    sht31_reading samples[SHT31_RING_CAPACITY];\n} sht31_device;\n\nstatic uint8_t sht31_crc(const uint8_t *word)\n{\n    uint8_t crc = 0xffu;\n    unsigned i, bit;\n\n    for (i = 0; i < 2u; ++i) {\n        crc ^= word[i];\n        for (bit = 0; bit < 8u; ++bit) {\n            unsigned polynomial = (crc & 0x80u) ? 0x31u : 0u;\n            crc = (uint8_t)(((unsigned)crc << 1) ^ polynomial);\n        }\n    }\n    return crc;\n}\n\n/* Software initialization only; does not probe or reset the sensor. */\nsht31_status sht31_init(sht31_device *dev, const sht31_bus *bus,\n                        uint8_t address)\n{\n    if (!dev || !bus || !bus->write || !bus->read || !bus->millis ||\n        (address != 0x44u && address != 0x45u)) {\n        return SHT31_BAD_ARGUMENT;\n    }\n\n    dev->bus = *bus;\n    dev->address = address;\n    dev->pending = 0;\n    dev->started_ms = 0;\n    dev->oldest = 0;\n    dev->count = 0;\n    return SHT31_OK;\n}\n\n/* All operations below require a successfully initialized device. */\nsht31_status sht31_start(sht31_device *dev)\n{\n    /* Single shot, high repeatability, clock stretching disabled. */\n    static const uint8_t command[] = { 0x24u, 0x00u };\n\n    if (!dev)\n        return SHT31_BAD_ARGUMENT;\n    if (dev->pending)\n        return SHT31_BUSY;\n    if (dev->bus.write(dev->bus.context, dev->address,\n                       command, sizeof command) != 0)\n        return SHT31_IO_ERROR;\n\n    dev->started_ms = dev->bus.millis(dev->bus.context);\n    dev->pending = 1;\n    return SHT31_OK;\n}\n\nsht31_status sht31_poll(sht31_device *dev)\n{\n    uint8_t data[6];\n    uint32_t raw_t, raw_h;\n    size_t slot;\n    sht31_reading sample;\n\n    if (!dev)\n        return SHT31_BAD_ARGUMENT;\n    if (!dev->pending)\n        return SHT31_IDLE;\n\n    /* 15 ms maximum conversion time plus one tick for quantization. */\n    if ((uint32_t)(dev->bus.millis(dev->bus.context) - dev->started_ms) < 16u)\n        return SHT31_WAIT;\n\n    dev->pending = 0;\n    if (dev->bus.read(dev->bus.context, dev->address, data, sizeof data) != 0)\n        return SHT31_IO_ERROR;\n    if (sht31_crc(data) != data[2] || sht31_crc(data + 3) != data[5])\n        return SHT31_CRC_ERROR;\n\n    raw_t = ((uint32_t)data[0] << 8) | data[1];\n    raw_h = ((uint32_t)data[3] << 8) | data[4];\n    sample.started_ms = dev->started_ms;\n    sample.temperature_millicelsius =\n        (int32_t)((UINT64_C(175000) * raw_t + 32767u) / 65535u) - 45000;\n    sample.humidity_millipercent =\n        (uint32_t)((UINT64_C(100000) * raw_h + 32767u) / 65535u);\n\n    slot = (dev->oldest + dev->count) % SHT31_RING_CAPACITY;\n    dev->samples[slot] = sample;\n    if (dev->count == SHT31_RING_CAPACITY)\n        dev->oldest = (dev->oldest + 1u) % SHT31_RING_CAPACITY;\n    else\n        ++dev->count;\n\n    return SHT31_OK;\n}\n\n/* Remove the oldest sample. Output is unchanged on failure. */\nsht31_status sht31_pop(sht31_device *dev, sht31_reading *out)\n{\n    if (!dev || !out)\n        return SHT31_BAD_ARGUMENT;\n    if (!dev->count)\n        return SHT31_EMPTY;\n\n    *out = dev->samples[dev->oldest];\n    dev->oldest = (dev->oldest + 1u) % SHT31_RING_CAPACITY;\n    --dev->count;\n    return SHT31_OK;\n}",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 48,
+  "completion_tokens": 1460,
+  "total_tokens": 1508,
+  "cost": 0.058784,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.058784,
+   "upstream_inference_prompt_cost": 0.000384,
+   "upstream_inference_completions_cost": 0.0584
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

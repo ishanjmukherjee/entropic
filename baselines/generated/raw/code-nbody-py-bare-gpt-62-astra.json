@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-nbody-py",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Python source file that runs an N-body gravitational simulation with a leapfrog integrator using NumPy. Output only the code.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 3000,
+ "domain": "scientific",
+ "language": "Python",
+ "id": "code-nbody-py-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "#!/usr/bin/env python3\n\"\"\"Simulate softened Newtonian gravity with a kick-drift-kick leapfrog.\n\nRun ``python nbody.py --help`` for options. The default initial conditions\nuse dimensionless units with total mass one. An optional NPZ input file\nmust contain masses (N,), positions (N, 3), and velocities (N, 3).\n\"\"\"\n\nimport argparse\nimport math\nimport sys\nfrom pathlib import Path\n\nimport numpy as np\n\n\ndef validate(masses, positions, velocities):\n    \"\"\"Check the shapes and physical domain of a particle state.\"\"\"\n    if masses.ndim != 1 or not masses.size:\n        raise ValueError(\"masses must be a nonempty vector\")\n    shape = (masses.size, 3)\n    if positions.shape != shape or velocities.shape != shape:\n        raise ValueError(f\"positions and velocities must both have shape {shape}\")\n    if not all(np.isfinite(a).all() for a in (masses, positions, velocities)):\n        raise ValueError(\"initial state contains nonfinite values\")\n    if np.any(masses <= 0):\n        raise ValueError(\"all masses must be positive\")\n\n\ndef interactions(positions, masses, gravity, softening, block_size):\n    \"\"\"Yield target slices, source offsets, and softened inverse distances.\n\n    Blocking bounds auxiliary storage by O(block_size * N). Self terms\n    have zero inverse distance and contribute neither force nor energy.\n    \"\"\"\n    n = masses.size\n    for start in range(0, n, block_size):\n        stop = min(start + block_size, n)\n        rows = slice(start, stop)\n        offset = positions[None, :, :] - positions[rows, None, :]\n        squared = np.einsum(\"ijk,ijk->ij\", offset, offset)\n        squared += softening * softening\n        squared[np.arange(stop - start), np.arange(start, stop)] = np.inf\n        yield rows, offset, 1.0 / np.sqrt(squared)\n\n\ndef acceleration(positions, masses, gravity, softening, block_size):\n    \"\"\"Evaluate the Plummer-softened acceleration of every particle.\"\"\"\n    result = np.empty_like(positions)\n    for rows, offset, inverse in interactions(\n        positions, masses, gravity, softening, block_size\n    ):\n        weights = gravity * masses * inverse**3\n        result[rows] = np.einsum(\"ij,ijk->ik\", weights, offset)\n    return result\n\n\ndef energy(positions, velocities, masses, gravity, softening, block_size):\n    \"\"\"Return kinetic plus pair potential energy, counting each pair once.\"\"\"\n    total = 0.5 * np.dot(masses, np.einsum(\"ij,ij->i\", velocities, velocities))\n    for rows, _, inverse in interactions(\n        positions, masses, gravity, softening, block_size\n    ):\n        total -= 0.5 * gravity * np.dot(masses[rows], inverse @ masses)\n    return float(total)\n\n\ndef initial_state(args):\n    if args.input is not None:\n        with np.load(args.input, allow_pickle=False) as data:\n            arrays = []\n            for name in (\"masses\", \"positions\", \"velocities\"):\n                value = data[name]\n                if value.dtype.kind not in \"fiu\":\n                    raise ValueError(f\"{name} must contain real numbers\")\n                arrays.append(np.array(value, dtype=np.float64, order=\"C\"))\n            return tuple(arrays)\n\n    rng = np.random.default_rng(args.seed)\n    masses = np.full(args.bodies, 1.0 / args.bodies)\n    positions = rng.normal(size=(args.bodies, 3))\n    velocities = rng.normal(scale=0.25 * math.sqrt(args.gravity), size=positions.shape)\n    positions -= np.average(positions, axis=0, weights=masses)\n    velocities -= np.average(velocities, axis=0, weights=masses)\n    return masses, positions, velocities\n\n\ndef main():\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument(\"--input\", type=Path, help=\"initial state NPZ\")\n    parser.add_argument(\"--output\", type=Path, help=\"write final state as NPZ\")\n    parser.add_argument(\"--bodies\", type=int, default=64, help=\"generated particle count\")\n    parser.add_argument(\"--seed\", type=int, default=42)\n    parser.add_argument(\"--steps\", type=int, default=1000)\n    parser.add_argument(\"--dt\", type=float, default=0.002, help=\"fixed timestep\")\n    parser.add_argument(\"--gravity\", type=float, default=1.0, help=\"gravitational constant\")\n    parser.add_argument(\"--softening\", type=float, default=0.05, help=\"softening length\")\n    parser.add_argument(\"--block-size\", type=int, default=128, help=\"targets per force batch\")\n    args = parser.parse_args()\n\n    if args.steps < 0 or args.seed < 0:\n        parser.error(\"steps and seed must be nonnegative\")\n    if args.block_size < 1 or args.bodies < 1:\n        parser.error(\"block-size and bodies must be positive\")\n    if not all(math.isfinite(x) and x > 0 for x in (args.dt, args.gravity, args.softening)):\n        parser.error(\"dt, gravity, and softening must be finite and positive\")\n\n    try:\n        with np.errstate(over=\"raise\", divide=\"raise\", invalid=\"raise\"):\n            masses, positions, velocities = initial_state(args)\n            validate(masses, positions, velocities)\n            params = (masses, args.gravity, args.softening, args.block_size)\n            initial_energy = energy(positions, velocities, *params)\n            accel = acceleration(positions, *params)\n            half_dt = 0.5 * args.dt\n            for _ in range(args.steps):\n                velocities += half_dt * accel\n                positions += args.dt * velocities\n                accel = acceleration(positions, *params)\n                velocities += half_dt * accel\n            final_energy = energy(positions, velocities, *params)\n            elapsed = args.steps * args.dt\n            if args.output is not None:\n                with args.output.open(\"wb\") as stream:\n                    np.savez_compressed(\n                        stream, masses=masses, positions=positions,\n                        velocities=velocities, time=elapsed, dt=args.dt,\n                        gravity=args.gravity, softening=args.softening,\n                    )\n            print(f\"time={elapsed:.10g} energy={final_energy:.12g} \"\n                  f\"energy_change={final_energy - initial_energy:.6g}\")\n    except (ValueError, KeyError, OSError, FloatingPointError, OverflowError) as exc:\n        print(f\"{parser.prog}: {exc}\", file=sys.stderr)\n        return 1\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 37,
+  "completion_tokens": 1440,
+  "total_tokens": 1477,
+  "cost": 0.057896,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.057896,
+   "upstream_inference_prompt_cost": 0.000296,
+   "upstream_inference_completions_cost": 0.0576
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

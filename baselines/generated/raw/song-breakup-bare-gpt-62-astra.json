@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "bare",
+ "prompt": "Write the lyrics of a pop song about a breakup. Output only the lyrics.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 900,
+ "id": "song-breakup-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "You came by Sunday for the last of your things,\nLeft me the toaster that burns everything.\nYou took the good speakers, I kept the tapes.\nWe laughed for a second like nothing had changed.\n\nI almost said, “Stay for a coffee or two.”\nThe kettle was on out of habit for you.\n\nNow I’m turning up the radio,\nSinging all the parts you used to know.\nWhen your high note comes, I sing it low.\nI’m learning how the other half goes.\nAnd I miss you, but I let you go.\nI’m learning how the other half goes.\n\nI went out Friday in the jacket you hate,\nGot caught in the rain, got home pretty late.\nFor once I forgot to check my phone,\nThen wanted to tell you the whole walk home.\n\nSome nights I still set a place there for two.\nSome nights I eat cherries and call it good food.\n\nAnd I’m turning up the radio,\nSinging all the parts you used to know.\nWhen your high note comes, I sing it low.\nI’m learning how the other half goes.\nAnd I miss you, but I let you go.\nI’m learning how the other half goes.\n\nMaybe somewhere at a red light\nYou hear that same guitar.\nMaybe you still leave a little air\nWhere I come in with my part.\n\nI’m turning up the radio,\nSinging all the parts you used to know.\nWhen your high note comes, I let it go.\nThere's a drumbeat underneath it\nI never heard before.\nI miss you, but I sing it low.\nI’m learning how the other half goes.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 22,
+  "completion_tokens": 332,
+  "total_tokens": 354,
+  "cost": 0.013456,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.013456,
+   "upstream_inference_prompt_cost": 0.000176,
+   "upstream_inference_completions_cost": 0.01328
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

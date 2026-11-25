@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-android",
+ "style": "matched",
+ "prompt": "Write an essay titled “The Android lockdown seems under-theorized”. It is about Google's plan to stop Android phones from running apps whose developers have not registered with Google, and argues that the debate over it lacks a clear theory. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "matched_to": "blogs-tech/dynomight-android",
+ "id": "essay-m-android-matched-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "The most revealing thing about Google’s plan to require Android developers to register before their apps can ordinarily be installed on certified devices is how quickly the argument turns into a dispute over the word “open.” Google says Android will remain open because developers can still distribute apps outside the Play Store. Critics say a platform is not open if its owner decides whose software may run on it. Both claims can be true under different definitions. What’s missing is an account of who should have the authority to make that decision in the first place.\n\nGoogle has identified a real problem. A scammer can persuade someone to install an app that impersonates a bank, then vanish and reappear under another name. Verifying developers’ identities can raise the cost of doing that, particularly if Google can link repeat offenders to previously registered accounts. And the familiar response that users should simply know better is inadequate. Fraud works because people make decisions under pressure, often while taking instructions from someone they believe is trying to help them. A phone that offers no protection at the moment of installation is not necessarily doing its owner a favor.\n\nBut identity verification is an oddly indirect answer to the question a user cares about: Is this app safe? An identified developer can write malicious software; an unidentified one can write excellent software. More importantly, the public need not know a developer’s legal name to establish that a new release comes from the same person who published the last one. Cryptographic signatures already furnish that kind of continuity. Registration adds a different property: an intermediary can connect a signing identity to a person or organization and act against future releases. That may be useful. It also means the proposal is about who can enforce rules, not just how users can recognize software.\n\nThis distinction gets lost when sideloading is described as a single risky behavior. Installing an app sent by a stranger during a supposed call from your bank is one thing. Installing a tool you compiled yourself, an app distributed by your employer, or a release from a small open-source project is another. These actions may look similar to the operating system, but they involve different relationships of trust. The interesting design question is whether Android can distinguish among them well enough to interrupt the first without making the others contingent on a standing relationship with Google.\n\nThat is why the details of any exception matter more than the mere fact that one exists. An advanced installation option can preserve meaningful owner control while keeping the ordinary path safer. It can also be so obscure, fragile, or burdensome that it preserves little beyond a talking point. Nor does a usable exception settle everything: if installing an independent app requires ordinary users to navigate a ceremony they reasonably associate with danger, the app may remain technically available while losing much of its audience. The relevant test is not whether a determined engineer can get an app onto one phone. It is whether independent distribution remains a practical way for developers to reach willing users.\n\nCritics, for their part, need a better theory than “my phone, my rules.” People buy phones partly to delegate decisions they cannot reasonably make themselves. They expect the operating system to isolate apps, restrict access to sensitive data, and make some dangerous actions difficult. The case for owner control cannot depend on pretending that every security boundary is an affront to ownership. It has to explain which decisions users can delegate by default without giving them up altogether. A reasonable place to draw the line is between allowing Google to set protective defaults and allowing it to make itself the indispensable authority over who can publish software for the device.\n\nThat line also suggests what evidence would improve the debate. How much fraud depends on unregistered developers, rather than on verified accounts, stolen identities, or abuse of legitimate apps? How much does identity verification help compared with more targeted interventions, such as restricting sensitive permissions for newly installed apps or interrupting installation when a user appears to be following instructions during a call? What recourse would developers have if verification failed? And could the same infrastructure later be used to enforce rules unrelated to fraud? None of these questions proves the policy unjustified. They establish what Google would need to show to justify it.\n\nAndroid’s significance was never that it left every decision to the user. It was that buying an Android phone did not necessarily mean accepting a single institution’s judgment about which software was worth running. Google can make a strong case for standing between a scammer and a victim. It has a harder case to make for standing, by default, between every independent developer and every willing user. Until the debate distinguishes those roles, “security” and “openness” will remain labels for the two sides rather than explanations of what either side is entitled to demand.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 66,
+  "completion_tokens": 933,
+  "total_tokens": 999,
+  "cost": 0.009462,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009462,
+   "upstream_inference_prompt_cost": 0.000132,
+   "upstream_inference_completions_cost": 0.00933
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

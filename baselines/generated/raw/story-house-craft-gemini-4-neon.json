@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-house",
+ "style": "craft",
+ "prompt": "Write a short story of about 800 words. Premise: two siblings clearing out their late mother's house.\n\nWrite it as a fine literary short-story writer would. Open in the middle of a particular moment, not with scene-setting or weather. Give each character a want that is never stated. Let the important thing happen slightly off the page or in what goes unsaid, and trust the reader. Use precise, unglamorous physical detail in place of adjectives; dialogue people would actually say, oblique and at cross purposes; and at least one turn the premise does not predict. Choose names a census would contain. No sentence that explains what a moment meant, and no ending on a lesson, a reconciliation or a sunrise.\n\nOutput only the story, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "story-house-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "The hinge on the spice cabinet had two loose screws, and Paul was tightening them with the tip of a butter knife. He had to stand on the green vinyl step-stool to reach, his knees pressed against the edge of the laminate counter.\n\nBehind him, Diane pulled a black contractor bag open with a snap. She began sweeping cans off the pantry shelves with her forearm—cream of mushroom, sliced beets, dented tins of mandarin oranges—letting them drop into the plastic with dull thuds.\n\n\"The guy from the estate place said four,\" she said.\n\n\"I'm almost done with this,\" Paul said. The blade of the knife slipped from the slot and gouged a crescent into the painted wood.\n\n\"They're going to gut the kitchen anyway, Paul. The realtor said nobody keeps these cabinets.\"\n\n\"They're solid birch.\"\n\n\"They're painted yellow.\" She reached for a box of saltines, shook it, and dropped it into the bag. Her phone buzzed on the counter beside the toaster. She looked at the screen, pressed the side button to silence it, and flipped it face down. On the ring finger of her left hand, a pale band of skin showed where the tan stopped.\n\nPaul stepped down from the stool and set the butter knife in the sink. \"Did you look in the garage yet?\"\n\n\"I'm not going in the garage until we finish in here. If we don't have the downstairs cleared by Tuesday, we lose the early closing.\"\n\n\"Tuesday's four days away.\"\n\n\"I have to be back in Columbus on Wednesday, Paul. Some of us have to work.\"\n\n\"I took the week off,\" he said, though he hadn't. He had just stopped answering the dispatcher's texts on Thursday. He picked up a roll of blue painter's tape from the table and began peeling the edge with his thumbnail. \"I thought we could keep the dining room chairs. Put them in storage.\"\n\n\"Who's paying for storage?\"\n\n\"I can pay for storage.\"\n\nDiane tied the contractor bag in a double knot and dragged it toward the mudroom. \"You didn't even pay for the flowers.\"\n\n\"You put them on your card before I got there.\"\n\nThe deadbolt on the side door clicked. Neither of them moved. The brass knob turned, and the door swung inward, scraping over the braided rug.\n\nA man in a tan windbreaker stepped inside. He was in his seventies, with a flat gray buzzcut and a folded Kroger bag tucked under his arm. He stopped when he saw Diane holding the trash bag, then looked past her at Paul.\n\n\"I thought you kids weren't coming till the third,\" the man said.\n\nDiane let go of the plastic. \"Excuse me?\"\n\n\"Ray,\" he said, as if that cleared it up. He bent down, unlaced his walking shoes, and set them neatly on the rubber mat beside the door. He was wearing thick white athletic socks with gray heels. \"I didn't mean to get in your way. I just need to grab a couple things.\"\n\n\"Who are you?\" Diane asked.\n\n\"From down on Elm,\" Ray said. He walked past her into the hallway, moving with the unhurried familiarity of someone who knew which floorboards creaked.\n\nPaul followed him to the mouth of the hall. He watched Ray step into the bathroom and emerge a moment later with a blue plastic razor and a half-empty tube of Colgate. Ray dropped them into the Kroger bag and continued to the back bedroom.\n\nPaul leaned against the doorframe. The bed was stripped to the ticking, the mattress stained in one corner with an old brown ring. Ray knelt, reached under the bedframe, and pulled out a pair of gray New Balances. He stood up, blowing a little through his nose, and opened the closet. From the left side, he took a red plaid flannel shirt off a wire hanger and folded it over his arm.\n\n\"She had my extra glasses in the nightstand,\" Ray said, not looking at Paul. He pulled the top drawer open, lifted a hard black case from beside a stack of crossword books, and put it in the bag.\n\n\"How long?\" Paul asked.\n\nRay zipped the top of his windbreaker halfway up. \"She didn't like the furnace making that clicking sound,\" he said. \"I told her to call the guy, she wouldn't do it. Said he charged too much just to walk in the door.\"\n\nHe walked back down the hall, Paul stepping aside to let him pass. In the kitchen, Diane was standing by the sink with her arms crossed. Ray didn't look at her. He sat on the edge of a dining chair to put his shoes back on, tying them in slow, double loops.\n\nWhen he stood, he reached into his windbreaker pocket and laid a brass key on the counter next to the toaster.\n\n\"The back gate sticks if you don't lift it,\" he said. \"You have to pull up on the latch.\"\n\nHe opened the side door, stepped out, and pulled it shut behind him. Through the small square of glass, Paul watched him walk down the concrete drive, the Kroger bag swinging lightly against his knee, until he turned the corner behind the hedges.\n\nIn the kitchen, the refrigerator hummed and then clicked off. Diane's phone vibrated against the laminate, two short pulses, then stopped. She didn't look at it. She picked up the brass key, pulled the junk drawer open, and dropped it in among the rubber bands and old batteries.\n\nPaul climbed back onto the green vinyl stool. He reached into the sink, retrieved the butter knife, and fit the tip into the second screw on the spice cabinet. He turned it until the wood inside gave way and the screw spun freely in the hole.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 197,
+  "completion_tokens": 3785,
+  "total_tokens": 3982,
+  "cost": 0.057366,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.057366,
+   "upstream_inference_prompt_cost": 0.000591,
+   "upstream_inference_completions_cost": 0.056775
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2559,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

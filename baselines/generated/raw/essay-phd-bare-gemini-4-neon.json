@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-phd",
+ "style": "bare",
+ "prompt": "Write an essay of advice for a new PhD student on choosing a research problem. About 800 words. Output only the essay, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-phd-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "For most of your academic life, problems have been handed to you. They arrived neatly packaged at the end of textbook chapters or on exam sheets, carrying the quiet reassurance that a correct answer existed and that you possessed the tools to find it. Beginning a PhD shatters that arrangement. Suddenly, you are asked to step off the mapped terrain and decide for yourself what is worth investigating. Choosing a research problem is often the most disorienting hurdle of graduate school, precisely because it marks your transition from a consumer of knowledge to a producer of it. Navigating this choice requires a blend of ambition, pragmatism, and patience.\n\nThe first and most difficult balance to strike is between significance and feasibility. New doctoral students often gravitate toward one of two extremes. Some want to solve the grand, foundational mysteries of their discipline in a single bound, only to find themselves paralyzed by the sheer scale of the task. Others, terrified of failure, choose safe, incremental questions that are easy to answer but ultimately leave the field unchanged. The ideal research problem lives in the narrow space between these poles. It should be substantial enough that its resolution genuinely matters to other scholars, yet constrained enough that you can make meaningful progress within the finite window of a graduate degree. A good rule of thumb is to look for a problem that can be broken down into a series of smaller, tractable questions. If your grand vision stalls, those smaller milestones will still yield valuable insights and keep you moving forward.\n\nEqually important is resisting the gravitational pull of academic hype. Every field has its fashionable buzzwords—the hot methods or trendy topics that dominate conference panels and grant announcements. While it is wise to be aware of where your discipline is heading, chasing a trend solely because it is popular is a perilous strategy. Hype cycles move quickly, and a topic that feels urgent in your first year may feel saturated or obsolete by your fifth. More importantly, a PhD is a marathon of setbacks. Experiments will fail, archives will prove empty, and drafts will be torn apart. When you hit those inevitable walls, external validation will not be enough to keep you going. You need genuine, stubborn curiosity. Choose a problem that genuinely bothers you—a puzzle you find yourself turning over in your mind while walking to the grocery store. If you care deeply about the question, you will have the resilience to endure the tedium required to answer it.\n\nThat said, your curiosity should not operate in a vacuum. A PhD is an apprenticeship, and your choice of problem should be deeply informed by your environment, particularly your advisor. It is tempting to assert your independence early by staking out territory entirely outside your advisor’s expertise. Resist this urge. Your advisor’s knowledge, network, and funding are your greatest assets. A problem that aligns with their core strengths means you will receive sharper feedback, better resources, and a clearer path to publication. The goal is not to become a clone of your advisor, nor to work in total isolation, but to find the intersection where their expertise meets your own emerging interests. Talk to senior graduate students and postdocs in your department, too; they often have the clearest sense of which local problems are fertile ground and which are notorious swamps.\n\nFinally, liberate yourself from the myth that you must discover a fully formed, pristine dissertation topic in your first year. Good research problems are rarely found; they are sculpted. Your initial idea is merely a starting point—a hypothesis about what might be interesting. Immerse yourself in the literature, not just to memorize what is known, but to notice the unspoken assumptions, the nagging contradictions, and the quiet gaps that other researchers have stepped over. Run small pilot studies, write exploratory memos, and test your ideas in conversations. Pay close attention to what surprises you. Often, the most compelling research problem is hiding inside a minor anomaly or a failed experiment that refuses to behave as expected. Give yourself permission to pivot when the evidence points in a more promising direction.\n\nAbove all, remember what a dissertation actually is. It is not meant to be your life’s magnum opus, nor the final word on your subject. It is your training ground—a structured opportunity to learn the craft of asking hard questions and answering them rigorously. Do not let the search for the \"perfect\" problem keep you from starting. Choose a question that is meaningful, manageable, and genuinely intriguing to you, surround yourself with people who can help you sharpen it, and begin the work. The clarity you are looking for will not come before you start; it will come because you did.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 67,
+  "completion_tokens": 2062,
+  "total_tokens": 2129,
+  "cost": 0.031131,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.031131,
+   "upstream_inference_prompt_cost": 0.000201,
+   "upstream_inference_completions_cost": 0.03093
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1139,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

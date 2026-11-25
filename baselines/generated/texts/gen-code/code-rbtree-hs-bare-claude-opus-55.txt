@@ -1,0 +1,208 @@
+{-# LANGUAGE Safe #-}
+
+-- |
+-- Module      : Data.RedBlackTree
+-- Description : Persistent (purely functional) red-black trees
+-- Stability   : stable
+-- Portability : portable
+--
+-- A persistent set implemented as a red-black tree, following
+-- Okasaki's \"Red-Black Trees in a Functional Setting\" (JFP, 1999).
+--
+-- All operations are purely functional. Older versions of a tree stay
+-- valid and unchanged after an insertion.
+--
+-- Complexity:
+--
+-- * 'insert' : /O(log n)/
+-- * 'member' : /O(log n)/
+-- * 'toList' : /O(n)/
+--
+-- Invariants maintained by every exported operation:
+--
+-- 1. No red node has a red child.
+-- 2. Every path from the root to an empty leaf contains the same
+--    number of black nodes.
+-- 3. The root is black.
+-- 4. An in-order traversal yields elements in strictly ascending order.
+module Data.RedBlackTree
+  ( -- * Type
+    RBTree
+    -- * Construction
+  , empty
+  , singleton
+  , insert
+  , fromList
+    -- * Query
+  , member
+  , size
+    -- * Conversion
+  , toList
+    -- * Debugging
+  , valid
+  ) where
+
+import Data.List (foldl')
+
+------------------------------------------------------------------------
+-- Representation
+
+-- | Node colour.
+data Color = R | B
+  deriving (Eq, Show)
+
+-- | A persistent set of elements of type @a@, stored as a red-black tree.
+--
+-- The structure is strict in its spine and its elements.
+data RBTree a
+  = E
+  | T !Color !(RBTree a) !a !(RBTree a)
+
+------------------------------------------------------------------------
+-- Instances
+
+instance Eq a => Eq (RBTree a) where
+  t1 == t2 = toList t1 == toList t2
+
+instance Ord a => Ord (RBTree a) where
+  compare t1 t2 = compare (toList t1) (toList t2)
+
+instance Show a => Show (RBTree a) where
+  showsPrec d t =
+    showParen (d > 10) $ showString "fromList " . shows (toList t)
+
+instance Foldable RBTree where
+  foldr f z0 t0 = go t0 z0
+    where
+      go E acc             = acc
+      go (T _ l x r) acc   = go l (f x (go r acc))
+  {-# INLINE foldr #-}
+
+  null E = True
+  null _ = False
+
+  length = size
+
+------------------------------------------------------------------------
+-- Construction
+
+-- | /O(1)/. The empty tree.
+empty :: RBTree a
+empty = E
+{-# INLINE empty #-}
+
+-- | /O(1)/. A tree containing exactly one element.
+singleton :: a -> RBTree a
+singleton x = T B E x E
+{-# INLINE singleton #-}
+
+-- | /O(log n)/. Insert an element into the tree. If an equal element is
+-- already present, the original tree is returned unchanged, so no
+-- structure is copied.
+insert :: Ord a => a -> RBTree a -> RBTree a
+insert x t = blacken (ins t)
+  where
+    ins E = T R E x E
+    ins node@(T c l y r) =
+      case compare x y of
+        LT -> balanceL c (ins l) y r
+        GT -> balanceR c l y (ins r)
+        EQ -> node
+{-# INLINABLE insert #-}
+
+-- | /O(n log n)/. Build a tree from a list of elements. Duplicates are
+-- discarded.
+fromList :: Ord a => [a] -> RBTree a
+fromList = foldl' (flip insert) empty
+{-# INLINABLE fromList #-}
+
+------------------------------------------------------------------------
+-- Query
+
+-- | /O(log n)/. Test whether an element is present in the tree.
+member :: Ord a => a -> RBTree a -> Bool
+member x = go
+  where
+    go E = False
+    go (T _ l y r) =
+      case compare x y of
+        LT -> go l
+        GT -> go r
+        EQ -> True
+{-# INLINABLE member #-}
+
+-- | /O(n)/. The number of elements in the tree.
+size :: RBTree a -> Int
+size = go 0
+  where
+    go !acc E           = acc
+    go !acc (T _ l _ r) = go (go (acc + 1) l) r
+
+------------------------------------------------------------------------
+-- Conversion
+
+-- | /O(n)/. The elements of the tree in ascending order.
+toList :: RBTree a -> [a]
+toList t0 = go t0 []
+  where
+    go E acc           = acc
+    go (T _ l x r) acc = go l (x : go r acc)
+{-# INLINE toList #-}
+
+------------------------------------------------------------------------
+-- Internal balancing
+
+-- | Recolour the root black. Applied after every insertion to restore
+-- invariant 3.
+blacken :: RBTree a -> RBTree a
+blacken (T R l x r) = T B l x r
+blacken t           = t
+{-# INLINE blacken #-}
+
+-- | Rebalance after inserting into the left subtree. Only the two
+-- left-leaning red-red configurations can occur there.
+balanceL :: Color -> RBTree a -> a -> RBTree a -> RBTree a
+balanceL B (T R (T R a x b) y c) z d = T R (T B a x b) y (T B c z d)
+balanceL B (T R a x (T R b y c)) z d = T R (T B a x b) y (T B c z d)
+balanceL c l x r                     = T c l x r
+{-# INLINE balanceL #-}
+
+-- | Rebalance after inserting into the right subtree. Only the two
+-- right-leaning red-red configurations can occur there.
+balanceR :: Color -> RBTree a -> a -> RBTree a -> RBTree a
+balanceR B a x (T R (T R b y c) z d) = T R (T B a x b) y (T B c z d)
+balanceR B a x (T R b y (T R c z d)) = T R (T B a x b) y (T B c z d)
+balanceR c l x r                     = T c l x r
+{-# INLINE balanceR #-}
+
+------------------------------------------------------------------------
+-- Debugging
+
+-- | /O(n)/. Check all red-black and ordering invariants. Meant for
+-- testing. Every tree built through the public API satisfies this.
+valid :: Ord a => RBTree a -> Bool
+valid t = rootBlack t && noRedRed t && balancedBlack t && ordered (toList t)
+  where
+    rootBlack E           = True
+    rootBlack (T c _ _ _) = c == B
+
+    noRedRed E = True
+    noRedRed (T R l _ r) | isRed l || isRed r = False
+    noRedRed (T _ l _ r) = noRedRed l && noRedRed r
+
+    isRed (T R _ _ _) = True
+    isRed _           = False
+
+    balancedBlack = maybe False (const True) . blackHeight
+
+    blackHeight :: RBTree a -> Maybe Int
+    blackHeight E = Just 1
+    blackHeight (T c l _ r) = do
+      hl <- blackHeight l
+      hr <- blackHeight r
+      if hl /= hr
+        then Nothing
+        else Just (hl + if c == B then 1 else 0)
+
+    ordered (x : rest@(y : _)) = x < y && ordered rest
+    ordered _                  = True

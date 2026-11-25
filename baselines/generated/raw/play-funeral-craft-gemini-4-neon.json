@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-funeral",
+ "style": "craft",
+ "prompt": "Write a scene for a stage play, about 700 words. Situation: two estranged brothers meet at their father's funeral.\n\nWrite it as a skilled playwright would. Each character wants something from the other and will not say what; the scene is the manoeuvring. Lines should be short and speakable, with people cutting across each other, changing the subject, answering the question they wish they had been asked. Keep stage directions few and physical. Let one object on stage matter. No speech that explains a feeling or a history, and no tidy resolution: end on an action or a line that leaves the question open.\n\nFormat: character names in capitals on their own line, the speech on the next line, stage directions in parentheses. Output only the script, with no title or cast list.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1500,
+ "id": "play-funeral-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "(A small side room. A folding table, two chairs. PAUL stands by the window in a dark coat. MARK enters, carrying two paper cups. He sets them down, then drops a heavy bunch of keys on a brass fob onto the table.)\n\nMARK\nMilk, no sugar.\n\nPAUL\nStill black.\n\nMARK\nThought you’d gone off it.\n\nPAUL\nNo.\n\nMARK\nCarol’s asking where you’re parked.\n\nPAUL\nDown by the bridge.\n\nMARK\nYou’ll get a ticket there.\n\nPAUL\nIt’s a Sunday.\n\nMARK\nNot on the yellow, it isn’t. They’ve got a van now. Cameras on the roof.\n\nPAUL\n(Turns from the window.)\nGood turnout.\n\nMARK\nHalf of them came for the sandwiches.\n\nPAUL\nThe vicar knew him, then.\n\nMARK\nMet him Tuesday.\n\nPAUL\nRight.\n\nMARK\nI gave him the dates. Told him about the navy. He got the ship wrong, did you notice?\n\nPAUL\nI wasn’t listening.\n\nMARK\nWell, you wouldn’t.\n\n(PAUL walks to the table. He looks at the keys, doesn't touch them.)\n\nPAUL\nQuick, was it?\n\nMARK\nThe service?\n\nPAUL\nThe end.\n\nMARK\n(Sits.)\nRoof’s gone on the back extension.\n\nPAUL\nRight.\n\nMARK\nNot the whole thing. Just the felt. Water’s coming in over the boiler.\n\nPAUL\nYou should get someone in.\n\nMARK\nI had a bloke out. Wants four grand.\n\nPAUL\nThat’s steep.\n\nMARK\nThat’s what they charge now. You wouldn’t know, renting.\n\nPAUL\nI bought a place. Two years ago.\n\nMARK\n(Pause.)\nDid you.\n\nPAUL\nNear the station.\n\nMARK\nGood for you.\n\nPAUL\nHe didn’t say?\n\nMARK\nWho?\n\nPAUL\nI sent a card. With the address on it.\n\nMARK\nHe didn’t open the post. Not since Easter. There’s a stack of it in the hall, up to your knee.\n\n(MARK nudges the keys an inch toward PAUL.)\n\nPAUL\nWas he awake? At the end.\n\nMARK\nOn and off.\n\nPAUL\nDid he know who—\n\nMARK\nThe solicitor’s in on Thursday.\n\nPAUL\nI’m back on the train tonight.\n\nMARK\nThursday morning, ten o’clock. It’s just signatures.\n\nPAUL\nPost them to me.\n\nMARK\nShe wants us both there.\n\nPAUL\nTell her I’m in Leeds.\n\nMARK\nYou’re not in Leeds, you’re standing in front of me.\n\nPAUL\n(Picks up a paper cup, sets it down.)\nShe’s a nurse, was she? The woman in the green hat.\n\nMARK\nFrom the home.\n\nPAUL\nShe looked upset.\n\nMARK\nShe’s like that. Cries at the telly.\n\nPAUL\nHe liked her, then.\n\nMARK\nHe threw a slipper at her on Monday.\n\nPAUL\n(Smiles, briefly.)\nSounds like him.\n\nMARK\nDidn’t miss, either.\n\n(A beat. PAUL sits opposite MARK.)\n\nPAUL\nDid he have his glasses on?\n\nMARK\nWhat?\n\nPAUL\nIn the bed. He hated not having them.\n\nMARK\nI don’t know, Paul. I was sorting the car.\n\nPAUL\nYou weren’t there?\n\nMARK\nI was in the car park. Getting a ticket. You have to put the reg in now, the machine wouldn’t take my card.\n\nPAUL\nRight.\n\nMARK\nI was gone ten minutes.\n\nPAUL\nI’m not—\n\nMARK\nI was there every bloody day for six months.\n\nPAUL\nI know you were.\n\nMARK\nDon’t sit there and ask me about his glasses.\n\n(Silence. MARK rubs his face. He looks at the keys.)\n\nMARK\nThe bank’s been ringing.\n\nPAUL\nAbout what?\n\nMARK\nThe yard. He never cleared the lease.\n\nPAUL\nI thought he sold the yard.\n\nMARK\nHe sold the vans. Kept the lease. God knows why.\n\nPAUL\nHow much?\n\nMARK\nEnough.\n\n(PAUL looks at the keys. MARK watches him.)\n\nPAUL\nHe had a box. In the wardrobe.\n\nMARK\nIt’s all still there. I haven’t touched a thing.\n\nPAUL\nGreen tin.\n\nMARK\nYou want to go up there? After this?\n\nPAUL\nI’ve got the six-twenty.\n\nMARK\nThere’s an eight-fifteen.\n\nPAUL\nI’ve got work tomorrow, Mark.\n\nMARK\nI’ve got work tomorrow.\n\nPAUL\n(Stands.)\nI should go say hello to Carol.\n\nMARK\nShe’s not going anywhere.\n\nPAUL\nDid he ask?\n\nMARK\nWhat?\n\nPAUL\nBefore Monday. Before the slipper.\n\n(MARK looks at him for a long moment.)\n\nMARK\nHe asked if the dog was fed.\n\nPAUL\nWe haven’t had a dog since—\n\nMARK\nI know when we had a dog.\n\n(PAUL buttons his coat.)\n\nMARK\nTake them.\n\nPAUL\nI can’t do Thursday.\n\nMARK\nI’m not asking about Thursday. Just go up there. Get your green tin. Have a look at the boiler.\n\nPAUL\nI don’t know anything about boilers.\n\nMARK\nNeither do I.\n\n(MARK stands. He walks to the door, stops with his hand on the handle.)\n\nMARK\nThey’re bringing the tea out.\n\nPAUL\nI’ll be there in a minute.\n\nMARK\nHe didn’t say your name, Paul. If that’s what you’re waiting for.\n\n(MARK opens the door, leaves it ajar, and goes out. PAUL stands by the table. He looks at the keys. He reaches out, rests his fingertips on the brass fob, and leaves them there.)",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 199,
+  "completion_tokens": 2806,
+  "total_tokens": 3005,
+  "cost": 0.042687,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.042687,
+   "upstream_inference_prompt_cost": 0.000597,
+   "upstream_inference_completions_cost": 0.04209
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1494,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

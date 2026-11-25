@@ -1,0 +1,174 @@
+// Command dupes walks a directory tree and reports files that share the same
+// content hash. It streams file contents through a cryptographic hash so large
+// files are not loaded entirely into memory, and it groups candidates by size
+// before hashing so unique sizes are never read.
+package main
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"flag"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+func main() {
+	root := flag.String("root", ".", "directory to scan")
+	follow := flag.Bool("follow", false, "follow symbolic links to files (not directories)")
+	minSize := flag.Int64("min-size", 1, "ignore files smaller than this many bytes")
+	algoNote := flag.String("hash", "sha256", "hash algorithm (only sha256 is supported)")
+	flag.Parse()
+
+	if *algoNote != "sha256" {
+		fmt.Fprintf(os.Stderr, "unsupported hash %q (only sha256)\n", *algoNote)
+		os.Exit(2)
+	}
+
+	abs, err := filepath.Abs(*root)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "root: %v\n", err)
+		os.Exit(1)
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "root: %v\n", err)
+		os.Exit(1)
+	}
+	if !info.IsDir() {
+		fmt.Fprintf(os.Stderr, "root is not a directory: %s\n", abs)
+		os.Exit(1)
+	}
+
+	groups, walkErrs, err := findDuplicates(abs, *follow, *minSize)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "scan: %v\n", err)
+		os.Exit(1)
+	}
+	for _, e := range walkErrs {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", e)
+	}
+
+	if len(groups) == 0 {
+		fmt.Println("no duplicates")
+		return
+	}
+
+	keys := make([]string, 0, len(groups))
+	for h := range groups {
+		keys = append(keys, h)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		gi, gj := groups[keys[i]], groups[keys[j]]
+		if gi[0].size != gj[0].size {
+			return gi[0].size > gj[0].size
+		}
+		return keys[i] < keys[j]
+	})
+
+	for _, h := range keys {
+		files := groups[h]
+		sort.Slice(files, func(i, j int) bool { return files[i].path < files[j].path })
+		fmt.Printf("%s  size=%d  count=%d\n", h, files[0].size, len(files))
+		for _, f := range files {
+			fmt.Printf("  %s\n", f.path)
+		}
+	}
+}
+
+type fileRec struct {
+	path string
+	size int64
+}
+
+func findDuplicates(root string, follow bool, minSize int64) (map[string][]fileRec, []error, error) {
+	bySize := make(map[int64][]string)
+	var walkErrs []error
+
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			walkErrs = append(walkErrs, fmt.Errorf("%s: %w", path, err))
+			if d != nil && d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		// Never descend through directory symlinks (WalkDir does not follow them).
+		info, err := d.Info()
+		if err != nil {
+			walkErrs = append(walkErrs, fmt.Errorf("%s: %w", path, err))
+			return nil
+		}
+		mode := info.Mode()
+		if mode&os.ModeSymlink != 0 {
+			if !follow {
+				return nil
+			}
+			fi, err := os.Stat(path)
+			if err != nil {
+				walkErrs = append(walkErrs, fmt.Errorf("%s: %w", path, err))
+				return nil
+			}
+			if !fi.Mode().IsRegular() {
+				return nil
+			}
+			info = fi
+		} else if !mode.IsRegular() {
+			return nil
+		}
+		if info.Size() < minSize {
+			return nil
+		}
+		bySize[info.Size()] = append(bySize[info.Size()], path)
+		return nil
+	})
+	if err != nil {
+		return nil, walkErrs, err
+	}
+
+	out := make(map[string][]fileRec)
+	for size, paths := range bySize {
+		if len(paths) < 2 {
+			continue
+		}
+		byHash := make(map[string][]fileRec)
+		for _, p := range paths {
+			sum, err := hashFile(p)
+			if err != nil {
+				walkErrs = append(walkErrs, fmt.Errorf("%s: %w", p, err))
+				continue
+			}
+			byHash[sum] = append(byHash[sum], fileRec{path: p, size: size})
+		}
+		for h, recs := range byHash {
+			if len(recs) > 1 {
+				out[h] = recs
+			}
+		}
+	}
+	return out, walkErrs, nil
+}
+
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// silence unused import if build tags change; strings is used for future filters.
+var _ = strings.TrimSpace

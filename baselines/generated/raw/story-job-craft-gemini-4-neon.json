@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-job",
+ "style": "craft",
+ "prompt": "Write a short story of about 800 words. Premise: a first day at a new job.\n\nWrite it as a fine literary short-story writer would. Open in the middle of a particular moment, not with scene-setting or weather. Give each character a want that is never stated. Let the important thing happen slightly off the page or in what goes unsaid, and trust the reader. Use precise, unglamorous physical detail in place of adjectives; dialogue people would actually say, oblique and at cross purposes; and at least one turn the premise does not predict. Choose names a census would contain. No sentence that explains what a moment meant, and no ending on a lesson, a reconciliation or a sunrise.\n\nOutput only the story, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "story-job-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Ray’s left thumbnail was split down the center and held together with a strip of yellowed tape. He set the brass plate into the steel jaws of the vise and turned the crank until the metal gave a small, dry tick.\n\n“You don’t push it,” he said, guiding the brass stylus into the groove of the letter *K*. “You let the bit eat. Push it and you’ll snap the tip, and those cost twelve dollars a piece out of Chicago.”\n\nLinda stood half a step behind his elbow, her hands clasped in front of her skirt. The shop smelled of cutting oil and the sweet, dusty glue used on the velvet-lined presentation boxes. “Should I be writing the job numbers on the yellow copy or the white?”\n\n“Kowalski,” Ray said, squinting at the order slip taped to the wall. “Two *w*’s? No. One. If you spell a man’s name wrong on a twenty-five-year plaque, he won’t say anything at the banquet, he’ll just bring it back in here on a Tuesday and set it on the counter.”\n\n“I’ve got good spelling,” Linda said. “At the dentist’s office I did all the insurance coding.”\n\nRay didn’t look up. He traced the pantograph arm across the stencil, and the cutter whined, throwing up curls of gold dust no thicker than eyelashes. “Dentist’s office,” he said. “Why’d you leave?”\n\n“Dr. Mercer retired.”\n\n“People don’t stop having teeth.”\n\n“He sold the practice to a group out of Akron. They brought their own girls.”\n\nRay backed the stylus out, blew the brass dust off the plate, and wiped his mouth with the back of his wrist. He unlatched the vise and handed her the plate. It was still warm. *D. KOWALSKI — 25 YRS — DEPT. OF STREETS.*\n\n“Your turn,” he said. “There’s a stack of rejects in the shoebox. Do your own name until your hand stops shaking.”\n\nLinda’s hand wasn’t shaking, though the heels of her new flats had already rubbed two raw dimes into her skin. She took the stool. The vinyl cushion was cracked in a crescent, and gray foam poked through. She clamped a scrap of brass into the jaws and looked at the tray of metal letter tiles.\n\n“Do we take lunch at twelve?” she asked.\n\n“Whenever,” Ray said. He was already walking toward the front counter, where the bell above the glass door hung silent. “I’ve got to run the bowling trophies over to the lanes on Route 9 before the league secretary leaves. Don’t answer the phone if it’s a 440 area code. And don’t go in the stockroom. The ballast went out in the fixture.”\n\n“What if someone comes in for a pickup?”\n\n“Everything ready is on the green shelf. Cash or check. No Discover.” He lifted two cardboard boxes stacked with plastic figures—men in mid-stride, arms cocked back—and hip-checked the front door open. The bell rattled once against the glass.\n\nLinda sat at the machine and spelled *L-I-N-D-A* in the stencil track. She pulled the lever down and traced the grooves. The *L* came out clean, the *I* a hair too deep. Halfway through the *N*, the phone on the counter rang.\n\nShe looked at the caller ID. It was a local number, 330. She picked it up on the fourth ring.\n\n“Mercer—sorry. Valley Trophy.”\n\nThere was a pause, and the sound of a television turned down low in another room. “Is Ray there?” a woman asked.\n\n“He stepped out on a delivery. Can I take a message?”\n\n“Who is this?”\n\n“Linda. I just started today.”\n\nThe woman let out a breath that crackled against the receiver. “Tell him the mail’s in the box on the porch. I’m not bringing it inside anymore.”\n\n“I’ll write that—”\n\nThe line went dead. Linda set the handset back in the cradle and wrote *Mail in box on porch* on the back of a pink routing slip.\n\nShe went back to the bench and finished her name, then started on the walnut plaques for the high school track team. The third one needed brass brads to pin the plate to the wood, and the jar on the bench held only two.\n\nShe stood up, her heels stinging, and walked to the stockroom door. It wasn’t locked. She pushed it open with her shoulder and wedged a box of marble bases against the frame so the fluorescent light from the shop fell across the concrete floor.\n\nThe shelves of brads and glue were to her right. To her left, the long shipping table had been cleared of bubble wrap. At the far end sat a gray wool blanket folded into a neat square, and a pillow without a case. Under the utility sink, two brown socks hung over the copper drainpipe. On the porcelain rim sat a bar of Ivory soap, a plastic razor, and a tube of toothpaste rolled tight from the bottom.\n\nLinda reached to the right, took a fresh jar of brads off the shelf, and kicked the marble bases out of the doorway. The latch clicked shut behind her.\n\nAt quarter to three, the front bell rattled. Ray came in carrying a cardboard tray with two styrofoam cups of coffee. He set the tray on the counter, pried the lid off one cup, and looked over at the workbench.\n\nHis eyes stopped on the full jar of brads. He looked from the jar to the stockroom door, then back to the coffee.\n\n“Cream’s in the little packets,” he said. “Sugar too, if you take it.”\n\n“Thank you,” Linda said. She walked to the counter and laid the pink routing slip beside the tray. “A woman called while you were out. She didn’t leave a name.”\n\nRay read the slip without picking it up. He reached into his shirt pocket, took out a red pen, and drew a single line through the words. “The lanes want six more for the junior league,” he said. “Gold risers, six-inch. You think you can handle the assembly?”\n\n“Show me the first one,” Linda said.\n\nShe took her coffee back to the bench, sat down on the cracked vinyl, and reached for the crank on the vise.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 194,
+  "completion_tokens": 4698,
+  "total_tokens": 4892,
+  "cost": 0.071052,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.071052,
+   "upstream_inference_prompt_cost": 0.000582,
+   "upstream_inference_completions_cost": 0.07047
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 3318,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

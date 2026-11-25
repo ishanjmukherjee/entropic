@@ -1,0 +1,235 @@
+"""Daily sales seasonal forecasting pipeline using pandas and statsmodels."""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from statsmodels.tsa.holtwinters import ExponentialSmoothing, HoltWintersResults
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger("sales_forecast")
+
+
+@dataclass(frozen=True)
+class EvaluationMetrics:
+    """Container for forecast accuracy metrics."""
+
+    mae: float
+    rmse: float
+    mape: float
+
+
+def load_and_clean_sales(
+    filepath: Path,
+    date_col: str = "date",
+    sales_col: str = "sales",
+) -> pd.Series:
+    """Load daily sales CSV, aggregate duplicates, and impute missing dates/values."""
+    if not filepath.is_file():
+        raise FileNotFoundError(f"Input CSV not found: {filepath}")
+
+    logger.info("Loading sales data from %s", filepath)
+    df = pd.read_csv(filepath)
+
+    missing_cols = {date_col, sales_col} - set(df.columns)
+    if missing_cols:
+        raise ValueError(f"Missing required columns: {sorted(missing_cols)}")
+
+    df = df[[date_col, sales_col]].copy()
+    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+    df[sales_col] = pd.to_numeric(df[sales_col], errors="coerce")
+
+    invalid_dates = int(df[date_col].isna().sum())
+    if invalid_dates > 0:
+        logger.warning("Dropping %d rows with invalid dates", invalid_dates)
+        df = df.dropna(subset=[date_col])
+
+    if df.empty:
+        raise ValueError("No valid rows remain after parsing dates.")
+
+    # Aggregate multiple records per day and enforce a continuous daily index
+    daily = df.groupby(df[date_col].dt.normalize())[sales_col].sum(min_count=1)
+    daily = daily.sort_index()
+
+    full_index = pd.date_range(start=daily.index.min(), end=daily.index.max(), freq="D")
+    daily = daily.reindex(full_index)
+    daily.index.name = date_col
+    daily.name = sales_col
+
+    missing_values = int(daily.isna().sum())
+    if missing_values > 0:
+        logger.info("Imputing %d missing daily sales values via time interpolation", missing_values)
+        daily = daily.interpolate(method="time").bfill().ffill()
+
+    negative_count = int((daily < 0).sum())
+    if negative_count > 0:
+        logger.warning("Clipping %d negative daily sales values to 0.0", negative_count)
+        daily = daily.clip(lower=0.0)
+
+    logger.info(
+        "Cleaned series: %d days (%s to %s)",
+        len(daily),
+        daily.index.min().date(),
+        daily.index.max().date(),
+    )
+    return daily
+
+
+def fit_seasonal_model(
+    series: pd.Series,
+    seasonal_periods: int = 7,
+) -> HoltWintersResults:
+    """Fit an additive Holt-Winters seasonal exponential smoothing model."""
+    min_required = 2 * seasonal_periods
+    if len(series) < min_required:
+        raise ValueError(
+            f"Series length ({len(series)}) must be at least 2 * seasonal_periods ({min_required})."
+        )
+
+    model = ExponentialSmoothing(
+        series,
+        trend="add",
+        seasonal="add",
+        seasonal_periods=seasonal_periods,
+        initialization_method="estimated",
+    )
+    return model.fit(optimized=True)
+
+
+def evaluate_forecast(y_true: pd.Series, y_pred: pd.Series) -> EvaluationMetrics:
+    """Compute MAE, RMSE, and safe MAPE (excluding zero actuals)."""
+    aligned_true, aligned_pred = y_true.align(y_pred, join="inner")
+    if aligned_true.empty:
+        raise ValueError("No overlapping timestamps between actuals and predictions.")
+
+    errors = aligned_true - aligned_pred
+    mae = float(np.mean(np.abs(errors)))
+    rmse = float(np.sqrt(np.mean(errors**2)))
+
+    non_zero_mask = aligned_true != 0
+    if non_zero_mask.any():
+        mape = float(
+            np.mean(np.abs(errors[non_zero_mask] / aligned_true[non_zero_mask])) * 100.0
+        )
+    else:
+        mape = float("nan")
+
+    return EvaluationMetrics(mae=mae, rmse=rmse, mape=mape)
+
+
+def run_pipeline(
+    input_path: Path,
+    date_col: str,
+    sales_col: str,
+    seasonal_periods: int,
+    test_size: int,
+    horizon: int,
+    output_path: Path | None,
+) -> tuple[EvaluationMetrics, pd.DataFrame]:
+    """Execute end-to-end loading, cleaning, backtesting, and future forecasting."""
+    series = load_and_clean_sales(input_path, date_col=date_col, sales_col=sales_col)
+
+    min_train = 2 * seasonal_periods
+    if len(series) < min_train + test_size:
+        raise ValueError(
+            f"Insufficient data ({len(series)} days) for train ({min_train}) + test ({test_size})."
+        )
+
+    train = series.iloc[:-test_size]
+    test = series.iloc[-test_size:]
+
+    logger.info("Fitting evaluation model on %d training days", len(train))
+    eval_model = fit_seasonal_model(train, seasonal_periods=seasonal_periods)
+    test_preds = eval_model.forecast(steps=len(test))
+    metrics = evaluate_forecast(test, test_preds)
+
+    logger.info(
+        "Evaluation metrics (%d-day holdout) | MAE: %.2f | RMSE: %.2f | MAPE: %.2f%%",
+        test_size,
+        metrics.mae,
+        metrics.rmse,
+        metrics.mape,
+    )
+
+    logger.info("Refitting final model on all %d days and forecasting %d days ahead", len(series), horizon)
+    final_model = fit_seasonal_model(series, seasonal_periods=seasonal_periods)
+    future_preds = final_model.forecast(steps=horizon)
+
+    forecast_df = pd.DataFrame(
+        {
+            date_col: future_preds.index,
+            f"predicted_{sales_col}": future_preds.values,
+        }
+    )
+
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        forecast_df.to_csv(output_path, index=False)
+        logger.info("Saved forecast to %s", output_path)
+
+    return metrics, forecast_df
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Daily sales seasonal forecasting pipeline.")
+    parser.add_argument("input_csv", type=Path, help="Path to input daily sales CSV.")
+    parser.add_argument("--date-col", default="date", help="Name of the date column.")
+    parser.add_argument("--sales-col", default="sales", help="Name of the sales column.")
+    parser.add_argument(
+        "--seasonal-periods",
+        type=int,
+        default=7,
+        help="Number of days per seasonal cycle (default: 7 for weekly seasonality).",
+    )
+    parser.add_argument(
+        "--test-size",
+        type=int,
+        default=14,
+        help="Number of trailing days reserved for holdout evaluation.",
+    )
+    parser.add_argument(
+        "--horizon",
+        type=int,
+        default=14,
+        help="Number of future days to forecast.",
+    )
+    parser.add_argument(
+        "--output-csv",
+        type=Path,
+        default=None,
+        help="Optional path to write the future forecast CSV.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point."""
+    args = parse_args(argv)
+    try:
+        run_pipeline(
+            input_path=args.input_csv,
+            date_col=args.date_col,
+            sales_col=args.sales_col,
+            seasonal_periods=args.seasonal_periods,
+            test_size=args.test_size,
+            horizon=args.horizon,
+            output_path=args.output_csv,
+        )
+    except Exception:
+        logger.exception("Forecasting pipeline failed")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

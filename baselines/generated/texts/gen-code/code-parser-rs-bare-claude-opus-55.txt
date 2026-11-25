@@ -1,0 +1,966 @@
+//! A tokenizer and recursive-descent parser for arithmetic expressions with
+//! variables and function calls, producing a span-annotated AST.
+//!
+//! # Grammar
+//!
+//! ```text
+//! expression     := additive
+//! additive       := multiplicative (("+" | "-") multiplicative)*
+//! multiplicative := unary (("*" | "/" | "%") unary)*
+//! unary          := ("+" | "-") unary | power
+//! power          := primary ("^" unary)?
+//! primary        := NUMBER
+//!                 | IDENT
+//!                 | IDENT "(" (expression ("," expression)*)? ")"
+//!                 | "(" expression ")"
+//! ```
+//!
+//! Operator notes:
+//! * `+ - * / %` are left-associative.
+//! * `^` is right-associative and binds tighter than unary minus, so
+//!   `-2 ^ 2` parses as `-(2 ^ 2)` and `2 ^ -1` parses as `2 ^ (-1)`.
+//!
+//! Numbers follow the form `digits [ "." digits ] [ ("e"|"E") ["+"|"-"] digits ]`,
+//! where either the integer or the fractional part may be omitted (but not
+//! both). Identifiers match `[A-Za-z_][A-Za-z0-9_]*`.
+//!
+//! # Example
+//!
+//! ```
+//! # use expr_parser::parse;
+//! let ast = parse("max(x, 2) * -y ^ 2").unwrap();
+//! assert_eq!(ast.to_string(), "(max(x, 2) * (-(y ^ 2)))");
+//! ```
+//!
+//! # Limits
+//!
+//! Nesting depth (parentheses, unary operators, and right-nested powers) is
+//! bounded by [`DEFAULT_MAX_DEPTH`] to prevent stack overflow on hostile input.
+//! Use [`Parser::with_max_depth`] to adjust it.
+
+use std::error::Error;
+use std::fmt;
+
+// ---------------------------------------------------------------------------
+// Spans
+// ---------------------------------------------------------------------------
+
+/// A half-open byte range `[start, end)` into the source text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+impl Span {
+    /// Creates a new span.
+    #[must_use]
+    pub const fn new(start: usize, end: usize) -> Self {
+        Self { start, end }
+    }
+
+    /// Returns the smallest span covering both `self` and `other`.
+    #[must_use]
+    pub fn merge(self, other: Span) -> Span {
+        Span::new(self.start.min(other.start), self.end.max(other.end))
+    }
+
+    /// Length of the span in bytes.
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        self.end - self.start
+    }
+
+    /// Whether the span is empty.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.start == self.end
+    }
+}
+
+impl fmt::Display for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}..{}", self.start, self.end)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tokens
+// ---------------------------------------------------------------------------
+
+/// The kind of a lexical token.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TokenKind {
+    Number(f64),
+    Ident(String),
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Caret,
+    LParen,
+    RParen,
+    Comma,
+    Eof,
+}
+
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TokenKind::Number(n) => write!(f, "number `{n}`"),
+            TokenKind::Ident(s) => write!(f, "identifier `{s}`"),
+            TokenKind::Plus => f.write_str("`+`"),
+            TokenKind::Minus => f.write_str("`-`"),
+            TokenKind::Star => f.write_str("`*`"),
+            TokenKind::Slash => f.write_str("`/`"),
+            TokenKind::Percent => f.write_str("`%`"),
+            TokenKind::Caret => f.write_str("`^`"),
+            TokenKind::LParen => f.write_str("`(`"),
+            TokenKind::RParen => f.write_str("`)`"),
+            TokenKind::Comma => f.write_str("`,`"),
+            TokenKind::Eof => f.write_str("end of input"),
+        }
+    }
+}
+
+/// A token with its location in the source.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: Span,
+}
+
+// ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+/// The category of a tokenization or parse failure.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ErrorKind {
+    /// A character that cannot begin any token.
+    UnexpectedChar(char),
+    /// A malformed or out-of-range numeric literal.
+    InvalidNumber(String),
+    /// A token that is not valid at this position.
+    UnexpectedToken {
+        found: TokenKind,
+        expected: &'static str,
+    },
+    /// The expression exceeds the configured nesting limit.
+    NestingTooDeep { limit: usize },
+}
+
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ErrorKind::UnexpectedChar(c) => write!(f, "unexpected character {c:?}"),
+            ErrorKind::InvalidNumber(s) => write!(f, "invalid number literal `{s}`"),
+            ErrorKind::UnexpectedToken { found, expected } => {
+                write!(f, "expected {expected}, found {found}")
+            }
+            ErrorKind::NestingTooDeep { limit } => {
+                write!(f, "expression nesting exceeds limit of {limit}")
+            }
+        }
+    }
+}
+
+/// An error produced while tokenizing or parsing.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParseError {
+    pub kind: ErrorKind,
+    pub span: Span,
+}
+
+impl ParseError {
+    /// Creates a new error.
+    #[must_use]
+    pub const fn new(kind: ErrorKind, span: Span) -> Self {
+        Self { kind, span }
+    }
+
+    /// Renders a human-readable diagnostic with a caret pointing at the
+    /// offending source location. `src` must be the text that was parsed.
+    #[must_use]
+    pub fn render(&self, src: &str) -> String {
+        let start = self.span.start.min(src.len());
+        let line_start = src[..start].rfind('\n').map_or(0, |i| i + 1);
+        let line_end = src[start..].find('\n').map_or(src.len(), |i| start + i);
+        let line = &src[line_start..line_end];
+        let line_no = src[..line_start].matches('\n').count() + 1;
+        let col = src[line_start..start].chars().count();
+        let end = self.span.end.clamp(start, line_end);
+        let width = src[start..end].chars().count().max(1);
+
+        format!(
+            "error: {}\n --> {}:{}\n  |\n  | {}\n  | {}{}",
+            self.kind,
+            line_no,
+            col + 1,
+            line,
+            " ".repeat(col),
+            "^".repeat(width)
+        )
+    }
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} at {}", self.kind, self.span)
+    }
+}
+
+impl Error for ParseError {}
+
+// ---------------------------------------------------------------------------
+// Lexer
+// ---------------------------------------------------------------------------
+
+struct Lexer<'a> {
+    src: &'a str,
+    pos: usize,
+}
+
+impl<'a> Lexer<'a> {
+    fn new(src: &'a str) -> Self {
+        Self { src, pos: 0 }
+    }
+
+    fn peek_byte(&self) -> Option<u8> {
+        self.src.as_bytes().get(self.pos).copied()
+    }
+
+    fn skip_whitespace(&mut self) {
+        while let Some(c) = self.src[self.pos..].chars().next() {
+            if c.is_whitespace() {
+                self.pos += c.len_utf8();
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn eat_digits(&mut self) {
+        while matches!(self.peek_byte(), Some(b'0'..=b'9')) {
+            self.pos += 1;
+        }
+    }
+
+    fn next_token(&mut self) -> Result<Token, ParseError> {
+        self.skip_whitespace();
+        let start = self.pos;
+
+        let Some(b) = self.peek_byte() else {
+            return Ok(Token {
+                kind: TokenKind::Eof,
+                span: Span::new(start, start),
+            });
+        };
+
+        let kind = match b {
+            b'+' => TokenKind::Plus,
+            b'-' => TokenKind::Minus,
+            b'*' => TokenKind::Star,
+            b'/' => TokenKind::Slash,
+            b'%' => TokenKind::Percent,
+            b'^' => TokenKind::Caret,
+            b'(' => TokenKind::LParen,
+            b')' => TokenKind::RParen,
+            b',' => TokenKind::Comma,
+            b'0'..=b'9' | b'.' => return self.lex_number(),
+            b if b.is_ascii_alphabetic() || b == b'_' => return Ok(self.lex_ident()),
+            _ => {
+                // Safe: `start` is always on a char boundary and not at EOF.
+                let c = self.src[start..]
+                    .chars()
+                    .next()
+                    .expect("non-empty remainder");
+                return Err(ParseError::new(
+                    ErrorKind::UnexpectedChar(c),
+                    Span::new(start, start + c.len_utf8()),
+                ));
+            }
+        };
+
+        self.pos += 1;
+        Ok(Token {
+            kind,
+            span: Span::new(start, self.pos),
+        })
+    }
+
+    fn lex_number(&mut self) -> Result<Token, ParseError> {
+        let start = self.pos;
+        let invalid = |lexer: &Self| {
+            ParseError::new(
+                ErrorKind::InvalidNumber(lexer.src[start..lexer.pos].to_owned()),
+                Span::new(start, lexer.pos),
+            )
+        };
+
+        self.eat_digits();
+        let has_int = self.pos > start;
+
+        if self.peek_byte() == Some(b'.') {
+            self.pos += 1;
+            let frac_start = self.pos;
+            self.eat_digits();
+            if !has_int && self.pos == frac_start {
+                return Err(invalid(self));
+            }
+        }
+
+        if matches!(self.peek_byte(), Some(b'e' | b'E')) {
+            self.pos += 1;
+            if matches!(self.peek_byte(), Some(b'+' | b'-')) {
+                self.pos += 1;
+            }
+            let exp_start = self.pos;
+            self.eat_digits();
+            if self.pos == exp_start {
+                return Err(invalid(self));
+            }
+        }
+
+        let text = &self.src[start..self.pos];
+        match text.parse::<f64>() {
+            Ok(v) if v.is_finite() => Ok(Token {
+                kind: TokenKind::Number(v),
+                span: Span::new(start, self.pos),
+            }),
+            _ => Err(invalid(self)),
+        }
+    }
+
+    fn lex_ident(&mut self) -> Token {
+        let start = self.pos;
+        while matches!(self.peek_byte(), Some(b) if b.is_ascii_alphanumeric() || b == b'_') {
+            self.pos += 1;
+        }
+        Token {
+            kind: TokenKind::Ident(self.src[start..self.pos].to_owned()),
+            span: Span::new(start, self.pos),
+        }
+    }
+}
+
+/// Converts source text into a token vector terminated by [`TokenKind::Eof`].
+///
+/// # Errors
+///
+/// Returns an error on unrecognized characters or malformed number literals.
+pub fn tokenize(src: &str) -> Result<Vec<Token>, ParseError> {
+    let mut lexer = Lexer::new(src);
+    let mut tokens = Vec::new();
+    loop {
+        let tok = lexer.next_token()?;
+        let is_eof = tok.kind == TokenKind::Eof;
+        tokens.push(tok);
+        if is_eof {
+            return Ok(tokens);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AST
+// ---------------------------------------------------------------------------
+
+/// A prefix operator.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UnaryOp {
+    Neg,
+    Plus,
+}
+
+impl UnaryOp {
+    /// The source symbol for this operator.
+    #[must_use]
+    pub const fn symbol(self) -> &'static str {
+        match self {
+            UnaryOp::Neg => "-",
+            UnaryOp::Plus => "+",
+        }
+    }
+}
+
+impl fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.symbol())
+    }
+}
+
+/// An infix operator.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    Pow,
+}
+
+impl BinaryOp {
+    /// The source symbol for this operator.
+    #[must_use]
+    pub const fn symbol(self) -> &'static str {
+        match self {
+            BinaryOp::Add => "+",
+            BinaryOp::Sub => "-",
+            BinaryOp::Mul => "*",
+            BinaryOp::Div => "/",
+            BinaryOp::Rem => "%",
+            BinaryOp::Pow => "^",
+        }
+    }
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.symbol())
+    }
+}
+
+/// The shape of an expression node.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExprKind {
+    Number(f64),
+    Variable(String),
+    Unary {
+        op: UnaryOp,
+        operand: Box<Expr>,
+    },
+    Binary {
+        op: BinaryOp,
+        lhs: Box<Expr>,
+        rhs: Box<Expr>,
+    },
+    Call {
+        name: String,
+        args: Vec<Expr>,
+    },
+}
+
+/// An expression node annotated with its source span.
+///
+/// For parenthesized expressions the span includes the parentheses.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Expr {
+    pub kind: ExprKind,
+    pub span: Span,
+}
+
+impl Expr {
+    /// Creates a new expression node.
+    #[must_use]
+    pub const fn new(kind: ExprKind, span: Span) -> Self {
+        Self { kind, span }
+    }
+
+    fn unary(op: UnaryOp, op_span: Span, operand: Expr) -> Self {
+        let span = op_span.merge(operand.span);
+        Self::new(
+            ExprKind::Unary {
+                op,
+                operand: Box::new(operand),
+            },
+            span,
+        )
+    }
+
+    fn binary(op: BinaryOp, lhs: Expr, rhs: Expr) -> Self {
+        let span = lhs.span.merge(rhs.span);
+        Self::new(
+            ExprKind::Binary {
+                op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            },
+            span,
+        )
+    }
+
+    /// Returns the names of all variables referenced, in order of first
+    /// appearance, without duplicates. Function names are not included.
+    #[must_use]
+    pub fn variables(&self) -> Vec<&str> {
+        let mut out: Vec<&str> = Vec::new();
+        let mut stack = vec![self];
+        while let Some(e) = stack.pop() {
+            match &e.kind {
+                ExprKind::Number(_) => {}
+                ExprKind::Variable(name) => {
+                    if !out.contains(&name.as_str()) {
+                        out.push(name);
+                    }
+                }
+                ExprKind::Unary { operand, .. } => stack.push(operand),
+                ExprKind::Binary { lhs, rhs, .. } => {
+                    stack.push(rhs);
+                    stack.push(lhs);
+                }
+                ExprKind::Call { args, .. } => stack.extend(args.iter().rev()),
+            }
+        }
+        out
+    }
+}
+
+/// Formats the expression fully parenthesized, making structure explicit.
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.kind {
+            ExprKind::Number(n) => write!(f, "{n}"),
+            ExprKind::Variable(name) => f.write_str(name),
+            ExprKind::Unary { op, operand } => write!(f, "({op}{operand})"),
+            ExprKind::Binary { op, lhs, rhs } => write!(f, "({lhs} {op} {rhs})"),
+            ExprKind::Call { name, args } => {
+                write!(f, "{name}(")?;
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        f.write_str(", ")?;
+                    }
+                    write!(f, "{arg}")?;
+                }
+                f.write_str(")")
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Parser
+// ---------------------------------------------------------------------------
+
+/// Default maximum nesting depth accepted by the parser.
+pub const DEFAULT_MAX_DEPTH: usize = 256;
+
+/// A recursive-descent parser over a token stream.
+#[derive(Debug)]
+pub struct Parser {
+    tokens: Vec<Token>,
+    pos: usize,
+    depth: usize,
+    max_depth: usize,
+}
+
+impl Parser {
+    /// Tokenizes `src` and constructs a parser for it.
+    ///
+    /// # Errors
+    ///
+    /// Returns any tokenization error.
+    pub fn new(src: &str) -> Result<Self, ParseError> {
+        Ok(Self::from_tokens(tokenize(src)?))
+    }
+
+    /// Constructs a parser from an existing token vector. An `Eof` token is
+    /// appended if the vector does not already end with one.
+    #[must_use]
+    pub fn from_tokens(mut tokens: Vec<Token>) -> Self {
+        if !matches!(tokens.last(), Some(t) if t.kind == TokenKind::Eof) {
+            let end = tokens.last().map_or(0, |t| t.span.end);
+            tokens.push(Token {
+                kind: TokenKind::Eof,
+                span: Span::new(end, end),
+            });
+        }
+        Self {
+            tokens,
+            pos: 0,
+            depth: 0,
+            max_depth: DEFAULT_MAX_DEPTH,
+        }
+    }
+
+    /// Sets the maximum nesting depth.
+    #[must_use]
+    pub fn with_max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
+        self
+    }
+
+    /// Parses a complete expression, requiring all input to be consumed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on syntax errors or excessive nesting.
+    pub fn parse(mut self) -> Result<Expr, ParseError> {
+        let expr = self.parse_expression()?;
+        let tok = self.peek();
+        if tok.kind != TokenKind::Eof {
+            return Err(ParseError::new(
+                ErrorKind::UnexpectedToken {
+                    found: tok.kind.clone(),
+                    expected: "operator or end of input",
+                },
+                tok.span,
+            ));
+        }
+        Ok(expr)
+    }
+
+    fn peek(&self) -> &Token {
+        &self.tokens[self.pos]
+    }
+
+    fn bump(&mut self) -> Token {
+        let tok = self.tokens[self.pos].clone();
+        if tok.kind != TokenKind::Eof {
+            self.pos += 1;
+        }
+        tok
+    }
+
+    fn expect_rparen(&mut self, expected: &'static str) -> Result<Token, ParseError> {
+        if self.peek().kind == TokenKind::RParen {
+            Ok(self.bump())
+        } else {
+            let tok = self.peek();
+            Err(ParseError::new(
+                ErrorKind::UnexpectedToken {
+                    found: tok.kind.clone(),
+                    expected,
+                },
+                tok.span,
+            ))
+        }
+    }
+
+    fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+        self.parse_additive()
+    }
+
+    fn parse_additive(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_multiplicative()?;
+        loop {
+            let op = match self.peek().kind {
+                TokenKind::Plus => BinaryOp::Add,
+                TokenKind::Minus => BinaryOp::Sub,
+                _ => break,
+            };
+            self.bump();
+            let rhs = self.parse_multiplicative()?;
+            lhs = Expr::binary(op, lhs, rhs);
+        }
+        Ok(lhs)
+    }
+
+    fn parse_multiplicative(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_unary()?;
+        loop {
+            let op = match self.peek().kind {
+                TokenKind::Star => BinaryOp::Mul,
+                TokenKind::Slash => BinaryOp::Div,
+                TokenKind::Percent => BinaryOp::Rem,
+                _ => break,
+            };
+            self.bump();
+            let rhs = self.parse_unary()?;
+            lhs = Expr::binary(op, lhs, rhs);
+        }
+        Ok(lhs)
+    }
+
+    /// Every recursive cycle in the grammar passes through here, so this is
+    /// where the nesting limit is enforced.
+    fn parse_unary(&mut self) -> Result<Expr, ParseError> {
+        self.depth += 1;
+        if self.depth > self.max_depth {
+            return Err(ParseError::new(
+                ErrorKind::NestingTooDeep {
+                    limit: self.max_depth,
+                },
+                self.peek().span,
+            ));
+        }
+        let result = self.parse_unary_inner();
+        self.depth -= 1;
+        result
+    }
+
+    fn parse_unary_inner(&mut self) -> Result<Expr, ParseError> {
+        let op = match self.peek().kind {
+            TokenKind::Minus => UnaryOp::Neg,
+            TokenKind::Plus => UnaryOp::Plus,
+            _ => return self.parse_power(),
+        };
+        let op_tok = self.bump();
+        let operand = self.parse_unary()?;
+        Ok(Expr::unary(op, op_tok.span, operand))
+    }
+
+    fn parse_power(&mut self) -> Result<Expr, ParseError> {
+        let base = self.parse_primary()?;
+        if self.peek().kind == TokenKind::Caret {
+            self.bump();
+            let exponent = self.parse_unary()?;
+            return Ok(Expr::binary(BinaryOp::Pow, base, exponent));
+        }
+        Ok(base)
+    }
+
+    fn parse_primary(&mut self) -> Result<Expr, ParseError> {
+        let tok = self.bump();
+        match tok.kind {
+            TokenKind::Number(v) => Ok(Expr::new(ExprKind::Number(v), tok.span)),
+            TokenKind::Ident(name) => {
+                if self.peek().kind == TokenKind::LParen {
+                    self.bump();
+                    self.parse_call(name, tok.span)
+                } else {
+                    Ok(Expr::new(ExprKind::Variable(name), tok.span))
+                }
+            }
+            TokenKind::LParen => {
+                let inner = self.parse_expression()?;
+                let close = self.expect_rparen("`)`")?;
+                Ok(Expr::new(inner.kind, tok.span.merge(close.span)))
+            }
+            found => Err(ParseError::new(
+                ErrorKind::UnexpectedToken {
+                    found,
+                    expected: "expression",
+                },
+                tok.span,
+            )),
+        }
+    }
+
+    /// Parses call arguments after the opening `(` has been consumed.
+    fn parse_call(&mut self, name: String, name_span: Span) -> Result<Expr, ParseError> {
+        let mut args = Vec::new();
+        if self.peek().kind != TokenKind::RParen {
+            loop {
+                args.push(self.parse_expression()?);
+                if self.peek().kind == TokenKind::Comma {
+                    self.bump();
+                } else {
+                    break;
+                }
+            }
+        }
+        let expected = if args.is_empty() {
+            "expression or `)`"
+        } else {
+            "`,` or `)`"
+        };
+        let close = self.expect_rparen(expected)?;
+        Ok(Expr::new(
+            ExprKind::Call { name, args },
+            name_span.merge(close.span),
+        ))
+    }
+}
+
+/// Tokenizes and parses `src` into an expression AST.
+///
+/// # Errors
+///
+/// Returns a [`ParseError`] describing the first problem encountered.
+pub fn parse(src: &str) -> Result<Expr, ParseError> {
+    Parser::new(src)?.parse()
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn show(src: &str) -> String {
+        parse(src)
+            .unwrap_or_else(|e| panic!("{}", e.render(src)))
+            .to_string()
+    }
+
+    fn err(src: &str) -> ParseError {
+        parse(src).expect_err("expected parse failure")
+    }
+
+    #[test]
+    fn precedence() {
+        assert_eq!(show("1 + 2 * 3"), "(1 + (2 * 3))");
+        assert_eq!(show("1 * 2 + 3"), "((1 * 2) + 3)");
+        assert_eq!(show("a % b * c"), "((a % b) * c)");
+    }
+
+    #[test]
+    fn left_associativity() {
+        assert_eq!(show("1 - 2 - 3"), "((1 - 2) - 3)");
+        assert_eq!(show("8 / 4 / 2"), "((8 / 4) / 2)");
+    }
+
+    #[test]
+    fn power_is_right_associative() {
+        assert_eq!(show("2 ^ 3 ^ 2"), "(2 ^ (3 ^ 2))");
+    }
+
+    #[test]
+    fn unary_and_power_interaction() {
+        assert_eq!(show("-2 ^ 2"), "(-(2 ^ 2))");
+        assert_eq!(show("2 ^ -1"), "(2 ^ (-1))");
+        assert_eq!(show("--x"), "(-(-x))");
+        assert_eq!(show("+x * -y"), "((+x) * (-y))");
+    }
+
+    #[test]
+    fn parentheses() {
+        assert_eq!(show("(1 + 2) * 3"), "((1 + 2) * 3)");
+        assert_eq!(show("((x))"), "x");
+    }
+
+    #[test]
+    fn variables_and_calls() {
+        assert_eq!(show("max(x, y_1 * 2) + f()"), "(max(x, (y_1 * 2)) + f())");
+        assert_eq!(show("_a1"), "_a1");
+        let ast = parse("f(x, y) + x * z").unwrap();
+        assert_eq!(ast.variables(), vec!["x", "y", "z"]);
+    }
+
+    #[test]
+    fn number_formats() {
+        assert_eq!(show("1.5e3 + .5 + 2."), "((1500 + 0.5) + 2)");
+        assert_eq!(show("1E-2"), "0.01");
+        assert_eq!(show("3e+1"), "30");
+    }
+
+    #[test]
+    fn whitespace_handling() {
+        assert_eq!(show(" \t1\n+\r\n2 "), "(1 + 2)");
+        assert_eq!(show("1\u{00A0}+ 2"), "(1 + 2)");
+    }
+
+    #[test]
+    fn spans() {
+        let ast = parse("  foo + 1").unwrap();
+        assert_eq!(ast.span, Span::new(2, 9));
+
+        let ast = parse("(a + b)").unwrap();
+        assert_eq!(ast.span, Span::new(0, 7));
+
+        let ast = parse("-x").unwrap();
+        assert_eq!(ast.span, Span::new(0, 2));
+
+        let ast = parse("f(1, 2)").unwrap();
+        assert_eq!(ast.span, Span::new(0, 7));
+    }
+
+    #[test]
+    fn error_unexpected_char() {
+        let e = err("1 $ 2");
+        assert_eq!(e.kind, ErrorKind::UnexpectedChar('$'));
+        assert_eq!(e.span, Span::new(2, 3));
+
+        let e = err("x + é");
+        assert_eq!(e.kind, ErrorKind::UnexpectedChar('é'));
+        assert_eq!(e.span, Span::new(4, 6));
+    }
+
+    #[test]
+    fn error_invalid_numbers() {
+        assert!(matches!(err("1e").kind, ErrorKind::InvalidNumber(_)));
+        assert!(matches!(err("1e+").kind, ErrorKind::InvalidNumber(_)));
+        assert!(matches!(err(".").kind, ErrorKind::InvalidNumber(_)));
+        assert!(matches!(err("1e999").kind, ErrorKind::InvalidNumber(_)));
+    }
+
+    #[test]
+    fn error_incomplete_expressions() {
+        let e = err("1 +");
+        assert_eq!(
+            e.kind,
+            ErrorKind::UnexpectedToken {
+                found: TokenKind::Eof,
+                expected: "expression"
+            }
+        );
+        assert_eq!(e.span, Span::new(3, 3));
+
+        let e = err("(1 + 2");
+        assert_eq!(
+            e.kind,
+            ErrorKind::UnexpectedToken {
+                found: TokenKind::Eof,
+                expected: "`)`"
+            }
+        );
+
+        assert!(matches!(err("").kind, ErrorKind::UnexpectedToken { .. }));
+        assert!(matches!(err("()").kind, ErrorKind::UnexpectedToken { .. }));
+    }
+
+    #[test]
+    fn error_trailing_tokens() {
+        let e = err("1 2");
+        assert_eq!(
+            e.kind,
+            ErrorKind::UnexpectedToken {
+                found: TokenKind::Number(2.0),
+                expected: "operator or end of input"
+            }
+        );
+        assert_eq!(e.span, Span::new(2, 3));
+        assert!(matches!(err("1 + 2)").kind, ErrorKind::UnexpectedToken { .. }));
+    }
+
+    #[test]
+    fn error_bad_calls() {
+        assert!(matches!(err("f(1,)").kind, ErrorKind::UnexpectedToken { .. }));
+        assert!(matches!(err("f(,1)").kind, ErrorKind::UnexpectedToken { .. }));
+        assert!(matches!(
+            err("f(1 2)").kind,
+            ErrorKind::UnexpectedToken {
+                expected: "`,` or `)`",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn nesting_limit() {
+        let deep = format!("{}1{}", "(".repeat(10_000), ")".repeat(10_000));
+        assert!(matches!(
+            err(&deep).kind,
+            ErrorKind::NestingTooDeep {
+                limit: DEFAULT_MAX_DEPTH
+            }
+        ));
+
+        let negs = format!("{}1", "-".repeat(10_000));
+        assert!(matches!(err(&negs).kind, ErrorKind::NestingTooDeep { .. }));
+
+        let ok = format!("{}1{}", "(".repeat(50), ")".repeat(50));
+        assert_eq!(show(&ok), "1");
+
+        let limited = Parser::new("((1))").unwrap().with_max_depth(2).parse();
+        assert!(matches!(
+            limited.unwrap_err().kind,
+            ErrorKind::NestingTooDeep { limit: 2 }
+        ));
+    }
+
+    #[test]
+    fn render_diagnostic() {
+        let src = "1 +\n  2 $";
+        let e = err(src);
+        let rendered = e.render(src);
+        assert!(rendered.contains("unexpected character '$'"));
+        assert!(rendered.contains("--> 2:5"));
+        assert!(rendered.ends_with("    ^"));
+    }
+
+    #[test]
+    fn from_tokens_appends_eof() {
+        let tokens = vec![Token {
+            kind: TokenKind::Ident("x".into()),
+            span: Span::new(0, 1),
+        }];
+        let ast = Parser::from_tokens(tokens).parse().unwrap();
+        assert_eq!(ast.kind, ExprKind::Variable("x".into()));
+    }
+}

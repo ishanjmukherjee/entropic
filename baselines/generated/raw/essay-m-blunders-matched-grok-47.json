@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-blunders",
+ "style": "matched",
+ "prompt": "Write an essay titled “To code well, avoid blunders”. It argues that writing good code is mostly a matter of avoiding catastrophic mistakes, not of having brilliant insights. About 800 words. Output only the essay, with no title.",
+ "model": "grok-4.7",
+ "max_tokens": 1600,
+ "matched_to": "blogs-tech/goedecke-to-code-well-avoid-blunders",
+ "id": "essay-m-blunders-matched-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "Writing good code is less often a matter of sudden brilliance than of refusing to make the mistakes that later cost weeks, reputations, or real money. The folklore of programming celebrates the elegant insight: the clever algorithm, the compact abstraction, the weekend rewrite that makes a system feel inevitable. Those moments exist, and they matter. They are also rare, and they are not what separates durable software from the kind that fails under ordinary use. Most of the difference is negative. Good code is code that has not been allowed to blunder.\n\nA blunder is not a typo. It is a decision that looks locally reasonable and later proves catastrophic. Choosing a data model that cannot represent the cases the business will actually have. Treating an external service as if it were always available and always honest. Shipping a migration that cannot be reversed. Logging secrets because it was faster than thinking about what the log line would contain. These are not failures of genius. They are failures of attention, of sequence, and of humility about what the system will be asked to do.\n\nThe first class of blunder is the unexamined assumption. Every program encodes a theory of the world: who the users are, what inputs arrive, which clocks agree, which failures are rare enough to ignore. Catastrophe usually begins when that theory is wrong and nobody wrote it down. A payment flow that assumes amounts are positive integers will eventually meet a refund. A cache that assumes keys never collide will eventually meet a collision. The remedy is not a more brilliant design. It is the habit of naming the assumption, asking what happens when it fails, and deciding in advance whether the failure is acceptable. Much of what people later call architecture is just this work done early enough that the answer can still change the shape of the code.\n\nThe second class is the irreversible step taken too soon. Software feels malleable, so people treat every commit as provisional. Some changes are not. Dropping a column, rotating a key without a dual-read period, publishing an API that clients will hard-code, deleting the only copy of a dataset because the new pipeline “should” have finished—these are blunders of sequence. Brilliance after the fact cannot restore what was discarded. The skilled programmer is often the one who inserts a boring intermediate state: write both, read from the old, cut over, then delete. The insight, if any, is that reversibility is a feature, not a delay.\n\nA third class is the local optimization that poisons the whole. Clever code is not automatically a blunder, but cleverness that only its author can modify is a debt with a due date. Nested conditionals that encode a business rule no one else can restate, concurrency tricks that work until a new caller appears, abstractions so general they hide the one case that matters—these fail not because they are incorrect today, but because the next change will be made by someone who cannot see the trap. Avoiding the blunder means preferring code whose failure modes are obvious. A straightforward loop that a colleague can audit in ten minutes is often better engineering than a compressed version that requires a whiteboard and a prayer.\n\nTesting is the practical form of this avoidance. Not testing as a ritual of coverage numbers, but testing as a search for the mistake you are about to make permanent. The useful test is the one that would have caught last quarter’s incident: the empty cart, the duplicate webhook, the clock skew, the user who retries. Brilliant test design is unnecessary. What is necessary is the willingness to write the awkward case before declaring the feature done, and to treat a green suite that never touches the dangerous path as a warning rather than a comfort. Production incidents are usually rehearsals that nobody scheduled.\n\nReview works the same way. A good review is not a hunt for style, and it is not a performance of superior taste. It is a second pair of eyes looking for the catastrophic mistake: the missing authorization check, the unbounded query, the error that is swallowed, the migration that locks a hot table. The reviewer who only praises elegance and never asks “what happens if this is wrong?” is not raising the standard. The author who treats every question as an insult is protecting the blunder. Teams that code well tend to make disagreement about risk cheap and routine, so that the expensive disagreements happen in the pull request rather than in the postmortem.\n\nNone of this denies the value of insight. There are problems whose shape only becomes clear after someone sees a better decomposition, a tighter invariant, a simpler protocol. Those moments should be welcomed. They should also be distrusted until they have survived the same questions as ordinary code: What does this assume? What cannot be undone? Who else must understand it? What fails closed? Insight that skips those questions is just another way to blunder faster.\n\nThe culture around programming often flatters the opposite story. We remember the heroic fix and forget the hundred quiet decisions that kept the system from needing one. We promote people for visible cleverness and under-reward the engineer who prevented a class of incidents by making a dangerous operation slightly harder to invoke. That incentive is itself a blunder. If writing good code is mostly the avoidance of catastrophe, then the status of the work should follow the status of the risk. The person who notices that a delete is irreversible, that a retry will double-charge, that a “temporary” flag will live for five years, is doing the central job.\n\nThere is a moral tone to this that is easy to overstate. Avoiding blunders is not timidity, and it is not a refusal to build ambitious systems. Ambitious systems fail in ambitious ways. The point is proportion. Spend ingenuity on the parts where a mistake is expensive and hard to see; spend discipline everywhere else. Prefer the design you can explain, the change you can roll back, the test that would embarrass you, the review that asks the unpleasant question. Brilliance will still arrive, sometimes, and it will land better in a codebase that has not already been compromised by avoidable error.\n\nTo code well, then, is to treat catastrophe as the ordinary enemy. Not the exotic bug that only a genius would foresee, but the plain mistake that everyone involved was busy enough to skip. The craft is largely the craft of not skipping it.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1290,
+  "completion_tokens": 1345,
+  "total_tokens": 2635,
+  "cost": 0.008922,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.008922,
+   "upstream_inference_prompt_cost": 0.000852,
+   "upstream_inference_completions_cost": 0.00807
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 71,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

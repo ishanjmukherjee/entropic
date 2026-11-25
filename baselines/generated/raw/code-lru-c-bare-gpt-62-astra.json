@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-lru-c",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality C source file that implements an LRU cache with a hash table and a doubly linked list. Output only the code.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 3000,
+ "domain": "systems",
+ "language": "C",
+ "id": "code-lru-c-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "#include <stdbool.h>\n#include <stddef.h>\n#include <stdint.h>\n#include <stdlib.h>\n\n/*\n * Fixed-capacity LRU cache mapping uint64_t keys to uint64_t values.\n * Successful lookups and insertions/updates mark the entry most recently used.\n * Calls on a shared cache require external synchronization.\n */\n\ntypedef struct lru_cache lru_cache;\n\ntypedef enum {\n    LRU_OK = 0,\n    LRU_INVALID,\n    LRU_NO_MEMORY,\n    LRU_ZERO_CAPACITY\n} lru_status;\n\n/* Returns NULL on allocation failure. A zero-capacity cache is valid. */\nlru_cache *lru_create(size_t capacity);\nvoid lru_destroy(lru_cache *cache);\nvoid lru_clear(lru_cache *cache);\nsize_t lru_size(const lru_cache *cache);\nsize_t lru_capacity(const lru_cache *cache);\n\n/* value may be NULL. On a miss, its contents are unchanged. */\nbool lru_get(lru_cache *cache, uint64_t key, uint64_t *value);\nbool lru_peek(const lru_cache *cache, uint64_t key, uint64_t *value);\n\n/* Evicts the least recently used entry if necessary. Atomic on failure. */\nlru_status lru_put(lru_cache *cache, uint64_t key, uint64_t value);\nbool lru_remove(lru_cache *cache, uint64_t key);\n\ntypedef struct lru_entry {\n    uint64_t key;\n    uint64_t value;\n    struct lru_entry *prev;\n    struct lru_entry *next;\n    struct lru_entry *hash_next;\n    struct lru_entry **hash_link; /* Pointer currently pointing to this node. */\n} lru_entry;\n\nstruct lru_cache {\n    size_t capacity;\n    size_t size;\n    lru_entry **buckets;\n    lru_entry *head; /* Most recently used. */\n    lru_entry *tail;\n};\n\nstatic size_t bucket_index(const lru_cache *cache, uint64_t key)\n{\n    /* SplitMix64 finalizer. Only called for nonzero capacity. */\n    key ^= key >> 30;\n    key *= UINT64_C(0xbf58476d1ce4e5b9);\n    key ^= key >> 27;\n    key *= UINT64_C(0x94d049bb133111eb);\n    key ^= key >> 31;\n    return (size_t)(key % cache->capacity);\n}\n\nstatic lru_entry *find_entry(const lru_cache *cache, uint64_t key)\n{\n    if (cache == NULL || cache->size == 0)\n        return NULL;\n\n    for (lru_entry *e = cache->buckets[bucket_index(cache, key)];\n         e != NULL; e = e->hash_next) {\n        if (e->key == key)\n            return e;\n    }\n    return NULL;\n}\n\nstatic void unlink_hash(lru_entry *e)\n{\n    *e->hash_link = e->hash_next;\n    if (e->hash_next != NULL)\n        e->hash_next->hash_link = e->hash_link;\n}\n\nstatic void unlink_list(lru_cache *cache, lru_entry *e)\n{\n    if (e->prev != NULL)\n        e->prev->next = e->next;\n    else\n        cache->head = e->next;\n\n    if (e->next != NULL)\n        e->next->prev = e->prev;\n    else\n        cache->tail = e->prev;\n}\n\nstatic void prepend(lru_cache *cache, lru_entry *e)\n{\n    e->prev = NULL;\n    e->next = cache->head;\n    if (cache->head != NULL)\n        cache->head->prev = e;\n    else\n        cache->tail = e;\n    cache->head = e;\n}\n\nstatic void touch(lru_cache *cache, lru_entry *e)\n{\n    if (cache->head != e) {\n        unlink_list(cache, e);\n        prepend(cache, e);\n    }\n}\n\nlru_cache *lru_create(size_t capacity)\n{\n    if (capacity > SIZE_MAX / sizeof(lru_entry *))\n        return NULL;\n\n    lru_cache *cache = malloc(sizeof *cache);\n    if (cache == NULL)\n        return NULL;\n\n    *cache = (lru_cache){ .capacity = capacity };\n    if (capacity != 0) {\n        cache->buckets = malloc(capacity * sizeof *cache->buckets);\n        if (cache->buckets == NULL) {\n            free(cache);\n            return NULL;\n        }\n        for (size_t i = 0; i < capacity; ++i)\n            cache->buckets[i] = NULL;\n    }\n    return cache;\n}\n\nvoid lru_clear(lru_cache *cache)\n{\n    if (cache == NULL)\n        return;\n\n    while (cache->head != NULL) {\n        lru_entry *e = cache->head;\n        cache->head = e->next;\n        unlink_hash(e);\n        free(e);\n    }\n    cache->tail = NULL;\n    cache->size = 0;\n}\n\nvoid lru_destroy(lru_cache *cache)\n{\n    if (cache != NULL) {\n        lru_clear(cache);\n        free(cache->buckets);\n        free(cache);\n    }\n}\n\nsize_t lru_size(const lru_cache *cache)\n{\n    return cache != NULL ? cache->size : 0;\n}\n\nsize_t lru_capacity(const lru_cache *cache)\n{\n    return cache != NULL ? cache->capacity : 0;\n}\n\nbool lru_peek(const lru_cache *cache, uint64_t key, uint64_t *value)\n{\n    const lru_entry *e = find_entry(cache, key);\n    if (e == NULL)\n        return false;\n    if (value != NULL)\n        *value = e->value;\n    return true;\n}\n\nbool lru_get(lru_cache *cache, uint64_t key, uint64_t *value)\n{\n    lru_entry *e = find_entry(cache, key);\n    if (e == NULL)\n        return false;\n    touch(cache, e);\n    if (value != NULL)\n        *value = e->value;\n    return true;\n}\n\nlru_status lru_put(lru_cache *cache, uint64_t key, uint64_t value)\n{\n    if (cache == NULL)\n        return LRU_INVALID;\n    if (cache->capacity == 0)\n        return LRU_ZERO_CAPACITY;\n\n    lru_entry *e = find_entry(cache, key);\n    if (e != NULL) {\n        e->value = value;\n        touch(cache, e);\n        return LRU_OK;\n    }\n\n    if (cache->size == cache->capacity) {\n        e = cache->tail;\n        unlink_hash(e);\n        unlink_list(cache, e);\n    } else {\n        e = malloc(sizeof *e);\n        if (e == NULL)\n            return LRU_NO_MEMORY;\n        ++cache->size;\n    }\n\n    e->key = key;\n    e->value = value;\n    e->hash_link = &cache->buckets[bucket_index(cache, key)];\n    e->hash_next = *e->hash_link;\n    if (e->hash_next != NULL)\n        e->hash_next->hash_link = &e->hash_next;\n    *e->hash_link = e;\n    prepend(cache, e);\n    return LRU_OK;\n}\n\nbool lru_remove(lru_cache *cache, uint64_t key)\n{\n    lru_entry *e = find_entry(cache, key);\n    if (e == NULL)\n        return false;\n\n    unlink_hash(e);\n    unlink_list(cache, e);\n    free(e);\n    --cache->size;\n    return true;\n}",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 37,
+  "completion_tokens": 1625,
+  "total_tokens": 1662,
+  "cost": 0.065296,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.065296,
+   "upstream_inference_prompt_cost": 0.000296,
+   "upstream_inference_completions_cost": 0.065
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "bare",
+ "prompt": "Write a villanelle about forgetting. Output only the poem, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-forgetting-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "The faces that I knew begin to fade,\nLike chalk beneath a slow and steady rain,\nI lose the quiet promises we made.\n\nThe sunlit afternoons where once we played\nDissolve into a dull and nameless pain;\nThe faces that I knew begin to fade.\n\nI reach for echoes in the evening shade,\nBut only hollow silences remain;\nI lose the quiet promises we made.\n\nThe photographs grow yellow and decayed,\nI search the empty rooms of mind in vain;\nThe faces that I knew begin to fade.\n\nI tell myself I will not be afraid,\nThough every golden moment leaves no stain;\nI lose the quiet promises we made.\n\nSo let the light go out, the debt be paid,\nLet winter frost the glass and blur the pane;\nThe faces that I knew begin to fade,\nI lose the quiet promises we made.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 51,
+  "completion_tokens": 2067,
+  "total_tokens": 2118,
+  "cost": 0.031158,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.031158,
+   "upstream_inference_prompt_cost": 0.000153,
+   "upstream_inference_completions_cost": 0.031005
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1882,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

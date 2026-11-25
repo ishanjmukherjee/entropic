@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-contact",
+ "style": "bare",
+ "prompt": "Write a science fiction short story about first contact. About 800 words. Output only the story, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "story-contact-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "The first thing the visitors sent us was a bill.\n\nIt came through the printer at the bottom of the Puerto Rico Trench, where there was no paper, so for six hours the machine simply complained. When I arrived for the morning shift, I took the emergency evacuation map out of its frame and fed it in blank side up.\n\nROOM AND BOARD, the bill said. ONE CHILD. 19,704 DAYS.\n\nThen a number I recognized: my mother's Social Security number.\n\nMy mother had been missing since 1971, when she was eight years old. She had also raised three daughters in a yellow house in Ponce and died the previous winter of a stroke. It had been a complicated family even before the printer got involved.\n\nI turned the page over. Through the blue arrows indicating the way to the escape bell, I could make out one more line.\n\nPLEASE COLLECT HER BY THURSDAY.\n\nMy supervisor, Joel, wanted to call the surface. I wanted ten minutes. He gave me five, which was why I loved him and why our marriage hadn't worked.\n\nI typed into the console: What did you give her for breakfast?\n\nThe reply appeared on-screen this time. STEWED PEARS. SHE DISLIKES THE STRINGS IN BANANAS.\n\nI sat down on the floor.\n\nOutside the observation window, something vast unfolded a little square of light. A girl stepped into it. She wore green shorts and one red sandal. Her other foot was bare.\n\nI knew those shorts. At home in my mother's closet was a coffee tin containing a red sandal with a broken strap. After the stroke, I'd thrown out twenty years of bank statements but kept that stupid shoe.\n\nThe girl put a finger to the glass. I put mine against it from inside.\n\n“Marisol,” I said.\n\nShe pulled her hand back. Even at eight, my mother hadn't liked strangers knowing her name.\n\nBy Wednesday, the surface had sent a linguist, two admirals, a child psychologist, and seventy kilograms of equipment that wouldn't fit through the hatch. The visitors declined to speak to any of them. Their messages came to my console, mostly concerning socks, vaccination records, and the transfer of a small savings account. Apparently Marisol had earned pocket money doing something the printer translated as “persuading angles.”\n\nThe linguist asked the question none of us could phrase politely. Which Marisol was real?\n\nBOTH, came the answer. STANDARD PROCEDURE IS TO RETURN A CHILD TO THE MOMENT OF REMOVAL. IN THIS CASE THE RETURN OCCURRED WITHOUT THE DEPARTURE CEASING. WE APOLOGIZE FOR THE INCONVENIENCE.\n\n“Why now?” I typed.\n\nFor the first time, the answer took a while.\n\nI AM DYING.\n\nI asked the others to leave.\n\nThe square outside brightened. Beside Marisol there appeared a crease, like the place where two fingers meet when you cup water in your hands.\n\n“Is that you?”\n\nAS MUCH AS WILL SHOW.\n\n“Does she know?”\n\nSHE KNOWS I AM GOING. SHE THINKS GOING IS A PLACE.\n\nI thought of my mother's last morning. I'd brought a comb to the hospital because she'd always been particular about her part. In the end I'd stood there holding it, unable to remember which side.\n\n“What do you want me to tell her?”\n\nNOTHING YET. COULD YOU ASK IF SHE HAS PACKED THE BLUE CUP? SHE WILL SAY SHE HAS.\n\nOn Thursday the square opened directly into the galley. There was no gust of air, no shimmer. One moment there was a cupboard full of powdered eggs; the next, a little girl dragging a green suitcase over the sill.\n\nShe spoke Spanish with my grandmother's country accent. “Are you the lady who knows me?”\n\n“A little.”\n\n“Do you know where my mami is?”\n\n“Yes,” I said. “It's a long story. We'll sit down for it.”\n\nBehind her, the crease had grown thin. Marisol turned toward it with the bored impatience of a child whose parent is taking too long to park.\n\n“Come on,” she said.\n\nThe console chimed in the other room. Nobody went to look.\n\nI crouched beside her. “Did you pack the blue cup?”\n\nHer face changed. She flung open the suitcase and dug through folded clothes, polished stones, a picture of something like a staircase eating an apple. No cup.\n\nA blue cup rolled over the sill and bumped her naked toes.\n\n“Oh,” she said, in exactly the tone my mother used when somebody caught her being wrong. She picked it up. The cupboard was full of eggs again.\n\nFor a minute she stood quite still. Then she climbed into my lap, all bony knees and hot forehead. I had been held by her so many times. It did not help me know how to hold her. I did my best.\n\nLater, Joel brought me the final printout. It wasn't a bill after all. The number beneath the itemized breakfasts and bedtimes wasn't a total due. It was a receipt for everything that had been paid.\n\nAt the bottom, in smaller type, it said: I WOULD HAVE LIKED ANOTHER THURSDAY.\n\nI folded it into the coffee tin when we got home. The sandal, of course, no longer fit.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 30,
+  "completion_tokens": 1086,
+  "total_tokens": 1116,
+  "cost": 0.04368,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.04368,
+   "upstream_inference_prompt_cost": 0.00024,
+   "upstream_inference_completions_cost": 0.04344
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: love. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-love-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "At six-fifteen the streetlights on Marine Drive\nclick off, one by one, toward the river.\nYou set the steel thermos on the fender\nand unscrew the cap. Steam rises\ninto the fog coming off the pilings in Astoria.\nI hand you the foil-wrapped egg.\nYour knuckles are split from the salt,\nthe creases packed with grease\nthat pumice soap never takes out.\nA gull drops a clam onto the gravel\nten feet from your boots, misses the crack,\nand hauls it up again.\nYou have a scar shaped like a comma\nbehind your left ear from a nail gun in Eugene,\nand you still turn your head that way\nwhenever a horn blows on the water.\nYou pour the first cup and hold it out to me\nbefore you drink from the mouth.\nThe truck idles, rattling the mirror\non the passenger side.\nWhen you climb into the cab,\nyou reach across the bench\nand pull the choke half an inch,\nleaving a thumbprint of coffee\non the chrome.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 211,
+  "completion_tokens": 2191,
+  "total_tokens": 2402,
+  "cost": 0.033498,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.033498,
+   "upstream_inference_prompt_cost": 0.000633,
+   "upstream_inference_completions_cost": 0.032865
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1968,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

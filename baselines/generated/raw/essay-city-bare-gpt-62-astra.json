@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-city",
+ "style": "bare",
+ "prompt": "Write a personal essay about moving to a new city. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "essay-city-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "For the first three weeks after I moved to Philadelphia, I kept a folding chair in the kitchen even though I owned two perfectly good chairs and a table. The table was boxed in by cartons in the dining room. The folding chair fit beside the stove. In the morning I sat there with my coffee, listening to the man downstairs practice scales on a clarinet. He usually got stuck in the same place. By my second week, I knew which note was going to squeak, and I would stop with the cup halfway to my mouth, waiting for it.\n\nI had moved for a job, which was the answer I gave when people asked and a small part of the truth. In Cincinnati, where I grew up, I could spend a whole Saturday running errands and never have to introduce myself. There was real pleasure in that. There was also the fact that my mother's dentist still called me Scoot, after a way I had apparently gone down the stairs as a baby. At thirty-two, I wanted the chance to become somebody whose childhood movements were not a matter of public record.\n\nI had expected my unfamiliarity with Philadelphia to show up in grander ways than it did. I thought I would get lost, and sometimes I did, but my phone could get me home. What my phone couldn't tell me was whether the corner store sold decent milk. I bought a quart, opened it, and found out. At the grocery store six blocks farther on, I stood in front of the eggs feeling abruptly, ridiculously tired. At home I could have sent my brother a picture of the spoiled milk. He would have driven over with some, then stayed long enough to drink most of it in coffee. Here I had to buy eggs and walk back.\n\nOne Sunday my mother called while I was standing on the folding chair, trying to put up curtains. I told her how much I liked the apartment. I described the tall windows and the sycamore out front, which was shedding its bark in pieces the size of postcards. Then the bracket slipped, and I said something that prompted her to ask exactly what I was standing on. A minute later my brother texted: *Get down.* I sat on the floor and laughed until I cried, and then cried for a while after it wasn't funny anymore.\n\nThe next morning I knocked on the downstairs door to ask about a ladder. The clarinet player turned out to be a woman named Fran. The man whose voice I'd heard through the floor was her husband, who taught history over Zoom. Fran had taken up the clarinet at sixty because she'd always wanted to play the opening of “Rhapsody in Blue.” I admitted that I heard her practicing. “Well,” she said, “at least one of us ought to be getting something out of it.” She lent me a stepladder with a dried fan of yellow paint across the top.\n\nIt would make a better story if we had become close friends. Mostly we became people who could ask each other for small things. I brought her packages in when it rained. She showed me how to yank the front door shut so the latch caught without waking everybody up. In November she asked if I'd mind driving her to the eye doctor because they were going to dilate her pupils. I spent forty minutes in the waiting room reading about the mating habits of seahorses. On the way home she bought us fries, which we ate in my parked car because they were hot and neither of us wanted to share.\n\nBy spring I'd found a barber and a place to get my taxes done. I still called Cincinnati home, especially when buying plane tickets. But one afternoon my brother came to visit, and on our walk back from lunch he stopped at a corner where I hadn't realized I always turned without thinking. I went another five steps before I noticed he wasn't beside me. He was looking up at the tiled face of an old bank, at a blue heron worked into the brick above the door. I had passed it maybe a hundred times. We stood there together, me showing him the way and him showing me the bird.\n\nThat evening we ate at the dining room table. The folding chair had gone into the closet months before, but when Fran knocked to return a dish, my brother pulled it out for her the way he would have for anyone back home. She stayed for a piece of pie. Over coffee he asked whether I had told her what everybody used to call me. I could have stopped him. Instead I got up to cut Fran another sliver, and from the kitchen I heard her asking how old I'd been, and whether I went down the stairs headfirst or feetfirst.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 31,
+  "completion_tokens": 947,
+  "total_tokens": 978,
+  "cost": 0.038128,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.038128,
+   "upstream_inference_prompt_cost": 0.000248,
+   "upstream_inference_completions_cost": 0.03788
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

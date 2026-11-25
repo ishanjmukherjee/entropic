@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-lighthouse",
+ "style": "craft",
+ "prompt": "Write a short story of about 800 words. Premise: a lighthouse keeper.\n\nWrite it as a fine literary short-story writer would. Open in the middle of a particular moment, not with scene-setting or weather. Give each character a want that is never stated. Let the important thing happen slightly off the page or in what goes unsaid, and trust the reader. Use precise, unglamorous physical detail in place of adjectives; dialogue people would actually say, oblique and at cross purposes; and at least one turn the premise does not predict. Choose names a census would contain. No sentence that explains what a moment meant, and no ending on a lesson, a reconciliation or a sunrise.\n\nOutput only the story, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "story-lighthouse-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Marlene set the cardboard box on the oilcloth and did not unbutton her coat.\n\nHarold was at the sink, working a bar of Lava soap into the creases of his knuckles. The water ran rust-colored for three seconds before it cleared. He shut the tap off with his wrist and reached for the dish towel hanging from the oven handle.\n\n\"I brought the boots,\" she said. \"They were in the front hall.\"\n\n\"It's May.\"\n\n\"And the mail. Most of it's circulars, except the one from the union.\"\n\nHarold dried each finger separately. The box had *Del Monte* printed on the side in faded red. Sticking out of the top were the rubber toes of his waders and a stack of envelopes bound with a thick blue rubber band from a bunch of broccoli.\n\n\"The pump's been knocking since Tuesday,\" he said. \"I had to pull the flange and repack it with hemp. Took half the morning.\"\n\n\"The furnace guy never came,\" Marlene said. \"I waited till four on Thursday.\"\n\n\"You have to call him at the house, not the shop. He doesn't answer the shop after noon.\"\n\nShe shifted her weight from one foot to the other. The heels of her loafers clicked on the linoleum. She had her purse tucked under her arm, the strap wound twice around her wrist.\n\n\"I painted the upstairs room,\" Harold said. He tossed the towel onto the counter. \"Two coats. I got the green from Sears, the one you picked off the card in February. Scraped all the muntins down to the wood first.\"\n\n\"You didn't have to do that.\"\n\n\"The sills were soft on the east side. I put putty in them. It's dry now, if you want to look.\"\n\nMarlene looked at the stove. The kettle sat on the back burner, its spout crusted with white scale. \"The tide's going out,\" she said. \"It's already off the lower step.\"\n\n\"I've got the water hot. Takes two minutes.\"\n\n\"I can't, Harold.\"\n\nHe stood by the sink, his hands hanging at his sides. There was a dark crescent of grease under his left thumbnail that the soap hadn't touched. \"There's a tin of saltines in the cupboard,\" he said. \"And I opened a jar of peaches last night.\"\n\n\"I shut the main valve off in the cellar,\" she said. \"The one by the coal chute. And I left",
+ "finish_reason": "length",
+ "usage": {
+  "prompt_tokens": 190,
+  "completion_tokens": 5600,
+  "total_tokens": 5790,
+  "cost": 0.08457,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.08457,
+   "upstream_inference_prompt_cost": 0.00057,
+   "upstream_inference_completions_cost": 0.084
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 5068,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

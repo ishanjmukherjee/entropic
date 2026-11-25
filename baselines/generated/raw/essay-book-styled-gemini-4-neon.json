@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-book",
+ "style": "styled",
+ "prompt": "Write an essay of about 800 words on the subject below.\n\nWrite it the way an excellent, idiosyncratic human essayist would: someone with real expertise and strong opinions, writing in the first person for their own blog. Commit to a specific thesis that a thoughtful reader might disagree with. Use concrete particulars (names, numbers, incidents, things only someone who had done the work would know) in place of general statements. Vary sentence length. No headings, no bullet points, no summary paragraph at the end, and none of the stock phrases of AI writing.\n\nOutput only the essay, with no title.\n\nSubject: an essay reviewing a book you think is underrated",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-book-styled-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Every few years, someone rediscovers G.B. Edwards’s *The Book of Ebenezer Le Page* and immediately ruins it by calling it charming. You see the word on the back of the NYRB Classics paperback, you see it in the reader reviews, and you can practically hear it in the patronizing warmth of John Fowles’s 1981 introduction. \"Charming\" is the kiss of death for a serious novel. It is what metropolitan critics call a book when the characters don’t have university degrees and live somewhere with a ferry schedule.\n\nLet’s be clear about what Edwards actually wrote. It is not a cozy piece of Channel Islands folklore, nor is it a quaint curio of outsider art. It is a four-hundred-page monument to human stubbornness, petty grievance, and emotional cowardice, disguised as the rambling autobiography of a Guernsey tomato-grower. And it is better—sharper, funnier, and infinitely more devastating—than almost anything published by the canonical British novelists of the postwar era.\n\nEdwards’s own biography is partly to blame for the misreading, because it sounds too much like a publisher’s fable. Born in Guernsey in 1899, Gerald Basil Edwards spent most of his adult life in England, working dreary civil service jobs, falling out with his family, and nursing a quiet, lifelong conviction that he was a genius. He finished the manuscript in his seventies, handed it to a young art historian named Edward Chaney, and died in Weymouth in 1976 without seeing a word of it in print. When Hamish Hamilton finally brought it out five years later, the literary establishment treated it like a message in a bottle from a gifted amateur.\n\nNobody writes sentences like Edwards by accident. The novel is narrated in the first person by Ebenezer, who is born in the late nineteenth century and lives into the 1960s, never once leaving Guernsey. His voice is thick with the cadence of Guernésiais—the island’s dying Norman-French dialect—and the blunt, repetitive rhythms of the King James Bible. Because Ebenezer sounds like an uneducated old man leaning over a granite wall, readers assume Edwards is merely transcribing a voice he remembered from boyhood. That is a massive underestimation of the book’s craft. What Edwards is doing is actually closer to Ford Madox Ford’s *The Good Soldier* than to rustic memoir. Ebenezer is a profoundly unreliable narrator, not because he lies to us, though he occasionally does, but because he is completely incapable of naming what is happening in his own chest.\n\nLook at how he handles the people who matter to him. His best friend, Jim Mahy, is killed in the First World War; the woman he loves, Liza Quéripel, marries another man because Ebenezer is too proud, too stingy, and too terrified of looking foolish to speak up. A lesser novelist would give Ebenezer a grand moment of reckoning, a tearful confession on a windswept cliff. Edwards refuses. Ebenezer just gets meaner. He hoards his money in tins. He nurses forty-year-old grudges against his cousins over boundary walls and inherited sideboards. He hates the English for being arrogant, the French for being French, and the tourists for ruining the beaches. When the Germans occupy Guernsey in 1940, Ebenezer doesn’t transform into a heroic resistance fighter. He mostly resents the curfew, worries about his crops, and watches with cold, acid satisfaction as the island’s respectable citizens scramble to collaborate.\n\nI know plenty of smart readers who give up on this book around page 150. Their complaint is fair enough: nothing happens, and the narrator is a crank. Why spend four hundred pages listening to an old man complain about the price of paraffin, the hypocrisy of the chapel elders, and the moral decline of the parish of the Vale?\n\nBecause that is how most human lives are actually experienced. Anthony Powell’s *A Dance to the Music of Time* gives you the twentieth century as a series of witty dinner parties; Evelyn Waugh gives it to you as a cruel farce. Edwards gives you the twentieth century as a slow, grinding accumulation of weather, manual labor, and unspoken grief. The tedium is the architecture. You don’t realize how deeply Ebenezer has been hollowed out by the death of Jim Mahy or the loss of Liza until you notice that, fifty years later, he still cannot walk past a certain lane without abruptly changing the subject to the quality of the soil.\n\nNear the end of the book, when Ebenezer is old and sick and sitting on a small fortune he has no idea how to spend, he decides to leave his money to a young island painter—a boy who doesn’t belong to his family, who doesn’t even share his prejudices, simply because the boy looks at the island the way Ebenezer secretly always has. It isn’t a neat redemption. Ebenezer is still cranky, still suspicious, still convinced the world is going to hell. He just finally, grudgingly, lets go of the rope. If you call that charming, you weren’t paying attention.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 171,
+  "completion_tokens": 4253,
+  "total_tokens": 4424,
+  "cost": 0.064308,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.064308,
+   "upstream_inference_prompt_cost": 0.000513,
+   "upstream_inference_completions_cost": 0.063795
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 3179,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

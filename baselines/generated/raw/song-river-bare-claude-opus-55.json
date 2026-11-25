@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "bare",
+ "prompt": "Write the lyrics of a folk song about a river being dammed. Output only the lyrics.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 900,
+ "id": "song-river-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "**The Water Comes No More**\n\n*Verse 1*\nMy granddad fished the Cedar Bend\nWhen the willows touched the shore,\nHe'd sing to me of the river's song\nBefore the water rose no more.\nWe'd watch the herons lift at dawn\nWhere the shallows caught the light,\nAnd the river ran down to the sea\nThrough the long and starry night.\n\n*Chorus*\nOh, the river ran so wild and free,\nThrough the valley, through the pines,\nNow she sleeps behind a wall of stone\nAnd the old songs lose their lines.\nThey've bound her up with concrete chains,\nDrowned the fields we knew before,\nAnd the river that once sang to me\nDon't sing to me no more.\n\n*Verse 2*\nThe men came down in '62\nWith their papers and their plans,\nSaid, \"Progress waits on the other side,\nSign your name and sell your land.\"\nThey gave us coin for the bottom fields\nAnd the churchyard on the hill,\nNow my grandmother's resting stone\nLies beneath the water still.\n\n*Chorus*\n\n*Verse 3*\nThe town of Ashford's gone below,\nJust a steeple in the drought,\nWhen the summer's long and the lake runs low\nYou can see the bell tower out.\nThe salmon beat against the wall\nWhere they used to journey home,\nAnd the eagles circle overhead\nOver waters still as stone.\n\n*Bridge*\nThey say the lights burn bright in town,\nThat the cities hum with power,\nBut who will light the darkened homes\nOf the ones who lost their hour?\nAnd who will tell the river's tale\nWhen the old folks all are gone?\nI'll carry it in this old guitar\nAnd I'll pass the singing on.\n\n*Verse 4*\nSomeday the concrete's bound to crack,\nAnd the stone will turn to sand,\nAnd the river will find her ancient path\nBack across the drownéd land.\nThe willows will return again,\nAnd the herons on the shore,\nAnd my children's children's children\nWill hear her sing once more.\n\n*Final Chorus*\nOh, the river ran so wild and free,\nThrough the valley, through the pines,\nThough she sleeps behind a wall of stone,\nShe's just waiting for her time.\nThey've bound her up with concrete chains,\nBut a river's made to roam,\nAnd someday she'll break those chains of stone\nAnd she'll carry us all home.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

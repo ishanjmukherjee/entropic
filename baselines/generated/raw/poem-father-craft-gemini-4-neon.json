@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a father's hands. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-father-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "At five-forty the kitchen bulb hums over the formica.\nMy father sets a 9/16-inch wrench beside the salt shaker\nand unscrews the lid of his Stanley thermos.\nThe grease in the creases of his knuckles\ndoes not come out with Lava soap.\n\nOutside, the gravel in the alley is frozen to the mud.\nA freighter clears the Duluth lift bridge,\nits horn rattling the storm window against the sash.\nHe wraps electrical tape twice\naround the split in his right thumb.\n\nOnce, at the county fair, he won a goldfish\nby dropping a dime onto a floating saucer\nand carried the bag home in his shirt pocket\nso the water would stay warm.\n\nHe pours coffee from the carafe,\ncaps the thermos, and drops the wrench into his coat.\nWhen he pulls the back door shut behind him,\na smudge of motor oil stays on the white paint\njust above the brass handle.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 215,
+  "completion_tokens": 2331,
+  "total_tokens": 2546,
+  "cost": 0.03561,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.03561,
+   "upstream_inference_prompt_cost": 0.000645,
+   "upstream_inference_completions_cost": 0.034965
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2131,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

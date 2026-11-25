@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-phd",
+ "style": "bare",
+ "prompt": "Write an essay of advice for a new PhD student on choosing a research problem. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "essay-phd-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "One of the hardest adjustments in starting a PhD is that the question is no longer printed at the top of the page. You may have chosen a field, joined a lab, or won funding for a particular project, yet still be unsure what problem is yours to solve. That uncertainty is not evidence that you are unprepared. Learning to turn a broad interest into a question worth answering is part of the degree. Your first task is not to foresee a brilliant dissertation. It is to choose a question that deserves a serious attempt and to make that attempt informative enough to guide the next one.\n\nBegin by noticing where your attention catches. As you read a paper, listen to a seminar, or work through an example, write down the moment when something stops making sense. Perhaps two authors explain the same event differently. Perhaps a model works remarkably well except in the case you would have expected it to handle best. Record the particular difficulty before translating it into the grand language of a proposal. “Why did this town reject the reform that its neighbors adopted?” is a more useful beginning than “I am interested in institutions and social change.” The larger interest tells you where you might spend several years; the smaller puzzle gives you something to do on Monday.\n\nNext, ask what would follow from an answer. A gap in the literature is not, by itself, a reason to fill it. Imagine the two or three most plausible outcomes of your investigation. Who would revise a belief, interpret a source differently, or choose a different method as a result? In the case of the town that rejected reform, perhaps prevailing accounts emphasize local wealth, while the voting records suggest that equally prosperous neighbors made opposite choices. Now the case matters beyond its boundaries: it gives you a way to examine where an explanation holds and where it breaks down. You need not promise a revolution. Correcting a consequential error is enough.\n\nRead to discover whether the puzzle survives contact with what is already known. Start with a few central works, then follow their disagreements and citations rather than trying to finish an entire field. Look especially for the strongest version of the explanation you suspect is wrong. Talk to someone who knows the material well, and show them the observation that bothers you. “Has anyone studied this?” often earns a list of references. “These authors predict the same outcome, but these two cases diverge; am I missing a distinction?” gives your listener a chance to identify an overlooked fact or recognize a real difficulty.\n\nBefore committing, design a small test of the project's hardest assumption. If your argument will depend on comparing municipal records, inspect a sample from each archive. A ledger labeled “public expenditure” may include school salaries in one town and exclude them in another. Discovering that in your first month could save a year of constructing a comparison that means nothing. It might also lead to a better question about how the towns classified public obligations. A pilot is valuable not because it supplies an encouraging preliminary result, but because it exposes the distance between the research you imagine and the work your evidence will actually support.\n\nConsider the conditions under which you will do that work. Does your adviser have the time and expertise to help when the project stalls? Can you obtain the necessary training, permissions, equipment, or travel funds on a plausible schedule? Ask senior students what took longer than expected and what they wish they had checked sooner. Pay attention, too, to the ordinary texture of the work. You can care deeply about a historical question and dislike spending most days deciphering handwriting. That does not disqualify you, but it is worth learning before you commit to three winters in an archive.\n\nFinally, give yourself a decision date. After an agreed period of reading and exploratory work, write a page stating your question, why the answer matters, what evidence could change your mind, and what you will try first. Include one reason to stop. Discuss that page with your adviser and decide whether to proceed, narrow the question, or set it aside. Without such a moment, caution can become a respectable way to avoid choosing; without permission to reconsider, an early choice can harden into an obligation long after its rationale has disappeared.\n\nYou are looking for a problem to which you can make a contribution, not one that certifies in advance that you belong in research. A good choice will leave some uncertainty intact: if you already knew what the evidence would say, there would be little point in collecting it. What you should be able to explain is why the uncertainty matters and how your next few months of work might reduce it. That is a sound basis on which to begin.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 37,
+  "completion_tokens": 928,
+  "total_tokens": 965,
+  "cost": 0.037416,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.037416,
+   "upstream_inference_prompt_cost": 0.000296,
+   "upstream_inference_completions_cost": 0.03712
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

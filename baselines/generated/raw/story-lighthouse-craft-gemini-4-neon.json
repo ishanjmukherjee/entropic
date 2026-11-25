@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-lighthouse",
+ "style": "craft",
+ "prompt": "Write a short story of about 800 words. Premise: a lighthouse keeper.\n\nWrite it as a fine literary short-story writer would. Open in the middle of a particular moment, not with scene-setting or weather. Give each character a want that is never stated. Let the important thing happen slightly off the page or in what goes unsaid, and trust the reader. Use precise, unglamorous physical detail in place of adjectives; dialogue people would actually say, oblique and at cross purposes; and at least one turn the premise does not predict. Choose names a census would contain. No sentence that explains what a moment meant, and no ending on a lesson, a reconciliation or a sunrise.\n\nOutput only the story, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "story-lighthouse-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Walter laid the crescent wrench on a folded page of the *Bangor Daily* and worked a grease rag between his thumb and forefinger. Across the oilcloth table, Carol was picking the price sticker off a tin of peaches with her thumbnail.\n\n\"You didn't need to haul cans up the walk,\" Walter said.\n\n\"They were two for a dollar at the IGA.\"\n\n\"I've got six tins of pears in the cupboard.\"\n\n\"You don't like pears.\"\n\n\"I eat them.\"\n\nShe set the tin beside the salt shaker and looked at the sink. A brown ring sat under the cold tap where the washer had gone. \"You're still leaving the faucet to drip.\"\n\n\"Stops the line from hammering.\" He folded the rag into a square and tucked it into his hip pocket. \"How's the truck?\"\n\n\"Slips going into third,\" she said. \"I'm taking it to Ray's on Monday.\"\n\n\"Don used to do the fluid himself.\"\n\nCarol reached into her canvas tote and pulled out a bundle of envelopes held together with a red rubber band. \"I brought your mail. Mostly circulars. Something from the union, and a postcard from the dentist.\"\n\n\"I told them I wasn't coming in.\"\n\n\"They send them anyway.\" She slid the bundle across the oilcloth. It stopped against the wrench. \"I painted the back room.\"\n\nWalter picked up the mail and thumbed the corner of the union envelope without opening it. \"Barge is at seven tomorrow. I've got four panels left to pull before it gets dark.\"\n\n\"I can help.\"\n\n\"You've got your good shoes on.\"\n\n\"They're just loafers, Dad.\"\n\nHe stood, his knees popping once, and went to the door that opened onto the tower stairs. Carol followed him, carrying her purse by the strap. The cast-iron treads were worn smooth in the center, and the handrail smelled of pennies. Walter climbed without holding on, his boots striking the metal in a flat, even rhythm. Halfway up, Carol stopped to catch her breath, leaning her shoulder against the whitewashed brick.\n\n\"You're going to miss these,\" she said to his back.\n\n\"I'm sixty-two,\" Walter said, not turning. \"I won't miss them.\"\n\nHe pushed up the heavy wooden trapdoor and stepped into the lantern room. Carol came up behind him and paused on the top rung, her hands on the iron rim.\n\nThree pine crates sat on the deck plates, overflowing with wood shavings. A crowbar leaned against the cast-iron pedestal where the clockwork mechanism used to sit. The Fresnel lens was half-stripped—its bronze frame stood open like a ribcage, and four curved glass panels lay on a folded wool blanket, each one thick as a wrist. Outside, bolted to the galvanized railing of the gallery, a green plastic beacon the size of a coffee can blinked once every six seconds.\n\n\"They said it's going to a museum in Bath,\" Carol said.\n\n\"Augusta,\" Walter said. He stepped over a coil of hemp rope and knelt beside the blanket. \"Bath didn't have the floor space.\"\n\nBy the trapdoor sat Walter's canvas duffel, cinched tight with a lanyard. A heavy, triangular shape pressed against the side of the cloth. Carol looked at it, then stepped onto the deck plates and walked to the glass.\n\n\"I painted it that yellow you liked,\" she said, her back to him. \"The one from the hallway.\"\n\nWalter fitted a flathead screwdriver into a brass retaining screw on the bronze frame. The metal gave a dry shriek as it turned. \"I've got the trailer in Brewer,\" he said. \"Already paid the lot rent through October.\"\n\n\"You can't stay in that thing in November. The pipes froze two years ago.\"\n\n\"I wrapped them with heat tape.\"\n\n\"Heat tape doesn't do anything when the power goes out.\" She put her palm flat against the glass pane. \"Don took the Buick,\" she said. \"Left me the truck.\"\n\nWalter stopped turning the screwdriver. He kept his eyes on the slot in the brass head. After a moment, he finished the turn and caught the screw in his left palm.\n\n\"The truck's got better tires,\" he said.\n\nCarol didn't answer. She walked over to the nearest crate, picked up a handful of wood shavings, and let them sift back through her fingers. \"It's just a lot of house,\" she said.\n\nWalter set the screw in a coffee tin with the others and gripped the edges of the glass panel. It was heavier than it looked; his forearms trembled as he eased it free of the bronze channel. He lowered it onto the wool blanket beside the others.\n\n\"Hand me that newspaper,\" he said.\n\nCarol bent and picked up a stack of the *Bangor Daily* from the deck. She held it out to him, and their fingers brushed against the dry paper. He laid two sheets flat, rolled the glass panel onto them, and folded the corners in with his thumbs.\n\n\"I should beat the traffic on Route 1,\" she said.\n\n\"Tide's coming in anyway,\" Walter said. \"Causeway'll have two inches over it by six.\"\n\nShe stood for a second by the trapdoor, her purse hanging straight down from her wrist. Then she stepped onto the ladder. Her shoulders disappeared, then her head, then her fingers on the iron rim. Down below, her loafers clicked against the treads, slower than they had come up.\n\nWalter waited until the kitchen door shut. He reached into the coffee tin, picked up the screwdriver, and fitted it into the next brass screw. Outside, bolted to the railing, the plastic beacon blinked once, and then again.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 190,
+  "completion_tokens": 6438,
+  "total_tokens": 6628,
+  "cost": 0.09714,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.09714,
+   "upstream_inference_prompt_cost": 0.00057,
+   "upstream_inference_completions_cost": 0.09657
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 5212,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

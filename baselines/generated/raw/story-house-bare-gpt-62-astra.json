@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-house",
+ "style": "bare",
+ "prompt": "Write a short story about two siblings clearing out their late mother's house. About 800 words. Output only the story, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "story-house-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "By noon, Ruth had put a price on everything except the good scissors. She set them beside the cash tin on the porch, and every few minutes somebody tried to buy them.\n\n“Those are for cutting string,” she told a woman who offered a dollar.\n\n“I know what scissors are for,” the woman said.\n\nInside, her brother Daniel was emptying the kitchen. He had been at it since eight and had filled one box. Ruth found him sitting on the floor with a drawer across his knees, sorting birthday candles by color.\n\n“You understand she’s dead,” Ruth said. “She won’t be checking.”\n\nDaniel held up a pink numeral six. The wick was black. “How many times do you think we were six?”\n\n“Get up.”\n\nHe put the candles in his pocket and got up.\n\nTheir mother had lived in the house for forty-three years. There were thumbtacks in the wallpaper from calendars issued by six different banks, all of which had become the same bank. In the hall closet hung a raincoat that had belonged to their father, who had left in 1997 for what he described as a trial separation and apparently considered the results conclusive.\n\nThe house had sold to a young couple expecting twins. They wanted possession Monday.\n\nAt one, a girl bought the raincoat. She wore it away with the sleeves rolled high. Daniel watched through the screen.\n\n“Looks better on her,” he said.\n\nRuth gave him a sandwich. They ate standing up, looking out at strangers touching their things.\n\n“Did you find the little blue dish?” Daniel asked.\n\n“What little blue dish?”\n\n“By the sink. She put her rings in it.”\n\n“Oh,” Ruth said. “Somebody bought it this morning.”\n\nDaniel put his sandwich down.\n\n“You could have said you wanted it.”\n\n“I didn’t know I had to reserve things.”\n\n“You had three weeks.”\n\n“I was arranging the funeral.”\n\n“And I was here,” Ruth said.\n\nOn the porch, a man rang the bicycle bell on Daniel’s old handlebars several times, as if asking to pass.\n\nRuth went out to take his money. When she came back, Daniel was under the sink, pulling out shopping bags. They came in a long, crackling rope, each bag stuffed into the next. Behind them lay a brown envelope with his name on it.\n\nFor a moment neither moved. Then Daniel wiped his hands on his jeans and opened it.\n\nInside was a receipt for thirty-eight dollars from Bell’s Hardware, dated August 1989. On the back their mother had written: Daniel owes me for window.\n\nRuth snorted. Daniel began to laugh. He sat down hard on the linoleum, the receipt shaking in his hand.\n\n“She charged me for it,” he said. “I mowed all summer.”\n\n“You broke it all summer. You put three balls through that window.”\n\n“Two. The third was yours.”\n\nRuth stopped laughing.\n\nIt had been hers. She remembered the surprising weight of the wet tennis ball, the small satisfactory knock of the racket. Daniel had come around the garage carrying two ice pops, and she had told him, quite calmly, that if he said anything she would tell their mother what she had found in his sock drawer.\n\n“What was in your sock drawer?”\n\n“Thirty-eight dollars, I hope.”\n\nShe sat beside him. From down there the kitchen looked almost as it had when they were children: the chipped lip of the counter, the brass tracks of the sliding cupboard doors. Their mother used to stand at the stove in her stocking feet, one foot resting on top of the other.\n\n“I thought there’d be a letter,” Daniel said.\n\n“Me too.”\n\n“To be honest, I was already feeling bad there wasn’t one for you.”\n\nFrom the porch came a tentative “Hello?”\n\nRuth closed her eyes. “I sold the dish for a quarter.”\n\n“Steep.”\n\n“I’m sorry.”\n\nDaniel folded the receipt along its old crease. “I don’t even wear rings.”\n\n“No. But you knew where she put hers.”\n\nThey stayed there until the person on the porch went away.\n\nBy five, what remained fit into the back of Daniel’s station wagon. Ruth swept the porch while he took down the signs. The cash tin held two hundred and eleven dollars, a Canadian dime, and a button someone had mistaken for a coin. They agreed not to count it again.\n\nDaniel went back inside for a last look. When he returned, he was carrying the kitchen drawer.\n\n“What are you going to do with that?” Ruth asked.\n\n“Absolutely no idea.”\n\n“The twins might need a drawer.”\n\nHe considered this, then carried it back. She heard it slide home, stick halfway, slide again.\n\nWhen he came out she handed him the good scissors. He opened them and closed them once.\n\n“Still good,” he said.\n\nRuth locked the door. On the walk to the car, Daniel took the birthday candles from his pocket and divided them between them, giving her the six.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 34,
+  "completion_tokens": 1014,
+  "total_tokens": 1048,
+  "cost": 0.040832,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.040832,
+   "upstream_inference_prompt_cost": 0.000272,
+   "upstream_inference_completions_cost": 0.04056
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

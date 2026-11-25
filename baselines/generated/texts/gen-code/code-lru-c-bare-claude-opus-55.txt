@@ -1,0 +1,526 @@
+/*
+ * lru_cache.c - A fixed-capacity Least-Recently-Used (LRU) cache.
+ *
+ * Design
+ * ------
+ *   - A hash table with separate chaining provides O(1) average lookup.
+ *   - A circular doubly linked list with a sentinel node tracks recency:
+ *       sentinel.next -> most recently used (MRU)
+ *       sentinel.prev -> least recently used (LRU)
+ *   - Each entry lives in one allocation holding both the list/chain links
+ *     and a private copy of the key.
+ *
+ * Keys are arbitrary byte strings (pointer + length) copied into the cache.
+ * Values are opaque pointers. The cache takes ownership of stored values
+ * and releases them with an optional user-supplied destructor when they are
+ * evicted, replaced, removed, or when the cache is cleared or destroyed.
+ *
+ * All operations are O(1) on average. The bucket array is sized once at
+ * creation, so the load factor never exceeds 0.75 and no rehashing occurs.
+ *
+ * Thread safety: an lru_cache instance is NOT thread-safe. Callers sharing
+ * an instance across threads must provide external synchronization.
+ *
+ * Build the self-test with:
+ *     cc -std=c99 -Wall -Wextra -O2 -DLRU_CACHE_TEST lru_cache.c -o lru_test
+ */
+
+#include <errno.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* ------------------------------------------------------------------------- */
+/* Public interface                                                          */
+/* ------------------------------------------------------------------------- */
+
+typedef void (*lru_free_fn)(void *value);
+
+typedef struct lru_cache lru_cache;
+
+typedef struct lru_stats {
+    uint64_t hits;
+    uint64_t misses;
+    uint64_t evictions;
+} lru_stats;
+
+/* Return codes. */
+enum {
+    LRU_OK        =  0,
+    LRU_NOT_FOUND =  1,
+    LRU_EINVAL    = -1,
+    LRU_ENOMEM    = -2
+};
+
+lru_cache *lru_create(size_t capacity, lru_free_fn value_free);
+void       lru_destroy(lru_cache *cache);
+
+int  lru_put(lru_cache *cache, const void *key, size_t key_len, void *value);
+int  lru_get(lru_cache *cache, const void *key, size_t key_len, void **out);
+int  lru_peek(const lru_cache *cache, const void *key, size_t key_len,
+              void **out);
+bool lru_contains(const lru_cache *cache, const void *key, size_t key_len);
+int  lru_remove(lru_cache *cache, const void *key, size_t key_len);
+void lru_clear(lru_cache *cache);
+
+size_t    lru_size(const lru_cache *cache);
+size_t    lru_capacity(const lru_cache *cache);
+lru_stats lru_get_stats(const lru_cache *cache);
+
+/* ------------------------------------------------------------------------- */
+/* Internal structures                                                       */
+/* ------------------------------------------------------------------------- */
+
+typedef struct lru_node {
+    struct lru_node *prev;   /* recency list: toward MRU             */
+    struct lru_node *next;   /* recency list: toward LRU             */
+    struct lru_node *hnext;  /* hash bucket chain                    */
+    uint64_t         hash;
+    void            *value;
+    size_t           key_len;
+    unsigned char    key[];  /* flexible array member: key bytes     */
+} lru_node;
+
+struct lru_cache {
+    size_t       capacity;
+    size_t       size;
+    size_t       bucket_mask;   /* nbuckets - 1; nbuckets is a power of 2 */
+    lru_node   **buckets;
+    lru_node     sentinel;      /* list head; never holds data            */
+    lru_free_fn  value_free;
+    lru_stats    stats;
+};
+
+/* ------------------------------------------------------------------------- */
+/* Helpers                                                                   */
+/* ------------------------------------------------------------------------- */
+
+/* 64-bit FNV-1a. */
+static uint64_t lru_hash(const void *key, size_t len)
+{
+    const unsigned char *p = (const unsigned char *)key;
+    uint64_t h = UINT64_C(14695981039346656037);
+    for (size_t i = 0; i < len; i++) {
+        h ^= (uint64_t)p[i];
+        h *= UINT64_C(1099511628211);
+    }
+    /* Final avalanche so low bits (used for bucket index) are well mixed. */
+    h ^= h >> 33;
+    h *= UINT64_C(0xff51afd7ed558ccd);
+    h ^= h >> 33;
+    return h;
+}
+
+/* Smallest power of two >= n, or 0 on overflow. */
+static size_t next_pow2(size_t n)
+{
+    size_t p = 1;
+    while (p < n) {
+        if (p > SIZE_MAX / 2)
+            return 0;
+        p <<= 1;
+    }
+    return p;
+}
+
+static inline void list_unlink(lru_node *n)
+{
+    n->prev->next = n->next;
+    n->next->prev = n->prev;
+    n->prev = n->next = NULL;
+}
+
+static inline void list_push_front(lru_cache *c, lru_node *n)
+{
+    n->prev = &c->sentinel;
+    n->next = c->sentinel.next;
+    c->sentinel.next->prev = n;
+    c->sentinel.next = n;
+}
+
+static inline void list_move_front(lru_cache *c, lru_node *n)
+{
+    if (c->sentinel.next == n)
+        return;
+    n->prev->next = n->next;
+    n->next->prev = n->prev;
+    list_push_front(c, n);
+}
+
+static inline bool node_matches(const lru_node *n, uint64_t hash,
+                                const void *key, size_t key_len)
+{
+    return n->hash == hash && n->key_len == key_len &&
+           (key_len == 0 || memcmp(n->key, key, key_len) == 0);
+}
+
+/*
+ * Locate a node. If `link_out` is non-NULL, it receives the address of the
+ * pointer that references the found node (for O(1) chain removal), or the
+ * address of the bucket head if not found.
+ */
+static lru_node *table_find(const lru_cache *c, uint64_t hash,
+                            const void *key, size_t key_len,
+                            lru_node ***link_out)
+{
+    lru_node **link = &c->buckets[hash & c->bucket_mask];
+    while (*link) {
+        if (node_matches(*link, hash, key, key_len)) {
+            if (link_out)
+                *link_out = link;
+            return *link;
+        }
+        link = &(*link)->hnext;
+    }
+    if (link_out)
+        *link_out = &c->buckets[hash & c->bucket_mask];
+    return NULL;
+}
+
+static void table_unlink(lru_cache *c, lru_node *target)
+{
+    lru_node **link = &c->buckets[target->hash & c->bucket_mask];
+    while (*link && *link != target)
+        link = &(*link)->hnext;
+    if (*link)
+        *link = target->hnext;
+    target->hnext = NULL;
+}
+
+static void node_free(lru_cache *c, lru_node *n)
+{
+    if (c->value_free && n->value)
+        c->value_free(n->value);
+    free(n);
+}
+
+static void evict_lru(lru_cache *c)
+{
+    lru_node *victim = c->sentinel.prev;
+    if (victim == &c->sentinel)
+        return;
+    table_unlink(c, victim);
+    list_unlink(victim);
+    c->size--;
+    c->stats.evictions++;
+    node_free(c, victim);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Public implementation                                                     */
+/* ------------------------------------------------------------------------- */
+
+lru_cache *lru_create(size_t capacity, lru_free_fn value_free)
+{
+    if (capacity == 0) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* Size buckets for a maximum load factor of 0.75. */
+    if (capacity > (SIZE_MAX - 2) / 4) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    size_t nbuckets = next_pow2((capacity * 4 + 2) / 3);
+    if (nbuckets == 0 || nbuckets > SIZE_MAX / sizeof(lru_node *)) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    lru_cache *c = (lru_cache *)calloc(1, sizeof(*c));
+    if (!c)
+        return NULL;
+
+    c->buckets = (lru_node **)calloc(nbuckets, sizeof(lru_node *));
+    if (!c->buckets) {
+        free(c);
+        return NULL;
+    }
+
+    c->capacity      = capacity;
+    c->size          = 0;
+    c->bucket_mask   = nbuckets - 1;
+    c->value_free    = value_free;
+    c->sentinel.prev = &c->sentinel;
+    c->sentinel.next = &c->sentinel;
+    return c;
+}
+
+void lru_clear(lru_cache *cache)
+{
+    if (!cache)
+        return;
+
+    lru_node *n = cache->sentinel.next;
+    while (n != &cache->sentinel) {
+        lru_node *next = n->next;
+        node_free(cache, n);
+        n = next;
+    }
+    memset(cache->buckets, 0, (cache->bucket_mask + 1) * sizeof(lru_node *));
+    cache->sentinel.prev = &cache->sentinel;
+    cache->sentinel.next = &cache->sentinel;
+    cache->size = 0;
+}
+
+void lru_destroy(lru_cache *cache)
+{
+    if (!cache)
+        return;
+    lru_clear(cache);
+    free(cache->buckets);
+    free(cache);
+}
+
+/*
+ * Insert or replace. On success the cache owns `value`. If the key already
+ * exists, its previous value is released with the destructor (unless it is
+ * the same pointer). On failure, ownership of `value` remains with the caller.
+ */
+int lru_put(lru_cache *cache, const void *key, size_t key_len, void *value)
+{
+    if (!cache || (!key && key_len != 0))
+        return LRU_EINVAL;
+
+    uint64_t h = lru_hash(key, key_len);
+    lru_node *n = table_find(cache, h, key, key_len, NULL);
+
+    if (n) {
+        if (n->value != value && cache->value_free && n->value)
+            cache->value_free(n->value);
+        n->value = value;
+        list_move_front(cache, n);
+        return LRU_OK;
+    }
+
+    if (key_len > SIZE_MAX - sizeof(lru_node))
+        return LRU_ENOMEM;
+
+    /* Allocate before evicting so a failed put leaves the cache intact. */
+    n = (lru_node *)malloc(sizeof(lru_node) + key_len);
+    if (!n)
+        return LRU_ENOMEM;
+
+    if (key_len)
+        memcpy(n->key, key, key_len);
+    n->key_len = key_len;
+    n->hash    = h;
+    n->value   = value;
+
+    if (cache->size >= cache->capacity)
+        evict_lru(cache);
+
+    lru_node **bucket = &cache->buckets[h & cache->bucket_mask];
+    n->hnext = *bucket;
+    *bucket  = n;
+    list_push_front(cache, n);
+    cache->size++;
+    return LRU_OK;
+}
+
+int lru_get(lru_cache *cache, const void *key, size_t key_len, void **out)
+{
+    if (!cache || (!key && key_len != 0))
+        return LRU_EINVAL;
+
+    lru_node *n = table_find(cache, lru_hash(key, key_len), key, key_len, NULL);
+    if (!n) {
+        cache->stats.misses++;
+        return LRU_NOT_FOUND;
+    }
+
+    cache->stats.hits++;
+    list_move_front(cache, n);
+    if (out)
+        *out = n->value;
+    return LRU_OK;
+}
+
+int lru_peek(const lru_cache *cache, const void *key, size_t key_len,
+             void **out)
+{
+    if (!cache || (!key && key_len != 0))
+        return LRU_EINVAL;
+
+    lru_node *n = table_find(cache, lru_hash(key, key_len), key, key_len, NULL);
+    if (!n)
+        return LRU_NOT_FOUND;
+    if (out)
+        *out = n->value;
+    return LRU_OK;
+}
+
+bool lru_contains(const lru_cache *cache, const void *key, size_t key_len)
+{
+    return lru_peek(cache, key, key_len, NULL) == LRU_OK;
+}
+
+int lru_remove(lru_cache *cache, const void *key, size_t key_len)
+{
+    if (!cache || (!key && key_len != 0))
+        return LRU_EINVAL;
+
+    lru_node **link;
+    lru_node *n = table_find(cache, lru_hash(key, key_len), key, key_len,
+                             &link);
+    if (!n)
+        return LRU_NOT_FOUND;
+
+    *link = n->hnext;
+    list_unlink(n);
+    cache->size--;
+    node_free(cache, n);
+    return LRU_OK;
+}
+
+size_t lru_size(const lru_cache *cache)
+{
+    return cache ? cache->size : 0;
+}
+
+size_t lru_capacity(const lru_cache *cache)
+{
+    return cache ? cache->capacity : 0;
+}
+
+lru_stats lru_get_stats(const lru_cache *cache)
+{
+    lru_stats empty = {0, 0, 0};
+    return cache ? cache->stats : empty;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Self-test                                                                 */
+/* ------------------------------------------------------------------------- */
+
+#ifdef LRU_CACHE_TEST
+
+#include <stdio.h>
+
+static int g_freed = 0;
+
+static void counting_free(void *p)
+{
+    g_freed++;
+    free(p);
+}
+
+static int *make_int(int v)
+{
+    int *p = (int *)malloc(sizeof(*p));
+    if (!p) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    *p = v;
+    return p;
+}
+
+#define CHECK(cond)                                                         \
+    do {                                                                    \
+        if (!(cond)) {                                                      \
+            fprintf(stderr, "%s:%d: CHECK failed: %s\n",                    \
+                    __FILE__, __LINE__, #cond);                             \
+            exit(EXIT_FAILURE);                                             \
+        }                                                                   \
+    } while (0)
+
+#define K(s) (s), strlen(s)
+
+int main(void)
+{
+    void *v = NULL;
+
+    CHECK(lru_create(0, NULL) == NULL);
+
+    lru_cache *c = lru_create(3, counting_free);
+    CHECK(c != NULL);
+    CHECK(lru_size(c) == 0);
+    CHECK(lru_capacity(c) == 3);
+
+    /* Basic insert and lookup. */
+    CHECK(lru_put(c, K("a"), make_int(1)) == LRU_OK);
+    CHECK(lru_put(c, K("b"), make_int(2)) == LRU_OK);
+    CHECK(lru_put(c, K("c"), make_int(3)) == LRU_OK);
+    CHECK(lru_size(c) == 3);
+    CHECK(lru_get(c, K("a"), &v) == LRU_OK && *(int *)v == 1);
+
+    /* "b" is now LRU; inserting "d" evicts it. */
+    CHECK(lru_put(c, K("d"), make_int(4)) == LRU_OK);
+    CHECK(g_freed == 1);
+    CHECK(!lru_contains(c, K("b")));
+    CHECK(lru_contains(c, K("a")));
+    CHECK(lru_contains(c, K("c")));
+    CHECK(lru_contains(c, K("d")));
+
+    /* Peek does not affect recency: "c" remains LRU. */
+    CHECK(lru_peek(c, K("c"), &v) == LRU_OK && *(int *)v == 3);
+    CHECK(lru_put(c, K("e"), make_int(5)) == LRU_OK);
+    CHECK(g_freed == 2);
+    CHECK(!lru_contains(c, K("c")));
+
+    /* Replacement frees the old value and promotes the entry. */
+    CHECK(lru_put(c, K("a"), make_int(10)) == LRU_OK);
+    CHECK(g_freed == 3);
+    CHECK(lru_size(c) == 3);
+    CHECK(lru_get(c, K("a"), &v) == LRU_OK && *(int *)v == 10);
+
+    /* Removal. */
+    CHECK(lru_remove(c, K("d")) == LRU_OK);
+    CHECK(g_freed == 4);
+    CHECK(lru_remove(c, K("d")) == LRU_NOT_FOUND);
+    CHECK(lru_size(c) == 2);
+
+    /* Miss accounting. */
+    CHECK(lru_get(c, K("zzz"), &v) == LRU_NOT_FOUND);
+    lru_stats s = lru_get_stats(c);
+    CHECK(s.hits == 2 && s.misses == 1 && s.evictions == 2);
+
+    /* Empty and binary keys. */
+    CHECK(lru_put(c, "", 0, make_int(0)) == LRU_OK);
+    CHECK(lru_get(c, "", 0, &v) == LRU_OK && *(int *)v == 0);
+    const unsigned char bin1[] = {0x00, 0x01, 0x02};
+    const unsigned char bin2[] = {0x00, 0x01, 0x03};
+    CHECK(lru_put(c, bin1, sizeof bin1, make_int(7)) == LRU_OK);
+    CHECK(!lru_contains(c, bin2, sizeof bin2));
+    CHECK(lru_contains(c, bin1, sizeof bin1));
+
+    /* Invalid arguments. */
+    CHECK(lru_put(NULL, K("x"), NULL) == LRU_EINVAL);
+    CHECK(lru_get(c, NULL, 5, &v) == LRU_EINVAL);
+
+    /* Clear. */
+    int before = g_freed;
+    lru_clear(c);
+    CHECK(lru_size(c) == 0);
+    CHECK(g_freed == before + 3);
+    CHECK(!lru_contains(c, K("a")));
+
+    /* Stress: many insertions against a larger cache. */
+    lru_destroy(c);
+    c = lru_create(1000, counting_free);
+    CHECK(c != NULL);
+    char buf[32];
+    for (int i = 0; i < 100000; i++) {
+        int n = snprintf(buf, sizeof buf, "key-%d", i);
+        CHECK(lru_put(c, buf, (size_t)n, make_int(i)) == LRU_OK);
+        CHECK(lru_size(c) <= 1000);
+    }
+    CHECK(lru_size(c) == 1000);
+    for (int i = 99000; i < 100000; i++) {
+        int n = snprintf(buf, sizeof buf, "key-%d", i);
+        CHECK(lru_get(c, buf, (size_t)n, &v) == LRU_OK && *(int *)v == i);
+    }
+    CHECK(!lru_contains(c, K("key-98999")));
+
+    lru_destroy(c);
+    lru_destroy(NULL);
+
+    printf("All LRU cache tests passed.\n");
+    return EXIT_SUCCESS;
+}
+
+#endif /* LRU_CACHE_TEST */

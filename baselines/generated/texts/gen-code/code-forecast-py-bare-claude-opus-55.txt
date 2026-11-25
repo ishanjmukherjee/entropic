@@ -1,0 +1,620 @@
+#!/usr/bin/env python3
+"""
+Daily sales forecasting pipeline.
+
+Loads a CSV of daily sales, cleans it into a regular daily time series,
+selects and fits a seasonal ETS (exponential smoothing state-space) model
+with statsmodels, evaluates it on a hold-out period against a seasonal-naive
+baseline, and optionally produces a forward-looking forecast.
+
+Cleaning steps
+--------------
+1. Parse and normalise dates (timezone dropped, time-of-day truncated).
+2. Coerce sales values to numeric (currency symbols / thousands separators
+   are stripped). Unparseable values become missing.
+3. Treat negative sales as invalid (set to missing).
+4. Aggregate multiple rows per day (sum by default).
+5. Reindex to a continuous daily calendar so missing days are explicit.
+6. Detect outliers with a seasonal Hampel filter (each value is compared to
+   the rolling median of values at the same seasonal phase, e.g. the same
+   weekday) and replace them with that median.
+7. Impute missing values by time-based interpolation.
+
+Outputs (written to --output-dir)
+---------------------------------
+* ``holdout_forecast.csv``  - actuals vs. model / baseline forecasts on the hold-out.
+* ``future_forecast.csv``   - forecast beyond the data (if --forecast-days > 0).
+* ``report.json``           - cleaning summary, model selection table and metrics.
+
+Example
+-------
+    python sales_forecast.py sales.csv --date-col date --value-col sales \
+        --holdout-days 28 --forecast-days 56 --output-dir out/
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import math
+import sys
+import warnings
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any, Iterable, Sequence
+
+import numpy as np
+import pandas as pd
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tsa.exponential_smoothing.ets import ETSModel
+
+LOGGER = logging.getLogger("sales_forecast")
+
+DEFAULT_PERIOD = 7
+DEFAULT_HOLDOUT = 28
+DEFAULT_ALPHA = 0.05
+DAILY_FREQ = "D"
+
+
+# --------------------------------------------------------------------------- #
+# Exceptions and data containers
+# --------------------------------------------------------------------------- #
+class DataError(ValueError):
+    """Raised when the input data is missing, malformed or insufficient."""
+
+
+class ModelError(RuntimeError):
+    """Raised when no forecasting model could be fitted."""
+
+
+@dataclass
+class CleaningReport:
+    """Summary of the transformations applied while cleaning the data."""
+
+    rows_read: int = 0
+    rows_bad_date: int = 0
+    values_unparseable: int = 0
+    values_negative: int = 0
+    duplicate_dates_aggregated: int = 0
+    days_missing_filled: int = 0
+    outliers_replaced: int = 0
+    longest_gap_days: int = 0
+    start_date: str | None = None
+    end_date: str | None = None
+    n_days: int = 0
+
+
+@dataclass(frozen=True)
+class ETSSpec:
+    """Specification of a single ETS model candidate."""
+
+    error: str
+    trend: str | None
+    damped_trend: bool
+    seasonal: str | None
+
+    @property
+    def label(self) -> str:
+        trend = "N" if self.trend is None else ("Ad" if self.damped_trend else "A")
+        seasonal = {None: "N", "add": "A", "mul": "M"}[self.seasonal]
+        error = {"add": "A", "mul": "M"}[self.error]
+        return f"ETS({error},{trend},{seasonal})"
+
+
+@dataclass
+class CandidateResult:
+    """Outcome of fitting one candidate model."""
+
+    label: str
+    aicc: float | None
+    converged: bool
+    error: str | None = None
+
+
+@dataclass
+class ForecastConfig:
+    """Runtime configuration for the pipeline."""
+
+    input_path: Path
+    output_dir: Path
+    date_col: str
+    value_col: str
+    aggregate: str = "sum"
+    period: int = DEFAULT_PERIOD
+    holdout_days: int = DEFAULT_HOLDOUT
+    forecast_days: int = 0
+    alpha: float = DEFAULT_ALPHA
+    outlier_window: int = 5
+    outlier_sigmas: float = 3.5
+    max_gap_warn: int = 7
+    clip_negative_forecasts: bool = True
+    extra: dict[str, Any] = field(default_factory=dict)
+
+
+# --------------------------------------------------------------------------- #
+# Loading and cleaning
+# --------------------------------------------------------------------------- #
+def load_raw(path: Path, date_col: str, value_col: str) -> pd.DataFrame:
+    """Read the CSV and return a two-column frame (raw strings / values)."""
+    if not path.is_file():
+        raise DataError(f"Input file not found: {path}")
+
+    try:
+        df = pd.read_csv(path, dtype=str, keep_default_na=True, skipinitialspace=True)
+    except pd.errors.EmptyDataError as exc:
+        raise DataError(f"Input file is empty: {path}") from exc
+    except pd.errors.ParserError as exc:
+        raise DataError(f"Could not parse CSV {path}: {exc}") from exc
+
+    df.columns = [str(c).strip() for c in df.columns]
+    missing = [c for c in (date_col, value_col) if c not in df.columns]
+    if missing:
+        raise DataError(
+            f"Missing required column(s) {missing}; available: {list(df.columns)}"
+        )
+    if df.empty:
+        raise DataError("Input file contains a header but no data rows.")
+
+    return df[[date_col, value_col]].rename(columns={date_col: "date", value_col: "sales"})
+
+
+def _parse_dates(raw: pd.Series) -> pd.Series:
+    dates = pd.to_datetime(raw.str.strip(), errors="coerce", utc=True)
+    return dates.dt.tz_convert(None).dt.normalize()
+
+
+def _parse_values(raw: pd.Series) -> pd.Series:
+    cleaned = (
+        raw.astype("string")
+        .str.strip()
+        .str.replace(r"^\((.*)\)$", r"-\1", regex=True)  # accounting negatives
+        .str.replace(r"[^0-9eE.+\-]", "", regex=True)
+        .replace("", pd.NA)
+    )
+    return pd.to_numeric(cleaned, errors="coerce").astype(float)
+
+
+def _longest_run(mask: pd.Series) -> int:
+    """Length of the longest consecutive run of True values."""
+    if not mask.any():
+        return 0
+    groups = (mask != mask.shift()).cumsum()
+    return int(mask.groupby(groups).sum().max())
+
+
+def seasonal_hampel(
+    series: pd.Series, period: int, window: int, n_sigmas: float
+) -> tuple[pd.Series, pd.Series]:
+    """
+    Seasonal Hampel filter.
+
+    Each observation is compared to the centred rolling median of observations
+    at the same seasonal phase (e.g. the same weekday). Points deviating by
+    more than ``n_sigmas`` robust standard deviations are replaced by that
+    median. Returns the filtered series and a boolean outlier mask.
+    """
+    if window < 3:
+        raise ValueError("outlier window must be >= 3")
+    phase = np.arange(len(series)) % period
+    grouped = series.groupby(phase, group_keys=False)
+
+    def _roll_median(s: pd.Series) -> pd.Series:
+        return s.rolling(window, center=True, min_periods=3).median()
+
+    median = grouped.transform(_roll_median)
+    abs_dev = (series - median).abs()
+    mad = abs_dev.groupby(phase, group_keys=False).transform(_roll_median)
+    threshold = n_sigmas * 1.4826 * mad
+
+    mask = (abs_dev > threshold) & (mad > 0) & series.notna() & median.notna()
+    filtered = series.where(~mask, median)
+    return filtered, mask.fillna(False)
+
+
+def clean_sales(raw: pd.DataFrame, cfg: ForecastConfig) -> tuple[pd.Series, CleaningReport]:
+    """Turn the raw frame into a regular, gap-free daily series."""
+    report = CleaningReport(rows_read=len(raw))
+
+    df = pd.DataFrame({"date": _parse_dates(raw["date"]), "sales": _parse_values(raw["sales"])})
+
+    bad_date = df["date"].isna()
+    report.rows_bad_date = int(bad_date.sum())
+    df = df.loc[~bad_date]
+    if df.empty:
+        raise DataError("No rows with a parseable date.")
+
+    report.values_unparseable = int((df["sales"].isna() & raw.loc[df.index, "sales"].notna()).sum())
+
+    negative = df["sales"] < 0
+    report.values_negative = int(negative.sum())
+    df.loc[negative, "sales"] = np.nan
+
+    report.duplicate_dates_aggregated = int(df["date"].duplicated().sum())
+    grouped = df.groupby("date")["sales"]
+    if cfg.aggregate == "sum":
+        daily = grouped.sum(min_count=1)
+    elif cfg.aggregate == "mean":
+        daily = grouped.mean()
+    elif cfg.aggregate == "last":
+        daily = grouped.last()
+    else:
+        raise ValueError(f"Unsupported aggregate: {cfg.aggregate}")
+
+    daily = daily.sort_index().asfreq(DAILY_FREQ)
+    daily.index.name = "date"
+
+    filtered, outliers = seasonal_hampel(
+        daily, cfg.period, cfg.outlier_window, cfg.outlier_sigmas
+    )
+    report.outliers_replaced = int(outliers.sum())
+
+    missing = filtered.isna()
+    report.days_missing_filled = int(missing.sum())
+    report.longest_gap_days = _longest_run(missing)
+    if report.longest_gap_days > cfg.max_gap_warn:
+        LOGGER.warning(
+            "Longest gap of missing data is %d days; interpolation may be unreliable.",
+            report.longest_gap_days,
+        )
+
+    if filtered.notna().sum() < 2:
+        raise DataError("Fewer than two valid sales observations after cleaning.")
+
+    series = filtered.interpolate(method="time", limit_direction="both").clip(lower=0)
+    series.name = "sales"
+
+    report.start_date = series.index[0].date().isoformat()
+    report.end_date = series.index[-1].date().isoformat()
+    report.n_days = len(series)
+    return series, report
+
+
+# --------------------------------------------------------------------------- #
+# Modelling
+# --------------------------------------------------------------------------- #
+def candidate_specs(positive: bool) -> list[ETSSpec]:
+    """Enumerate the ETS model family to search over."""
+    errors = ["add", "mul"] if positive else ["add"]
+    seasonals: list[str | None] = ["add", "mul", None] if positive else ["add", None]
+    trends: list[tuple[str | None, bool]] = [(None, False), ("add", False), ("add", True)]
+
+    specs: list[ETSSpec] = []
+    for error in errors:
+        for seasonal in seasonals:
+            for trend, damped in trends:
+                specs.append(ETSSpec(error, trend, damped, seasonal))
+    return specs
+
+
+def fit_ets(series: pd.Series, spec: ETSSpec, period: int) -> tuple[Any, bool]:
+    """Fit a single ETS model. Returns (results, converged)."""
+    model = ETSModel(
+        series,
+        error=spec.error,
+        trend=spec.trend,
+        damped_trend=spec.damped_trend,
+        seasonal=spec.seasonal,
+        seasonal_periods=period if spec.seasonal else None,
+        initialization_method="estimated",
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        results = model.fit(disp=False, maxiter=2000)
+    converged = not any(issubclass(w.category, ConvergenceWarning) for w in caught)
+    for w in caught:
+        LOGGER.debug("%s: %s", spec.label, w.message)
+    return results, converged
+
+
+def select_model(
+    train: pd.Series, period: int
+) -> tuple[ETSSpec, Any, list[CandidateResult]]:
+    """Fit every candidate and choose the one with the lowest AICc."""
+    positive = bool((train > 0).all())
+    table: list[CandidateResult] = []
+    best: tuple[float, ETSSpec, Any] | None = None
+
+    for spec in candidate_specs(positive):
+        try:
+            results, converged = fit_ets(train, spec, period)
+            aicc = float(results.aicc)
+        except (ValueError, np.linalg.LinAlgError, RuntimeError) as exc:
+            LOGGER.debug("Candidate %s failed: %s", spec.label, exc)
+            table.append(CandidateResult(spec.label, None, False, str(exc)))
+            continue
+
+        if not math.isfinite(aicc):
+            table.append(CandidateResult(spec.label, None, converged, "non-finite AICc"))
+            continue
+
+        table.append(CandidateResult(spec.label, aicc, converged))
+        # Prefer converged fits; only fall back to non-converged if nothing else works.
+        score = aicc if converged else aicc + 1e9
+        if best is None or score < best[0]:
+            best = (score, spec, results)
+
+    if best is None:
+        raise ModelError("No ETS candidate could be fitted to the training data.")
+
+    table.sort(key=lambda c: (c.aicc is None, c.aicc if c.aicc is not None else 0.0))
+    _, spec, results = best
+    LOGGER.info("Selected %s (AICc=%.2f)", spec.label, results.aicc)
+    return spec, results, table
+
+
+def forecast_frame(
+    results: Any, n_obs: int, horizon: int, index: pd.DatetimeIndex, alpha: float, clip: bool
+) -> pd.DataFrame:
+    """Out-of-sample forecast with prediction intervals."""
+    pred = results.get_prediction(start=n_obs, end=n_obs + horizon - 1)
+    frame = pred.summary_frame(alpha=alpha)
+    frame = frame.rename(columns={"mean": "forecast", "pi_lower": "lower", "pi_upper": "upper"})
+    frame = frame[["forecast", "lower", "upper"]]
+    frame.index = index
+    if clip:
+        frame = frame.clip(lower=0)
+    return frame
+
+
+def seasonal_naive(train: pd.Series, horizon: int, period: int) -> np.ndarray:
+    """Repeat the last observed season."""
+    last_season = train.to_numpy(dtype=float)[-period:]
+    reps = int(math.ceil(horizon / period))
+    return np.tile(last_season, reps)[:horizon]
+
+
+# --------------------------------------------------------------------------- #
+# Evaluation
+# --------------------------------------------------------------------------- #
+def evaluate(
+    actual: np.ndarray,
+    predicted: np.ndarray,
+    train: np.ndarray,
+    period: int,
+    lower: np.ndarray | None = None,
+    upper: np.ndarray | None = None,
+) -> dict[str, float | None]:
+    """Compute standard point-forecast and interval metrics."""
+    actual = np.asarray(actual, dtype=float)
+    predicted = np.asarray(predicted, dtype=float)
+    err = actual - predicted
+    abs_err = np.abs(err)
+
+    mae = float(abs_err.mean())
+    rmse = float(np.sqrt(np.mean(err**2)))
+    bias = float(np.mean(predicted - actual))
+
+    nonzero = actual != 0
+    mape = float(np.mean(abs_err[nonzero] / np.abs(actual[nonzero])) * 100) if nonzero.any() else None
+
+    denom = np.abs(actual) + np.abs(predicted)
+    smape_terms = np.divide(2 * abs_err, denom, out=np.zeros_like(abs_err), where=denom != 0)
+    smape = float(smape_terms.mean() * 100)
+
+    scale = np.mean(np.abs(train[period:] - train[:-period])) if len(train) > period else np.nan
+    mase = float(mae / scale) if np.isfinite(scale) and scale > 0 else None
+
+    metrics: dict[str, float | None] = {
+        "mae": mae,
+        "rmse": rmse,
+        "mape_pct": mape,
+        "smape_pct": smape,
+        "mase": mase,
+        "bias": bias,
+    }
+    if lower is not None and upper is not None:
+        inside = (actual >= np.asarray(lower)) & (actual <= np.asarray(upper))
+        metrics["interval_coverage"] = float(inside.mean())
+        metrics["mean_interval_width"] = float(np.mean(np.asarray(upper) - np.asarray(lower)))
+    return metrics
+
+
+# --------------------------------------------------------------------------- #
+# Orchestration
+# --------------------------------------------------------------------------- #
+def _json_safe(obj: Any) -> Any:
+    """Recursively replace NaN/inf with None so the output is valid JSON."""
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    if isinstance(obj, (float, np.floating)):
+        return float(obj) if math.isfinite(obj) else None
+    if isinstance(obj, np.integer):
+        return int(obj)
+    return obj
+
+
+def validate_config(cfg: ForecastConfig) -> None:
+    if cfg.period < 2:
+        raise ValueError("--period must be >= 2")
+    if cfg.holdout_days < 1:
+        raise ValueError("--holdout-days must be >= 1")
+    if cfg.forecast_days < 0:
+        raise ValueError("--forecast-days must be >= 0")
+    if not 0 < cfg.alpha < 1:
+        raise ValueError("--alpha must be in (0, 1)")
+    if cfg.outlier_sigmas <= 0:
+        raise ValueError("--outlier-sigmas must be > 0")
+
+
+def run(cfg: ForecastConfig) -> dict[str, Any]:
+    """Execute the full pipeline and return the report dictionary."""
+    validate_config(cfg)
+
+    raw = load_raw(cfg.input_path, cfg.date_col, cfg.value_col)
+    series, cleaning = clean_sales(raw, cfg)
+    LOGGER.info(
+        "Cleaned series: %d days (%s to %s), %d outliers replaced, %d days imputed",
+        cleaning.n_days, cleaning.start_date, cleaning.end_date,
+        cleaning.outliers_replaced, cleaning.days_missing_filled,
+    )
+
+    min_train = 2 * cfg.period + 2
+    if len(series) - cfg.holdout_days < min_train:
+        raise DataError(
+            f"Need at least {min_train + cfg.holdout_days} days of data for a "
+            f"{cfg.holdout_days}-day hold-out with period {cfg.period}; got {len(series)}."
+        )
+
+    train = series.iloc[: -cfg.holdout_days].asfreq(DAILY_FREQ)
+    test = series.iloc[-cfg.holdout_days :]
+
+    spec, results, table = select_model(train, cfg.period)
+    holdout = forecast_frame(
+        results, len(train), len(test), test.index, cfg.alpha, cfg.clip_negative_forecasts
+    )
+    holdout.insert(0, "actual", test.to_numpy())
+    holdout["seasonal_naive"] = seasonal_naive(train, len(test), cfg.period)
+
+    train_arr = train.to_numpy(dtype=float)
+    model_metrics = evaluate(
+        holdout["actual"].to_numpy(), holdout["forecast"].to_numpy(), train_arr,
+        cfg.period, holdout["lower"].to_numpy(), holdout["upper"].to_numpy(),
+    )
+    baseline_metrics = evaluate(
+        holdout["actual"].to_numpy(), holdout["seasonal_naive"].to_numpy(), train_arr, cfg.period
+    )
+    LOGGER.info(
+        "Hold-out MAE: model=%.3f, seasonal-naive=%.3f | MASE: model=%s",
+        model_metrics["mae"], baseline_metrics["mae"],
+        f"{model_metrics['mase']:.3f}" if model_metrics["mase"] is not None else "n/a",
+    )
+
+    cfg.output_dir.mkdir(parents=True, exist_ok=True)
+    holdout_path = cfg.output_dir / "holdout_forecast.csv"
+    holdout.to_csv(holdout_path, index_label="date", float_format="%.4f")
+
+    future_path: Path | None = None
+    if cfg.forecast_days > 0:
+        full = series.asfreq(DAILY_FREQ)
+        full_results, converged = fit_ets(full, spec, cfg.period)
+        if not converged:
+            LOGGER.warning("Refit on full data did not fully converge.")
+        future_index = pd.date_range(
+            full.index[-1] + pd.Timedelta(days=1), periods=cfg.forecast_days, freq=DAILY_FREQ
+        )
+        future = forecast_frame(
+            full_results, len(full), cfg.forecast_days, future_index,
+            cfg.alpha, cfg.clip_negative_forecasts,
+        )
+        future_path = cfg.output_dir / "future_forecast.csv"
+        future.to_csv(future_path, index_label="date", float_format="%.4f")
+
+    report: dict[str, Any] = {
+        "input": str(cfg.input_path),
+        "cleaning": asdict(cleaning),
+        "split": {
+            "train_start": train.index[0].date().isoformat(),
+            "train_end": train.index[-1].date().isoformat(),
+            "test_start": test.index[0].date().isoformat(),
+            "test_end": test.index[-1].date().isoformat(),
+        },
+        "seasonal_period": cfg.period,
+        "interval_level": 1 - cfg.alpha,
+        "selected_model": {
+            "label": spec.label,
+            "spec": asdict(spec),
+            "aicc": float(results.aicc),
+            "params": {str(k): float(v) for k, v in zip(results.param_names, results.params)},
+        },
+        "candidates": [asdict(c) for c in table],
+        "metrics": {"model": model_metrics, "seasonal_naive": baseline_metrics},
+        "outputs": {
+            "holdout_forecast": str(holdout_path),
+            "future_forecast": str(future_path) if future_path else None,
+        },
+    }
+    report = _json_safe(report)
+    report_path = cfg.output_dir / "report.json"
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    LOGGER.info("Wrote outputs to %s", cfg.output_dir)
+    return report
+
+
+# --------------------------------------------------------------------------- #
+# CLI
+# --------------------------------------------------------------------------- #
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Clean daily sales data and fit/evaluate a seasonal ETS forecast.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("input", type=Path, help="Path to the input CSV file.")
+    parser.add_argument("--date-col", default="date", help="Name of the date column.")
+    parser.add_argument("--value-col", default="sales", help="Name of the sales column.")
+    parser.add_argument("--aggregate", choices=["sum", "mean", "last"], default="sum",
+                        help="How to combine multiple rows for the same day.")
+    parser.add_argument("--period", type=int, default=DEFAULT_PERIOD,
+                        help="Seasonal period in days.")
+    parser.add_argument("--holdout-days", type=int, default=DEFAULT_HOLDOUT,
+                        help="Number of final days reserved for evaluation.")
+    parser.add_argument("--forecast-days", type=int, default=0,
+                        help="Days to forecast beyond the data after refitting on all of it.")
+    parser.add_argument("--alpha", type=float, default=DEFAULT_ALPHA,
+                        help="Significance level for prediction intervals.")
+    parser.add_argument("--outlier-window", type=int, default=5,
+                        help="Seasonal cycles in the Hampel filter window.")
+    parser.add_argument("--outlier-sigmas", type=float, default=3.5,
+                        help="Robust z-score threshold for outlier replacement.")
+    parser.add_argument("--allow-negative-forecasts", action="store_true",
+                        help="Do not clip forecasts and intervals at zero.")
+    parser.add_argument("--output-dir", type=Path, default=Path("forecast_output"),
+                        help="Directory for output files.")
+    parser.add_argument("-v", "--verbose", action="count", default=0,
+                        help="Increase logging verbosity (-v, -vv).")
+    return parser.parse_args(argv)
+
+
+def configure_logging(verbosity: int) -> None:
+    level = logging.WARNING if verbosity <= 0 else logging.INFO if verbosity == 1 else logging.DEBUG
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parse_args(argv)
+    configure_logging(args.verbose + 1)
+
+    cfg = ForecastConfig(
+        input_path=args.input,
+        output_dir=args.output_dir,
+        date_col=args.date_col,
+        value_col=args.value_col,
+        aggregate=args.aggregate,
+        period=args.period,
+        holdout_days=args.holdout_days,
+        forecast_days=args.forecast_days,
+        alpha=args.alpha,
+        outlier_window=args.outlier_window,
+        outlier_sigmas=args.outlier_sigmas,
+        clip_negative_forecasts=not args.allow_negative_forecasts,
+    )
+
+    try:
+        report = run(cfg)
+    except (DataError, ValueError) as exc:
+        LOGGER.error("Invalid input or configuration: %s", exc)
+        return 2
+    except ModelError as exc:
+        LOGGER.error("Modelling failed: %s", exc)
+        return 3
+    except OSError as exc:
+        LOGGER.error("I/O error: %s", exc)
+        return 4
+
+    json.dump(
+        {"selected_model": report["selected_model"]["label"], "metrics": report["metrics"]},
+        sys.stdout,
+        indent=2,
+    )
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

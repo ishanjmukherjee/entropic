@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-messenger",
+ "style": "craft",
+ "prompt": "Write a scene for a stage play, about 700 words. Situation: a messenger brings a queen bad news from the war.\n\nWrite it as a skilled playwright would. Each character wants something from the other and will not say what; the scene is the manoeuvring. Lines should be short and speakable, with people cutting across each other, changing the subject, answering the question they wish they had been asked. Keep stage directions few and physical. Let one object on stage matter. No speech that explains a feeling or a history, and no tidy resolution: end on an action or a line that leaves the question open.\n\nFormat: character names in capitals on their own line, the speech on the next line, stage directions in parentheses. Output only the script, with no title or cast list.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1500,
+ "id": "play-messenger-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "(The QUEEN holds a little brass bell upside down. The MESSENGER wears one boot.)\n\nQUEEN\nDid you come in like that?\n\nMESSENGER\nThere was nobody on the stair.\n\nQUEEN\nThere are six men on the stair.\n\nMESSENGER\nThen I came in past six men.\n\nQUEEN\nWhich foot is it?\n\nMESSENGER\nYou can see which foot.\n\nQUEEN\nI can see which boot. Is the other foot hurt?\n\nMESSENGER\nNo.\n\nQUEEN\nPut it down then.\n\n(He puts his foot down.)\n\nMESSENGER\nWe lost the town.\n\nQUEEN\nWhich is what you said downstairs?\n\nMESSENGER\nI asked for you downstairs.\n\nQUEEN\nAnd they sent you up without a boot.\n\nMESSENGER\nWould you like me to go down again?\n\nQUEEN\nWhere's my son?\n\nMESSENGER\nOn the east bank when I left.\n\nQUEEN\nThe town's on the east bank.\n\nMESSENGER\nYes.\n\nQUEEN\nYou said you lost it.\n\nMESSENGER\nYes.\n\nQUEEN\nWas he on his horse?\n\nMESSENGER\nHe was standing up.\n\nQUEEN\nThat's a curious answer.\n\nMESSENGER\nIt's what you wanted to know.\n\nQUEEN\nYou don't know me as well as that.\n\nMESSENGER\nNo.\n\nQUEEN\nWas there anyone with him?\n\nMESSENGER\nA man on either side.\n\nQUEEN\nOurs?\n\n(The MESSENGER looks at the bell.)\n\nQUEEN\nIt hasn't rung yet.\n\nMESSENGER\nI know.\n\nQUEEN\nWhat do they tell you happens when it rings?\n\nMESSENGER\nThey shut the river gate.\n\nQUEEN\nThere's a little girl comes up with hot water. That's what happens when it rings.\n\nMESSENGER\nThen have some hot water.\n\nQUEEN\nSit down.\n\nMESSENGER\nOn what?\n\nQUEEN\nYou'll have to wait for them to bring you something.\n\nMESSENGER\nI'll stand.\n\nQUEEN\nThese two men. Did they have hold of him?\n\nMESSENGER\nOne had his arm.\n\nQUEEN\nTo keep him up?\n\nMESSENGER\nYou could say that.\n\nQUEEN\nI could say anything. That's why I sent somebody who could look.\n\nMESSENGER\nHe had both boots on.\n\nQUEEN\nDon't do that.\n\nMESSENGER\nGood ones. You'd have known them from this far.\n\nQUEEN\nDid he give you anything for me?\n\nMESSENGER\nHe gave me a woman.\n\nQUEEN\nWhat?\n\nMESSENGER\nBy the elbow. Like this. Here, he said. And then there was another one. And then a fellow carrying his father. You should see the size of the father.\n\nQUEEN\nWhere are they?\n\nMESSENGER\nWhere do you think I lost the boot?\n\nQUEEN\nIn the mud.\n\nMESSENGER\nOn the landing. There's a gap between the boards. If you put your foot in sideways you can keep the landing up level with the boat.\n\nQUEEN\nHow many boats?\n\nMESSENGER\nIt was the last boat.\n\nQUEEN\nHow many people?\n\nMESSENGER\nLess than there were.\n\nQUEEN\nFewer.\n\nMESSENGER\nThat's good. I'll tell them.\n\nQUEEN\nYou'll tell nobody anything yet.\n\nMESSENGER\nThere's a boy in my boot.\n\nQUEEN\nYou said it was between the boards.\n\nMESSENGER\nIt is. I got my foot out and he put his in. He asked how long. I said I'd go upstairs and ask.\n\nQUEEN\nAnd all the time you're up here being clever—\n\nMESSENGER\nYes.\n\nQUEEN\nYou should have said that first.\n\nMESSENGER\nI asked for you downstairs.\n\nQUEEN\nDid my son get on that boat?\n\nMESSENGER\nHe was sending people down.\n\nQUEEN\nAfter the woman. After the big man. There must have been a moment when he could—\n\nMESSENGER\nThere was a moment.\n\nQUEEN\nYes?\n\nMESSENGER\nI got on.\n\n(The QUEEN turns the bell upright. He catches the clapper.)\n\nQUEEN\nThat's my hand you're touching.\n\nMESSENGER\nYes.\n\nQUEEN\nIf I call down, they'll come.\n\nMESSENGER\nYes.\n\nQUEEN\nYou wouldn't get as far as the stair.\n\nMESSENGER\nNo.\n\nQUEEN\nLet go and ask me properly.\n\nMESSENGER\nI don't know the proper way.\n\nQUEEN\nNobody seems to, this morning.\n\nMESSENGER\nWould you come down?\n\nQUEEN\nIn these?\n\nMESSENGER\nYou could go as far as the turn. They can see you from the gate if you stand on the turn.\n\nQUEEN\nAnd what will they see?\n\nMESSENGER\nThat you're not up here ringing a bell.\n\nQUEEN\nAnd what will I see?\n\n(He lets go.)\n\nQUEEN\nNo. Put your hand back.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 167,
+  "completion_tokens": 1035,
+  "total_tokens": 1202,
+  "cost": 0.042736,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.042736,
+   "upstream_inference_prompt_cost": 0.001336,
+   "upstream_inference_completions_cost": 0.0414
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,29 @@
+Local news out of southeastern Iowa reported that the Army intends to dispose of a substantial stock of lead azide at the Iowa Army Ammunition Plant, outside Burlington, by detonating it. Not by slowly working through it in small batches, or by chemically converting it into something boring, but by blowing it up. My first reaction was to read the story again in case I had misunderstood. I had not. The quantity is measured not in grams, which is how sane people measure lead azide, but in units you'd normally use for gravel.
+
+What is lead azide, for those who have been spared?
+
+It is Pb(N₃)₂, the lead salt of hydrazoic acid. It belongs to the class called primary explosives, and that word is doing a lot of work. Secondary explosives like TNT or RDX are actually rather hard to set off. You can burn many of them, drop them, and generally mistreat them, and they will usually just sit there. To get them to detonate you need a small, violent, reliable kick, and that kick comes from a primary explosive in a detonator. Lead azide is one of the classic choices because it does one thing extremely well: it goes from "stable solid" to "full detonation" almost instantly, with no lazy intermediate phase of burning. Friction, impact, static, or a spark will do it. It is the match, and the TNT is the log.
+
+So why does anyone make it at all?
+
+Because that hair-trigger reliability is precisely what you want in a fuze. If you are building munitions, you want the initiating charge to work every single time, including after years in storage. Lead azide is compact, doesn't absorb much water, and is hard to "dead-press" into inactivity. That makes an ammunition plant exactly the place you'd expect to find it, and over decades a stockpile of off-spec, surplus, or aging material piles up and has to go somewhere.
+
+Isn't a big pile of it more dangerous than a small one?
+
+Here is where a chemist starts to sweat. In a lab, primary explosives are handled in tiny amounts, behind shields, with the general attitude of someone defusing a bomb, because that's roughly the situation. The reason isn't only the size of the eventual bang. It's that the material's sensitivity doesn't care how much of it you have. A gram of lead azide is about as easy to set off as a kilogram, so the consequence of a mistake scales with quantity while the probability doesn't go down to compensate. And lead azide has some well-known bad habits. Under certain conditions it can form large, especially sensitive crystals. In contact with copper it can form copper azides, which are worse. Anyone who has been near the stuff has heard these stories, and they are not told for fun.
+
+Then isn't detonating it on purpose the safest way to get rid of it?
+
+Oddly, maybe. The alternatives involve people touching it. You can destroy azides chemically. Various oxidizing treatments break the azide group down into nitrogen gas, and that is the elegant solution for small quantities. But scaling a chemical destruction process to bulk primary explosive means mixing, transferring, dissolving, and generally handling a material that resents being handled. Every step is another chance for someone to have a very short bad day. Open detonation, by contrast, means you move it once, carefully, put it somewhere remote, back far away, and let it do the one thing it's built for. From a worker-safety standpoint, the brute-force approach has a certain grim logic.
+
+So what's the catch?
+
+The catch is in the name. Lead azide. The azide half of the molecule is the reason it explodes, and it conveniently turns mostly into nitrogen gas, which is 78% of what you're breathing right now. The lead, however, doesn't go anywhere useful. It's an element; you can't explode it out of existence. A detonation will vaporize and scatter it as fine particulate and oxides, and fine lead particulate is just about the worst physical form you could choose for a neurotoxic heavy metal. It deposits on soil, it washes into water, and it does not break down. That's the part residents near Burlington are right to ask hard questions about: not whether the noise rattles windows, but where the lead lands, how it's contained, and who measures it afterward.
+
+What should people actually want to know?
+
+Whether the detonations are done in contained chambers or in the open. What quantity goes per shot, since spreading it over many smaller events changes both the blast and the plume. What air and soil monitoring is in place, before as well as after, so there's a real baseline. And whether chemical destruction was seriously evaluated and rejected for good reasons, or simply never considered because blowing things up is what ammunition plants are equipped to do.
+
+Final verdict?
+
+I don't envy the people who have to make this decision. Nobody gets to pick a good option here, only a least-bad one. Getting rid of a giant stockpile of one of the most touchy compounds in common use is a problem with no gentle solution. But I'll admit that "we're going to detonate a huge pile of lead azide" is a sentence I never expected to read outside of a cautionary tale. Really.

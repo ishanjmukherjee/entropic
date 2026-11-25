@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "bare",
+ "prompt": "Write the lyrics of a country song about leaving a small town. Output only the lyrics.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 900,
+ "id": "song-town-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "Mama wrapped two biscuits in the Sunday news,\nDaddy checked the spare and said, “That oughta do.”\nHe'd spent all week telling me which road to take,\nThen stood there in his slippers till I cleared the gate.\n\nAt the edge of town the station turned to snow,\nHalfway through a song that everybody knows.\nI kept on singing where the signal fell apart,\nOne hand on the wheel, that chorus in my heart.\nI didn't leave for lack of love or solid ground;\nI just had to hear my voice outside that town.\n\nFirst night in the city, in a rented room,\nI ate the second biscuit with a plastic spoon.\nThere was blackberry jam on the classifieds,\nRight on a used piano, barely played, half price.\n\nAt the edge of town the station turned to snow,\nHalfway through a song that everybody knows.\nI kept on singing where the signal fell apart,\nOne hand on the wheel, that chorus in my heart.\nI didn't leave for lack of love or solid ground;\nI just had to hear my voice outside that town.\n\nNow I play on Fridays at a corner bar;\nDaddy says, “Call collect, it ain't that far.”\nLast week I called and let him hear the crowd;\nHe said, “Your mama's here. Sing good and loud.”\n\nAt the edge of town the station turned to snow,\nHalfway through a song that everybody knows.\nTonight a room of strangers sang the missing part,\nAnd I could hear my daddy's whistle when they stopped.\nI didn't leave for lack of love or solid ground;\nI just had to hear my voice outside that town.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 24,
+  "completion_tokens": 330,
+  "total_tokens": 354,
+  "cost": 0.013392,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.013392,
+   "upstream_inference_prompt_cost": 0.000192,
+   "upstream_inference_completions_cost": 0.0132
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

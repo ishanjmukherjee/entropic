@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-book",
+ "style": "bare",
+ "prompt": "Write an essay reviewing a book you think is underrated. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "id": "essay-book-bare-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "The most unsettling thing about Barbara Comyns’s *The Vet’s Daughter* is how long it takes the impossible to become the strangest thing in the book. For much of the novel, Alice Rowlands lives with her parents in a south London house where her father treats animals and terrorizes his family. Her mother is dying. Alice has little education, no money of her own, and almost no experience of kindness that does not come with conditions. When she discovers that she can rise into the air, the reader might reasonably expect her circumstances to change. Instead, Comyns asks a more difficult question: what good is a miracle if everyone around you gets to decide what it means?\n\nFirst published in 1959, *The Vet’s Daughter* is not exactly forgotten. It has been reissued, and readers who love Comyns tend to recommend her with the urgency of people passing along a remedy. Yet it still feels underrated, in part because it is so easy to praise for the wrong things. Call it an eccentric Gothic novel, and you have described its furniture without accounting for its atmosphere. Say that it anticipates magical realism, and you risk making its most unusual feature sound like a technique. The real achievement is Alice’s voice. She can tell you what a room smells like, how someone is dressed, and what has just been done to her without arranging those details in the order you would expect. The resulting unease is as much moral as supernatural.\n\nAlice does not narrate like someone who has learned to call her father abusive. She narrates like someone who has learned to listen for him coming home. That difference matters. A retrospective account might give her the satisfaction of naming what happened, but it would also relieve readers of some of the work of noticing. Comyns gives us no such relief. An ugly incident can sit beside an observation about an animal or a piece of clothing, neither detail italicized by outrage. This is sometimes described as naïveté, though Alice is often a shrewd observer. What she lacks is not intelligence but a reliable sense of what she is entitled to object to.\n\nThe veterinary practice makes that distinction especially sharp. The animals are not simply emblems of Alice’s captivity, waiting for a reader to decode them. They are creatures that have to be fed, handled, treated, and sometimes killed. Their presence gives the house a daily rhythm that continues regardless of what is happening to Alice’s mother. It also complicates the father’s cruelty. His profession does not require tenderness, exactly, but it does require attention to pain: where it is, what causes it, what might stop it. That he can exercise this skill at work makes his behavior at home harder to dismiss as mere insensibility. He knows how to notice suffering.\n\nThe book does lose some of its pressure when Alice leaves the house to keep a lonely woman company in the country. The new setting can feel too neatly stocked with Gothic materials, and the people there are less vivid than the family she has left behind. Yet I would not trade this interlude for a tighter plot. Alice needs to leave home long enough for us to see which of her habits belong to that particular household and which she will carry into any room she enters. The country episode also lets companionship look genuinely desirable without making it a cure. Alice can be useful to someone without being brutalized, but usefulness is still the main basis on which she understands her welcome.\n\nThen there is the levitation. Comyns is wonderfully sparing about what it feels like and almost entirely uninterested in how it works. A lesser novel might make the power grow in proportion to Alice’s confidence, so that learning to fly and learning to assert herself became the same lesson. Here, rising off the ground does not teach Alice how to negotiate with anyone. When her father sees a way to turn her ability into a public spectacle, his response is grotesque but wholly consistent with what we already know about him. He does not have to understand the miracle to recognize an opportunity. And Alice, who can do something no one else can do, remains at a disadvantage in the conversation about what she ought to do next.\n\nThe ending is severe enough that I am not always sure I believe in it, even on the novel’s own terms. It moves faster than the intimate, watchful pages that precede it, and some of the people who determine Alice’s fate scarcely exist as individuals. But the speed is part of what has stayed with me. I finished the book wanting someone to interrupt, to ask Alice an ordinary question and wait for the answer. Comyns has spent the whole novel showing how rarely anyone does even that. We remember Alice for her ability to rise into the air, but by the end I found myself thinking about how few people in her life had ever bothered to offer her a chair.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 31,
+  "completion_tokens": 988,
+  "total_tokens": 1019,
+  "cost": 0.009942,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009942,
+   "upstream_inference_prompt_cost": 6.2e-05,
+   "upstream_inference_completions_cost": 0.00988
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

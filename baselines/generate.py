@@ -228,7 +228,7 @@ def call_featherless(spec, prompt, max_tokens):
 
 def call_openrouter(spec, prompt, max_tokens):
     # Extra room in max_tokens because reasoning tokens count against it.
-    body = {"model": spec["openrouter"], "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens + 4000,
+    body = {"model": spec["openrouter"], "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens + 9000,
             "reasoning": {"effort": "low"}}
     req = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=json.dumps(body).encode(),
                                  headers={"Authorization": "Bearer " + os.environ["OPENROUTER_API_KEY"], "Content-Type": "application/json"})

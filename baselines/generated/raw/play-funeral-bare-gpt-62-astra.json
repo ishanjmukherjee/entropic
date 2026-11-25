@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-funeral",
+ "style": "bare",
+ "prompt": "Write a scene for a stage play in which two estranged brothers meet at their father's funeral. About 700 words. Output only the script.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1500,
+ "id": "play-funeral-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "[The chapel after the service. LEON, fifty, is stacking the printed orders of service on a chair. His younger brother KIT stands at the lectern with a cassette recorder. From it comes the sound of a man clearing his throat.]\n\nLEON: Turn that off.\n\nKIT: I'm trying.\n\nLEON: The square one.\n\n[The sound stops.]\n\nKIT: I know what stop looks like.\n\nLEON: You were pushing eject.\n\nKIT: Has anybody ever told you how wonderful it is to have you nearby?\n\n[LEON evens up the stack against his knee.]\n\nKIT: They want us at the restaurant.\n\nLEON: Then go. Tell them I'm getting the flowers.\n\nKIT: Are you?\n\nLEON: Eventually somebody will have to.\n\n[KIT takes out the cassette. A length of brown tape hangs from it.]\n\nKIT: Oh, hell.\n\nLEON: Give it here.\n\n[KIT gives it to him. LEON takes a pencil from his breast pocket and winds the tape back in.]\n\nKIT: You still carry a pencil.\n\nLEON: Evidently.\n\nKIT: I thought he sounded good. Once the coughing stopped.\n\nLEON: That was 1998. That's how he sounded in 1998.\n\nKIT: I wasn't going to play the last voicemail he left me. It's four minutes of him trying to get a parking app to work.\n\nLEON: He rang you about the parking app?\n\nKIT: Every Thursday. From the renal clinic. He'd read me the numbers and I'd pay from my phone.\n\nLEON: I gave him parking money.\n\nKIT: Well. The old crook.\n\n[LEON nearly smiles. He puts the cassette on the chair.]\n\nLEON: You could've mentioned that in there.\n\nKIT: What?\n\nLEON: Thursdays. Something that happened this century. Listening to you, anybody would've thought he died the summer we built that boat.\n\nKIT: You said you didn't want to speak.\n\nLEON: I didn't.\n\nKIT: I asked you for something to say.\n\nLEON: And I sent you something.\n\nKIT: You sent me his medication list.\n\nLEON: On the back, Kit.\n\n[KIT takes a folded sheet from inside his jacket. He opens it and turns it over.]\n\nKIT: Oh.\n\n[A door closes somewhere outside.]\n\nKIT: “Dad liked the woman at the bakery because she cut his bread the long way.” Why did she cut it the long way?\n\nLEON: He liked a long piece of toast.\n\nKIT: “He learned the names of all six dogs on the landing but none of the owners.” That's good. Leon, I'm sorry. I saw amlodipine and thought you'd sent the wrong thing.\n\nLEON: I wondered why you said you'd run it past the minister.\n\n[KIT sits. He reads the rest in silence. LEON picks a white carnation out of a wreath. It comes away on a wire.]\n\nKIT: Do you want me to read this at the restaurant?\n\nLEON: No.\n\nKIT: I could.\n\nLEON: Just keep it.\n\n[KIT folds the sheet, this time with the writing out.]\n\nKIT: At the end of the recording, did you hear him say, “Mind your fingers, Lenny”?\n\nLEON: He said, “Mind your fingers, Leonard.”\n\nKIT: Nobody ever called you Leonard except when you were in trouble.\n\nLEON: You were holding the hammer.\n\nKIT: Christ, yes.\n\nLEON: You brought it down on my thumb. He drove us both to Casualty. You threw up in the car and somehow you got the front seat on the way home.\n\nKIT: I don't remember that part.\n\nLEON: No. It was a pretty good arrangement for you.\n\n[KIT looks at him. LEON puts the carnation in his buttonhole. The wire is too long; it sticks out below his lapel.]\n\nKIT: I didn't know how to come back once I'd stayed away that long.\n\nLEON: There's a direct train.\n\nKIT: I know there's a direct train.\n\n[LEON bends the wire up under his lapel.]\n\nLEON: I used to work out which one you could still catch. On Christmas Eve. Even after we'd eaten.\n\nKIT: What time was the last one?\n\nLEON: Nine fourteen.\n\n[KIT returns the cassette to the machine. He depresses two buttons together.]\n\nLEON: What are you doing?\n\nKIT: Tell me about the toast again.\n\nLEON: You'll tape over the boat.\n\nKIT: Other side. Look.\n\n[LEON checks. KIT sets the recorder between them.]\n\nLEON: Well. It wouldn't fit in the toaster, obviously. So every morning he had to put the grill on. And every morning the smoke alarm went off. And the dog next door—\n\nKIT: Which dog?\n\nLEON: Pamela.\n\n[They both laugh. The machine turns.]\n\nLEON: Leave that bit in.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 35,
+  "completion_tokens": 1009,
+  "total_tokens": 1044,
+  "cost": 0.04064,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.04064,
+   "upstream_inference_prompt_cost": 0.00028,
+   "upstream_inference_completions_cost": 0.04036
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

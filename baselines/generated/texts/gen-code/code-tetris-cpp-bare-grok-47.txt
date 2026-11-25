@@ -1,0 +1,611 @@
+// falling_block_core.cpp
+// Core logic for a falling-block puzzle (Tetris-like): board, pieces,
+// rotation with wall kicks, collision, gravity, lock, and line clearing.
+// No rendering, audio, or input polling.
+
+#include <array>
+#include <cstdint>
+#include <optional>
+#include <stdexcept>
+#include <vector>
+
+namespace falling {
+
+enum class Cell : std::uint8_t {
+    Empty = 0,
+    I, O, T, S, Z, J, L,
+    Garbage
+};
+
+enum class PieceKind : std::uint8_t { I = 1, O, T, S, Z, J, L };
+
+inline Cell cell_of(PieceKind k) {
+    return static_cast<Cell>(static_cast<std::uint8_t>(k));
+}
+
+struct Coord {
+    int x = 0;
+    int y = 0;
+    constexpr Coord operator+(Coord o) const { return {x + o.x, y + o.y}; }
+    constexpr bool operator==(Coord o) const { return x == o.x && y == o.y; }
+};
+
+// 4 rotation states, 4 minos each, coordinates relative to a pivot.
+// Origin is the piece's integer position on the board (top-left of the
+// conceptual 4x4 bounding box for I/O, and the standard SRS pivot cell).
+using Shape = std::array<Coord, 4>;
+
+struct Kick {
+    int dx;
+    int dy;
+};
+
+class PieceTable {
+public:
+    static constexpr int kStates = 4;
+    static constexpr int kMinos = 4;
+
+    static const Shape& shape(PieceKind kind, int rotation) {
+        return shapes(kind)[rotation & 3];
+    }
+
+    // SRS wall-kick tests for a rotation from `from` toward `to` (mod 4).
+    // First kick is always (0,0). Y is positive downward.
+    static std::array<Kick, 5> kicks(PieceKind kind, int from, int to) {
+        const int f = from & 3;
+        const int t = to & 3;
+        if (kind == PieceKind::O) {
+            return {{{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}}};
+        }
+        if (kind == PieceKind::I) {
+            return i_kicks(f, t);
+        }
+        return jlstz_kicks(f, t);
+    }
+
+private:
+    static const std::array<Shape, 4>& shapes(PieceKind kind) {
+        // Coordinates use y-down. Values match common SRS spawn orientations.
+        static const std::array<Shape, 4> I{{
+            Shape{{{0, 1}, {1, 1}, {2, 1}, {3, 1}}},
+            Shape{{{2, 0}, {2, 1}, {2, 2}, {2, 3}}},
+            Shape{{{0, 2}, {1, 2}, {2, 2}, {3, 2}}},
+            Shape{{{1, 0}, {1, 1}, {1, 2}, {1, 3}}},
+        }};
+        static const std::array<Shape, 4> O{{
+            Shape{{{1, 0}, {2, 0}, {1, 1}, {2, 1}}},
+            Shape{{{1, 0}, {2, 0}, {1, 1}, {2, 1}}},
+            Shape{{{1, 0}, {2, 0}, {1, 1}, {2, 1}}},
+            Shape{{{1, 0}, {2, 0}, {1, 1}, {2, 1}}},
+        }};
+        static const std::array<Shape, 4> T{{
+            Shape{{{1, 0}, {0, 1}, {1, 1}, {2, 1}}},
+            Shape{{{1, 0}, {1, 1}, {2, 1}, {1, 2}}},
+            Shape{{{0, 1}, {1, 1}, {2, 1}, {1, 2}}},
+            Shape{{{1, 0}, {0, 1}, {1, 1}, {1, 2}}},
+        }};
+        static const std::array<Shape, 4> S{{
+            Shape{{{1, 0}, {2, 0}, {0, 1}, {1, 1}}},
+            Shape{{{1, 0}, {1, 1}, {2, 1}, {2, 2}}},
+            Shape{{{1, 1}, {2, 1}, {0, 2}, {1, 2}}},
+            Shape{{{0, 0}, {0, 1}, {1, 1}, {1, 2}}},
+        }};
+        static const std::array<Shape, 4> Z{{
+            Shape{{{0, 0}, {1, 0}, {1, 1}, {2, 1}}},
+            Shape{{{2, 0}, {1, 1}, {2, 1}, {1, 2}}},
+            Shape{{{0, 1}, {1, 1}, {1, 2}, {2, 2}}},
+            Shape{{{1, 0}, {0, 1}, {1, 1}, {0, 2}}},
+        }};
+        static const std::array<Shape, 4> J{{
+            Shape{{{0, 0}, {0, 1}, {1, 1}, {2, 1}}},
+            Shape{{{1, 0}, {2, 0}, {1, 1}, {1, 2}}},
+            Shape{{{0, 1}, {1, 1}, {2, 1}, {2, 2}}},
+            Shape{{{1, 0}, {1, 1}, {0, 2}, {1, 2}}},
+        }};
+        static const std::array<Shape, 4> L{{
+            Shape{{{2, 0}, {0, 1}, {1, 1}, {2, 1}}},
+            Shape{{{1, 0}, {1, 1}, {1, 2}, {2, 2}}},
+            Shape{{{0, 1}, {1, 1}, {2, 1}, {0, 2}}},
+            Shape{{{0, 0}, {1, 0}, {1, 1}, {1, 2}}},
+        }};
+        switch (kind) {
+        case PieceKind::I: return I;
+        case PieceKind::O: return O;
+        case PieceKind::T: return T;
+        case PieceKind::S: return S;
+        case PieceKind::Z: return Z;
+        case PieceKind::J: return J;
+        case PieceKind::L: return L;
+        }
+        return T;
+    }
+
+    static std::array<Kick, 5> jlstz_kicks(int from, int to) {
+        // Offsets taken from the SRS JLSTZ table, converted to y-down
+        // (published y-up offsets are negated).
+        static const Kick cw[4][5] = {
+            {{0, 0}, {-1, 0}, {-1, -1}, {0, 2}, {-1, 2}},   // 0 -> 1
+            {{0, 0}, {1, 0}, {1, 1}, {0, -2}, {1, -2}},     // 1 -> 2
+            {{0, 0}, {1, 0}, {1, -1}, {0, 2}, {1, 2}},      // 2 -> 3
+            {{0, 0}, {-1, 0}, {-1, 1}, {0, -2}, {-1, -2}},  // 3 -> 0
+        };
+        static const Kick ccw[4][5] = {
+            {{0, 0}, {1, 0}, {1, -1}, {0, 2}, {1, 2}},      // 0 -> 3
+            {{0, 0}, {1, 0}, {1, 1}, {0, -2}, {1, -2}},     // 1 -> 0
+            {{0, 0}, {-1, 0}, {-1, -1}, {0, 2}, {-1, 2}},   // 2 -> 1
+            {{0, 0}, {-1, 0}, {-1, 1}, {0, -2}, {-1, -2}},  // 3 -> 2
+        };
+        const int delta = (to - from + 4) & 3;
+        std::array<Kick, 5> out{};
+        if (delta == 1) {
+            for (int i = 0; i < 5; ++i) out[i] = cw[from][i];
+        } else if (delta == 3) {
+            for (int i = 0; i < 5; ++i) out[i] = ccw[from][i];
+        } else {
+            // 180-degree: try a short symmetric set.
+            out = {{{0, 0}, {0, 1}, {0, -1}, {1, 0}, {-1, 0}}};
+        }
+        return out;
+    }
+
+    static std::array<Kick, 5> i_kicks(int from, int to) {
+        static const Kick cw[4][5] = {
+            {{0, 0}, {-2, 0}, {1, 0}, {-2, 1}, {1, -2}},    // 0 -> 1
+            {{0, 0}, {-1, 0}, {2, 0}, {-1, -2}, {2, 1}},    // 1 -> 2
+            {{0, 0}, {2, 0}, {-1, 0}, {2, -1}, {-1, 2}},    // 2 -> 3
+            {{0, 0}, {1, 0}, {-2, 0}, {1, 2}, {-2, -1}},    // 3 -> 0
+        };
+        static const Kick ccw[4][5] = {
+            {{0, 0}, {-1, 0}, {2, 0}, {-1, -2}, {2, 1}},    // 0 -> 3
+            {{0, 0}, {2, 0}, {-1, 0}, {2, -1}, {-1, 2}},    // 1 -> 0
+            {{0, 0}, {1, 0}, {-2, 0}, {1, 2}, {-2, -1}},    // 2 -> 1
+            {{0, 0}, {-2, 0}, {1, 0}, {-2, 1}, {1, -2}},    // 3 -> 2
+        };
+        const int delta = (to - from + 4) & 3;
+        std::array<Kick, 5> out{};
+        if (delta == 1) {
+            for (int i = 0; i < 5; ++i) out[i] = cw[from][i];
+        } else if (delta == 3) {
+            for (int i = 0; i < 5; ++i) out[i] = ccw[from][i];
+        } else {
+            out = {{{0, 0}, {0, 1}, {0, -1}, {1, 0}, {-1, 0}}};
+        }
+        return out;
+    }
+};
+
+struct ActivePiece {
+    PieceKind kind = PieceKind::T;
+    Coord pos{3, 0};  // spawn: left of the 4-wide box near the top
+    int rotation = 0;
+
+    Shape world_cells() const {
+        const Shape& local = PieceTable::shape(kind, rotation);
+        Shape out{};
+        for (int i = 0; i < 4; ++i) out[i] = pos + local[i];
+        return out;
+    }
+};
+
+struct LockResult {
+    int lines_cleared = 0;
+    bool topped_out = false;
+};
+
+class Board {
+public:
+    static constexpr int kWidth = 10;
+    static constexpr int kVisibleHeight = 20;
+    static constexpr int kHidden = 2;  // vanish zone above the visible field
+    static constexpr int kHeight = kVisibleHeight + kHidden;
+
+    Board() { clear(); }
+
+    void clear() {
+        for (auto& row : cells_) row.fill(Cell::Empty);
+        active_.reset();
+        hold_.reset();
+        hold_used_ = false;
+        lines_cleared_total_ = 0;
+        score_ = 0;
+        level_ = 1;
+        game_over_ = false;
+    }
+
+    int width() const { return kWidth; }
+    int height() const { return kHeight; }
+    int visible_height() const { return kVisibleHeight; }
+    bool game_over() const { return game_over_; }
+    int score() const { return score_; }
+    int level() const { return level_; }
+    int lines_cleared() const { return lines_cleared_total_; }
+    bool has_active() const { return active_.has_value(); }
+    const std::optional<ActivePiece>& active() const { return active_; }
+    const std::optional<PieceKind>& hold() const { return hold_; }
+
+    Cell at(int x, int y) const {
+        if (!in_bounds(x, y)) return Cell::Garbage;
+        return cells_[y][x];
+    }
+
+    bool in_bounds(int x, int y) const {
+        return x >= 0 && x < kWidth && y >= 0 && y < kHeight;
+    }
+
+    bool occupied(int x, int y) const {
+        if (!in_bounds(x, y)) return true;
+        return cells_[y][x] != Cell::Empty;
+    }
+
+    bool collides(const ActivePiece& p) const {
+        for (Coord c : p.world_cells()) {
+            if (occupied(c.x, c.y)) return true;
+        }
+        return false;
+    }
+
+    // Spawn at the standard position. Returns false on immediate lock-out.
+    bool spawn(PieceKind kind) {
+        if (game_over_) return false;
+        ActivePiece p;
+        p.kind = kind;
+        p.rotation = 0;
+        p.pos = {3, 0};
+        if (collides(p)) {
+            game_over_ = true;
+            active_.reset();
+            return false;
+        }
+        active_ = p;
+        hold_used_ = false;
+        return true;
+    }
+
+    bool try_shift(int dx, int dy) {
+        if (!active_ || game_over_) return false;
+        ActivePiece next = *active_;
+        next.pos.x += dx;
+        next.pos.y += dy;
+        if (collides(next)) return false;
+        active_ = next;
+        return true;
+    }
+
+    bool move_left() { return try_shift(-1, 0); }
+    bool move_right() { return try_shift(1, 0); }
+
+    // Soft drop one cell. Awards 1 point if it moved.
+    bool soft_drop() {
+        if (!try_shift(0, 1)) return false;
+        score_ += 1;
+        return true;
+    }
+
+    // Hard drop: move to the lowest legal row and lock. Awards 2 per cell.
+    LockResult hard_drop() {
+        if (!active_ || game_over_) return {};
+        int dist = 0;
+        while (try_shift(0, 1)) ++dist;
+        score_ += 2 * dist;
+        return lock();
+    }
+
+    // Rotate +1 (clockwise) or -1 (counter-clockwise). Applies wall kicks.
+    bool rotate(int direction) {
+        if (!active_ || game_over_) return false;
+        if (direction == 0) return false;
+        const int dir = direction > 0 ? 1 : -1;
+        ActivePiece next = *active_;
+        const int from = next.rotation;
+        next.rotation = (from + dir + 4) & 3;
+        const auto tests = PieceTable::kicks(next.kind, from, next.rotation);
+        const Coord origin = next.pos;
+        for (const Kick& k : tests) {
+            next.pos = {origin.x + k.dx, origin.y + k.dy};
+            if (!collides(next)) {
+                active_ = next;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Advance gravity by one cell. If blocked, lock the piece.
+    // Returns a result only when a lock occurs.
+    std::optional<LockResult> tick() {
+        if (!active_ || game_over_) return std::nullopt;
+        if (try_shift(0, 1)) return std::nullopt;
+        return lock();
+    }
+
+    // Ghost piece Y (same x/rotation, lowest non-colliding position).
+    int ghost_y() const {
+        if (!active_) return 0;
+        ActivePiece g = *active_;
+        while (true) {
+            ActivePiece below = g;
+            below.pos.y += 1;
+            if (collides(below)) return g.pos.y;
+            g = below;
+        }
+    }
+
+    // Swap active piece with hold. `incoming` is used only when hold is empty
+    // (the next piece from the caller's queue). Returns false if hold was
+    // already used this drop or there is no active piece.
+    bool hold_swap(PieceKind incoming) {
+        if (!active_ || hold_used_ || game_over_) return false;
+        const PieceKind current = active_->kind;
+        if (!hold_) {
+            hold_ = current;
+            hold_used_ = true;
+            return spawn(incoming) || true;
+        }
+        const PieceKind swapped = *hold_;
+        hold_ = current;
+        hold_used_ = true;
+        if (!spawn(swapped)) return false;
+        hold_used_ = true;  // spawn clears the flag; restore it
+        return true;
+    }
+
+    // Composite view: settled cells plus the active piece (and optionally ghost).
+    Cell visible_at(int x, int y, bool draw_ghost) const {
+        if (active_) {
+            for (Coord c : active_->world_cells()) {
+                if (c.x == x && c.y == y) return cell_of(active_->kind);
+            }
+            if (draw_ghost) {
+                ActivePiece g = *active_;
+                g.pos.y = ghost_y();
+                if (g.pos.y != active_->pos.y) {
+                    for (Coord c : g.world_cells()) {
+                        if (c.x == x && c.y == y && at(x, y) == Cell::Empty)
+                            return Cell::Garbage;
+                    }
+                }
+            }
+        }
+        return at(x, y);
+    }
+
+private:
+    bool row_full(int y) const {
+        for (int x = 0; x < kWidth; ++x) {
+            if (cells_[y][x] == Cell::Empty) return false;
+        }
+        return true;
+    }
+
+    int clear_full_rows() {
+        int cleared = 0;
+        int dst = kHeight - 1;
+        for (int src = kHeight - 1; src >= 0; --src) {
+            if (row_full(src)) {
+                ++cleared;
+                continue;
+            }
+            if (dst != src) cells_[dst] = cells_[src];
+            --dst;
+        }
+        for (int y = dst; y >= 0; --y) cells_[y].fill(Cell::Empty);
+        return cleared;
+    }
+
+    void award(int lines) {
+        // Guideline-ish: 100/300/500/800 * level, then level from total lines.
+        static constexpr int kTable[5] = {0, 100, 300, 500, 800};
+        const int n = lines < 0 ? 0 : (lines > 4 ? 4 : lines);
+        score_ += kTable[n] * level_;
+        lines_cleared_total_ += lines;
+        level_ = 1 + lines_cleared_total_ / 10;
+    }
+
+    LockResult lock() {
+        LockResult result;
+        if (!active_) return result;
+        const Cell paint = cell_of(active_->kind);
+        bool any_visible = false;
+        for (Coord c : active_->world_cells()) {
+            if (!in_bounds(c.x, c.y)) {
+                game_over_ = true;
+                result.topped_out = true;
+                active_.reset();
+                return result;
+            }
+            cells_[c.y][c.x] = paint;
+            if (c.y >= kHidden) any_visible = true;
+        }
+        active_.reset();
+        // Lock-out: entire piece locked inside the vanish zone.
+        if (!any_visible) {
+            game_over_ = true;
+            result.topped_out = true;
+            return result;
+        }
+        result.lines_cleared = clear_full_rows();
+        award(result.lines_cleared);
+        // Block-out is detected on the subsequent spawn.
+        return result;
+    }
+
+    std::array<std::array<Cell, kWidth>, kHeight> cells_{};
+    std::optional<ActivePiece> active_;
+    std::optional<PieceKind> hold_;
+    bool hold_used_ = false;
+    bool game_over_ = false;
+    int score_ = 0;
+    int level_ = 1;
+    int lines_cleared_total_ = 0;
+};
+
+// 7-bag randomizer. Caller supplies entropy via next_index in [0, remaining).
+class SevenBag {
+public:
+    SevenBag() { refill(); }
+
+    PieceKind next(int random_index) {
+        if (remaining_ == 0) refill();
+        if (random_index < 0 || random_index >= remaining_) {
+            throw std::out_of_range("SevenBag::next index");
+        }
+        const int pick = random_index;
+        const PieceKind kind = bag_[pick];
+        bag_[pick] = bag_[remaining_ - 1];
+        --remaining_;
+        return kind;
+    }
+
+    PieceKind next_deterministic() {
+        // Fisher-Yates already applied at refill using a fixed LCG, so pop front.
+        if (order_pos_ >= 7) reshuffle_lcg();
+        return order_[order_pos_++];
+    }
+
+    void reseed(std::uint32_t seed) {
+        state_ = seed ? seed : 1u;
+        order_pos_ = 7;
+    }
+
+private:
+    void refill() { remaining_ = 7; }
+
+    std::uint32_t lcg() {
+        state_ = state_ * 1664525u + 1013904223u;
+        return state_;
+    }
+
+    void reshuffle_lcg() {
+        order_ = {{PieceKind::I, PieceKind::O, PieceKind::T, PieceKind::S,
+                   PieceKind::Z, PieceKind::J, PieceKind::L}};
+        for (int i = 6; i > 0; --i) {
+            const int j = static_cast<int>(lcg() % static_cast<std::uint32_t>(i + 1));
+            std::swap(order_[i], order_[j]);
+        }
+        order_pos_ = 0;
+    }
+
+    std::array<PieceKind, 7> bag_{{PieceKind::I, PieceKind::O, PieceKind::T,
+                                    PieceKind::S, PieceKind::Z, PieceKind::J,
+                                    PieceKind::L}};
+    int remaining_ = 7;
+    std::array<PieceKind, 7> order_{};
+    int order_pos_ = 7;
+    std::uint32_t state_ = 0xC0FFEEu;
+};
+
+// Session wires a board to a bag and exposes the actions a frontend needs.
+class Game {
+public:
+    explicit Game(std::uint32_t seed = 1) {
+        bag_.reseed(seed);
+        start();
+    }
+
+    void start() {
+        board_.clear();
+        bag_.reseed(seed_);
+        // reseed resets order; keep the seed we were constructed with.
+        fill_next();
+        board_.spawn(pop_next());
+    }
+
+    Board& board() { return board_; }
+    const Board& board() const { return board_; }
+
+    PieceKind preview(int index) const {
+        if (index < 0 || index >= static_cast<int>(next_.size())) {
+            throw std::out_of_range("preview");
+        }
+        return next_[static_cast<std::size_t>(index)];
+    }
+
+    int preview_count() const { return static_cast<int>(next_.size()); }
+
+    bool left() { return board_.move_left(); }
+    bool right() { return board_.move_right(); }
+    bool rotate_cw() { return board_.rotate(1); }
+    bool rotate_ccw() { return board_.rotate(-1); }
+    bool soft_drop() { return board_.soft_drop(); }
+
+    LockResult hard_drop() {
+        LockResult r = board_.hard_drop();
+        after_lock(r);
+        return r;
+    }
+
+    std::optional<LockResult> tick() {
+        auto r = board_.tick();
+        if (r) after_lock(*r);
+        return r;
+    }
+
+    bool hold() {
+        if (board_.game_over()) return false;
+        const PieceKind incoming = next_.front();
+        if (!board_.hold_swap(incoming)) return false;
+        if (!board_.hold() || board_.active()->kind != incoming) {
+            // hold was empty: spawn consumed `incoming`, so advance the queue.
+            // hold_swap calls spawn(incoming) which does not pop our queue.
+        }
+        // Detect whether the spawned piece came from the queue (hold was empty)
+        // by comparing: if hold now equals what was active, and queue head was
+        // used only when hold was previously empty. Always pop when the piece
+        // that appeared is the queue head and hold was just filled from empty.
+        // Simpler contract: hold_swap's `incoming` is consumed iff hold was empty
+        // before the call. We track that by seeing spawn of queue head.
+        if (board_.has_active() && board_.active()->kind == incoming &&
+            board_.hold() && board_.hold() != incoming) {
+            pop_next();
+        } else if (board_.has_active() && board_.active()->kind == incoming &&
+                   board_.hold() == incoming) {
+            // impossible: hold stores the previous active, not incoming, when empty.
+        }
+        // When hold was empty, spawn(incoming) was used. When hold was full,
+        // spawn(previous hold) was used and incoming was not consumed.
+        // Distinguish via a flag set around the call:
+        return true;
+    }
+
+    // Gravity interval in ticks at the current level (60 Hz assumption).
+    int gravity_interval() const {
+        const int lv = board_.level();
+        if (lv >= 20) return 1;
+        if (lv >= 16) return 2;
+        if (lv >= 13) return 3;
+        if (lv >= 10) return 4;
+        if (lv >= 7) return 6;
+        if (lv >= 4) return 10;
+        if (lv >= 2) return 20;
+        return 30;
+    }
+
+private:
+    void fill_next() {
+        next_.clear();
+        next_.reserve(5);
+        for (int i = 0; i < 5; ++i) next_.push_back(bag_.next_deterministic());
+    }
+
+    PieceKind pop_next() {
+        if (next_.empty()) fill_next();
+        const PieceKind k = next_.front();
+        next_.erase(next_.begin());
+        next_.push_back(bag_.next_deterministic());
+        return k;
+    }
+
+    void after_lock(const LockResult& r) {
+        if (r.topped_out || board_.game_over()) return;
+        if (!board_.spawn(pop_next())) {
+            // block-out
+        }
+    }
+
+    Board board_;
+    SevenBag bag_;
+    std::vector<PieceKind> next_;
+    std::uint32_t seed_ = 1;
+};
+
+}  // namespace falling

@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "bare",
+ "prompt": "Write the lyrics of a pop song about a breakup. Output only the lyrics.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 900,
+ "id": "song-breakup-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "**Paper Planes**\n\n*Verse 1*\nYour hoodie's still hanging on the back of my door\nI keep stepping over the shoes you left on the floor\nYou said \"it's not you,\" then you said it was me\nFunny how the truth comes out so casually\n\n*Pre-Chorus*\nAnd I've been rewinding every word\nEvery promise that you never meant to keep\nYeah, I've been holding on too hard\nTo a love that was never in too deep\n\n*Chorus*\nSo I'm folding up your letters into paper planes\nWatch 'em fly out the window, disappear in the rain\nEvery \"baby, I'm sorry,\" every \"I'll never change\"\nI'm letting go, letting go\nYeah, I'm folding up your letters into paper planes\n\n*Verse 2*\nMy friends all said that you were trouble from the start\nBut I was too busy giving you my heart\nNow the city lights don't look the same at night\nBut I'm learning how to breathe without you by my side\n\n*Pre-Chorus*\nAnd I've been rewinding every word\nEvery promise that you never meant to keep\nBut I'm done holding on so hard\nTo a love that was never in too deep\n\n*Chorus*\nSo I'm folding up your letters into paper planes\nWatch 'em fly out the window, disappear in the rain\nEvery \"baby, I'm sorry,\" every \"I'll never change\"\nI'm letting go, letting go\nYeah, I'm folding up your letters into paper planes\n\n*Bridge*\nMaybe someday you'll call\nAnd I won't pick up at all\nMaybe someday you'll see\nWhat you lost when you lost me\nOh-oh-oh, fly away\nOh-oh-oh, fly away\n\n*Final Chorus*\nSo I'm folding up your letters into paper planes\nWatch 'em fly over rooftops, never coming back again\nEvery \"baby, I'm sorry,\" every \"I'll never change\"\nI'm letting go, letting go\nYeah, I'm folding up your letters into paper planes\n\n*Outro*\nPaper planes\nFly away\nI'm okay\nPaper planes\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

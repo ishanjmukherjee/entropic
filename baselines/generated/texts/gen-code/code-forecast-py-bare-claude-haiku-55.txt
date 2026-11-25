@@ -1,0 +1,496 @@
+#!/usr/bin/env python3
+"""Clean a daily sales CSV and fit, evaluate, and forecast with Holt-Winters
+exponential smoothing (statsmodels).
+
+Pipeline:
+    1. Load CSV and validate required columns.
+    2. Clean: parse dates and numbers, drop invalid rows, aggregate duplicate
+       dates, reindex to a complete daily calendar, interpolate short gaps,
+       fill long gaps with zero (logged), clip negatives, and cap outliers
+       using a rolling-median / MAD rule.
+    3. Hold out the last `--test-days` observations. Select the best
+       Holt-Winters configuration on the training split by AIC, then evaluate
+       it on the holdout against a seasonal-naive baseline.
+    4. Refit the selected configuration on the full cleaned history and
+       forecast `--horizon` days ahead.
+    5. Write the forecast CSV and, optionally, a JSON metrics report.
+
+Example:
+    python forecast_sales.py --input sales.csv --date-col date --value-col sales \
+        --seasonal-period 7 --test-days 28 --horizon 28 \
+        --output forecast.csv --metrics-output metrics.json
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import math
+import sys
+import warnings
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Optional, Sequence
+
+import numpy as np
+import pandas as pd
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+LOGGER = logging.getLogger("forecast_sales")
+
+MAD_SCALE = 1.4826  # Makes MAD a consistent estimator of sigma for normal data.
+
+
+class DataValidationError(ValueError):
+    """Raised when the input data cannot be used for forecasting."""
+
+
+class ModelFitError(RuntimeError):
+    """Raised when no candidate model could be fitted successfully."""
+
+
+@dataclass(frozen=True)
+class CleaningReport:
+    rows_in: int
+    rows_invalid_date: int
+    rows_invalid_value: int
+    duplicate_dates_merged: int
+    days_missing_in_range: int
+    days_interpolated: int
+    days_filled_zero: int
+    negative_values_clipped: int
+    outliers_capped: int
+    rows_out: int
+
+
+@dataclass(frozen=True)
+class ModelCandidate:
+    name: str
+    trend: Optional[str]
+    damped: bool
+    seasonal: Optional[str]
+
+
+@dataclass(frozen=True)
+class FittedCandidate:
+    candidate: ModelCandidate
+    aic: float
+    result: object  # statsmodels HoltWintersResults
+
+
+CANDIDATES: tuple[ModelCandidate, ...] = (
+    ModelCandidate("additive_seasonal", None, False, "add"),
+    ModelCandidate("additive_trend_seasonal", "add", False, "add"),
+    ModelCandidate("additive_damped_trend_seasonal", "add", True, "add"),
+    ModelCandidate("multiplicative_seasonal", None, False, "mul"),
+    ModelCandidate("multiplicative_damped_trend_seasonal", "add", True, "mul"),
+)
+
+
+# --------------------------------------------------------------------------- #
+# Loading and cleaning
+# --------------------------------------------------------------------------- #
+
+def load_raw(path: Path, date_col: str, value_col: str) -> pd.DataFrame:
+    """Read the CSV and return a frame with columns ['date', 'sales']."""
+    if not path.is_file():
+        raise FileNotFoundError(f"Input file not found: {path}")
+
+    df = pd.read_csv(path)
+    missing = {date_col, value_col} - set(df.columns)
+    if missing:
+        raise DataValidationError(
+            f"Missing required column(s) {sorted(missing)}; "
+            f"available columns: {list(df.columns)}"
+        )
+    return df[[date_col, value_col]].rename(columns={date_col: "date", value_col: "sales"})
+
+
+def _parse_numeric(series: pd.Series) -> pd.Series:
+    """Convert values like '$1,234.50' or ' 12 ' to floats; invalid -> NaN."""
+    cleaned = series.astype(str).str.replace(r"[,$\s]", "", regex=True)
+    return pd.to_numeric(cleaned, errors="coerce")
+
+
+def _cap_outliers(series: pd.Series, k: float, window: int = 29) -> tuple[pd.Series, int]:
+    """Cap values outside rolling_median +/- k * rolling_MAD.
+
+    Uses a centred rolling window so that level shifts are tracked while
+    isolated spikes are clipped. Falls back to the global MAD where the
+    local MAD is zero or unavailable.
+    """
+    if k <= 0:
+        return series, 0
+
+    median = series.rolling(window, center=True, min_periods=7).median()
+    median = median.fillna(series.median())
+
+    residual = series - median
+    global_mad = MAD_SCALE * residual.abs().median()
+    local_mad = (
+        residual.abs()
+        .rolling(window, center=True, min_periods=7)
+        .median()
+        * MAD_SCALE
+    )
+    scale = local_mad.replace(0, np.nan).fillna(global_mad)
+
+    if not np.isfinite(scale).all() or (scale <= 0).all():
+        return series, 0
+
+    upper = median + k * scale
+    lower = (median - k * scale).clip(lower=0)
+    capped = series.clip(lower=lower, upper=upper)
+    n_capped = int((capped != series).sum())
+    return capped, n_capped
+
+
+def clean_sales(
+    raw: pd.DataFrame,
+    *,
+    duplicate_policy: str = "sum",
+    outlier_k: float = 5.0,
+    max_interp_gap: int = 7,
+) -> tuple[pd.Series, CleaningReport]:
+    """Return a gap-free, daily, non-negative sales series and a cleaning report.
+
+    Assumptions (documented for the caller):
+      * Duplicate rows for the same date are combined with `duplicate_policy`.
+      * Gaps up to `max_interp_gap` days are linearly interpolated in time.
+      * Longer interior gaps are treated as zero sales (e.g. closed days).
+      * Leading and trailing missing days are trimmed, not filled.
+    """
+    if duplicate_policy not in {"sum", "mean", "last"}:
+        raise ValueError(f"Unsupported duplicate_policy: {duplicate_policy}")
+
+    rows_in = len(raw)
+
+    dates = pd.to_datetime(raw["date"], errors="coerce")
+    values = _parse_numeric(raw["sales"])
+
+    invalid_date = dates.isna()
+    invalid_value = values.isna() & ~invalid_date
+
+    df = pd.DataFrame({"date": dates.dt.normalize(), "sales": values})
+    df = df[~invalid_date & ~invalid_value]
+
+    if df.empty:
+        raise DataValidationError("No valid (date, sales) rows remain after parsing.")
+
+    duplicate_count = int(df["date"].duplicated().sum())
+    daily = df.groupby("date")["sales"].agg(duplicate_policy).sort_index()
+
+    full_index = pd.date_range(daily.index.min(), daily.index.max(), freq="D")
+    daily = daily.reindex(full_index)
+    days_missing = int(daily.isna().sum())
+
+    # Trim leading and trailing missing days rather than inventing history.
+    first_valid = daily.first_valid_index()
+    last_valid = daily.last_valid_index()
+    daily = daily.loc[first_valid:last_valid]
+
+    interior_nan_before = int(daily.isna().sum())
+    daily = daily.interpolate(
+        method="time", limit=max_interp_gap, limit_area="inside"
+    )
+    days_interpolated = interior_nan_before - int(daily.isna().sum())
+
+    long_gaps = int(daily.isna().sum())
+    if long_gaps:
+        LOGGER.warning(
+            "Filling %d day(s) in long gaps with 0 (assumed no sales/closed).",
+            long_gaps,
+        )
+        daily = daily.fillna(0.0)
+
+    negatives = int((daily < 0).sum())
+    if negatives:
+        LOGGER.warning("Clipping %d negative value(s) to 0.", negatives)
+        daily = daily.clip(lower=0.0)
+
+    daily, outliers = _cap_outliers(daily, k=outlier_k)
+    if outliers:
+        LOGGER.info("Capped %d outlier value(s).", outliers)
+
+    daily = daily.astype(float)
+    daily.index.name = "date"
+    daily.name = "sales"
+
+    report = CleaningReport(
+        rows_in=rows_in,
+        rows_invalid_date=int(invalid_date.sum()),
+        rows_invalid_value=int(invalid_value.sum()),
+        duplicate_dates_merged=duplicate_count,
+        days_missing_in_range=days_missing,
+        days_interpolated=days_interpolated,
+        days_filled_zero=long_gaps,
+        negative_values_clipped=negatives,
+        outliers_capped=outliers,
+        rows_out=len(daily),
+    )
+    return daily, report
+
+
+# --------------------------------------------------------------------------- #
+# Modelling
+# --------------------------------------------------------------------------- #
+
+def _applicable_candidates(y: pd.Series) -> list[ModelCandidate]:
+    """Multiplicative models require strictly positive data."""
+    strictly_positive = bool((y > 0).all())
+    return [
+        c for c in CANDIDATES
+        if c.seasonal != "mul" or strictly_positive
+    ]
+
+
+def _fit_candidate(y: pd.Series, cand: ModelCandidate, period: int) -> FittedCandidate:
+    model = ExponentialSmoothing(
+        y.to_numpy(dtype=float),
+        trend=cand.trend,
+        damped_trend=cand.damped if cand.trend else False,
+        seasonal=cand.seasonal,
+        seasonal_periods=period,
+        initialization_method="estimated",
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        result = model.fit(optimized=True)
+
+    aic = float(result.aic)
+    if not math.isfinite(aic):
+        raise ModelFitError(f"non-finite AIC for {cand.name}")
+    return FittedCandidate(candidate=cand, aic=aic, result=result)
+
+
+def select_best_model(train: pd.Series, period: int) -> FittedCandidate:
+    """Fit every applicable candidate on the training data and keep the lowest AIC."""
+    best: Optional[FittedCandidate] = None
+    for cand in _applicable_candidates(train):
+        try:
+            fitted = _fit_candidate(train, cand, period)
+        except Exception as exc:  # statsmodels can raise a variety of errors
+            LOGGER.debug("Candidate %s failed: %s", cand.name, exc)
+            LOGGER.info("Candidate %s could not be fitted.", cand.name)
+            continue
+        LOGGER.info("Candidate %-40s AIC=%.2f", cand.name, fitted.aic)
+        if best is None or fitted.aic < best.aic:
+            best = fitted
+
+    if best is None:
+        raise ModelFitError("No candidate model could be fitted to the data.")
+    LOGGER.info("Selected model: %s (AIC=%.2f)", best.candidate.name, best.aic)
+    return best
+
+
+def forecast_fitted(fitted: FittedCandidate, steps: int) -> np.ndarray:
+    values = np.asarray(fitted.result.forecast(steps), dtype=float)
+    if values.shape[0] != steps or not np.isfinite(values).all():
+        raise ModelFitError("Model produced invalid forecasts.")
+    return np.clip(values, 0.0, None)
+
+
+def seasonal_naive_forecast(train: pd.Series, period: int, steps: int) -> np.ndarray:
+    """Repeat the last full season of the training data."""
+    last_season = train.iloc[-period:].to_numpy(dtype=float)
+    reps = math.ceil(steps / period)
+    return np.tile(last_season, reps)[:steps]
+
+
+# --------------------------------------------------------------------------- #
+# Evaluation
+# --------------------------------------------------------------------------- #
+
+def compute_metrics(actual: np.ndarray, predicted: np.ndarray) -> dict[str, float]:
+    err = actual - predicted
+    abs_err = np.abs(err)
+
+    nonzero = actual != 0
+    mape = (
+        float(np.mean(abs_err[nonzero] / np.abs(actual[nonzero])) * 100.0)
+        if nonzero.any()
+        else float("nan")
+    )
+
+    denom = np.abs(actual) + np.abs(predicted)
+    valid = denom > 0
+    smape = (
+        float(np.mean(2.0 * abs_err[valid] / denom[valid]) * 100.0)
+        if valid.any()
+        else float("nan")
+    )
+
+    return {
+        "mae": float(abs_err.mean()),
+        "rmse": float(np.sqrt(np.mean(err ** 2))),
+        "mape_pct": mape,
+        "smape_pct": smape,
+    }
+
+
+@dataclass(frozen=True)
+class EvaluationReport:
+    model: str
+    aic: float
+    test_days: int
+    model_metrics: dict
+    baseline_metrics: dict
+    mae_improvement_pct: float
+
+
+def evaluate_holdout(
+    train: pd.Series, test: pd.Series, period: int, selected: FittedCandidate
+) -> EvaluationReport:
+    steps = len(test)
+    model_pred = forecast_fitted(selected, steps)
+    naive_pred = seasonal_naive_forecast(train, period, steps)
+
+    actual = test.to_numpy(dtype=float)
+    model_metrics = compute_metrics(actual, model_pred)
+    baseline_metrics = compute_metrics(actual, naive_pred)
+
+    base_mae = baseline_metrics["mae"]
+    improvement = (
+        (base_mae - model_metrics["mae"]) / base_mae * 100.0 if base_mae > 0 else float("nan")
+    )
+    return EvaluationReport(
+        model=selected.candidate.name,
+        aic=selected.aic,
+        test_days=steps,
+        model_metrics=model_metrics,
+        baseline_metrics=baseline_metrics,
+        mae_improvement_pct=float(improvement),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# CLI
+# --------------------------------------------------------------------------- #
+
+def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Clean daily sales and forecast with Holt-Winters.")
+    p.add_argument("--input", required=True, type=Path, help="Path to input CSV.")
+    p.add_argument("--date-col", default="date", help="Name of the date column.")
+    p.add_argument("--value-col", default="sales", help="Name of the sales column.")
+    p.add_argument("--seasonal-period", type=int, default=7,
+                   help="Seasonal cycle length in days (7 = weekly).")
+    p.add_argument("--test-days", type=int, default=28,
+                   help="Holdout length in days for evaluation (0 disables it).")
+    p.add_argument("--horizon", type=int, default=28,
+                   help="Number of future days to forecast.")
+    p.add_argument("--duplicate-policy", choices=["sum", "mean", "last"], default="sum",
+                   help="How to combine multiple rows for the same date.")
+    p.add_argument("--outlier-k", type=float, default=5.0,
+                   help="MAD multiplier for outlier capping (0 disables).")
+    p.add_argument("--max-interp-gap", type=int, default=7,
+                   help="Longest gap (days) to interpolate linearly.")
+    p.add_argument("--output", type=Path, default=Path("forecast.csv"),
+                   help="Where to write the forecast CSV.")
+    p.add_argument("--metrics-output", type=Path, default=None,
+                   help="Optional path to write evaluation metrics as JSON.")
+    p.add_argument("--log-level", default="INFO",
+                   choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+
+    args = p.parse_args(argv)
+
+    if args.seasonal_period < 2:
+        p.error("--seasonal-period must be at least 2.")
+    if args.horizon < 1:
+        p.error("--horizon must be at least 1.")
+    if args.test_days < 0:
+        p.error("--test-days must be non-negative.")
+    if args.outlier_k < 0:
+        p.error("--outlier-k must be non-negative.")
+    if args.max_interp_gap < 0:
+        p.error("--max-interp-gap must be non-negative.")
+    return args
+
+
+def run(args: argparse.Namespace) -> int:
+    raw = load_raw(args.input, args.date_col, args.value_col)
+    LOGGER.info("Loaded %d raw row(s) from %s.", len(raw), args.input)
+
+    y, report = clean_sales(
+        raw,
+        duplicate_policy=args.duplicate_policy,
+        outlier_k=args.outlier_k,
+        max_interp_gap=args.max_interp_gap,
+    )
+    LOGGER.info("Cleaning report: %s", json.dumps(asdict(report)))
+
+    period = args.seasonal_period
+    min_history = 3 * period
+    if len(y) - args.test_days < min_history:
+        raise DataValidationError(
+            f"Need at least {min_history} training days for seasonal period {period}; "
+            f"have {len(y) - args.test_days} after holding out {args.test_days}."
+        )
+    if len(y) < 2 * period:
+        raise DataValidationError("Not enough history after cleaning.")
+
+    evaluation: Optional[EvaluationReport] = None
+    if args.test_days > 0:
+        train, test = y.iloc[:-args.test_days], y.iloc[-args.test_days:]
+        selected_on_train = select_best_model(train, period)
+        evaluation = evaluate_holdout(train, test, period, selected_on_train)
+        LOGGER.info("Holdout evaluation: %s", json.dumps(asdict(evaluation)))
+        if (
+            evaluation.model_metrics["mae"] > evaluation.baseline_metrics["mae"]
+        ):
+            LOGGER.warning(
+                "Model underperforms the seasonal-naive baseline on the holdout "
+                "(MAE %.2f vs %.2f).",
+                evaluation.model_metrics["mae"],
+                evaluation.baseline_metrics["mae"],
+            )
+
+    # Refit the selected configuration on the full cleaned history.
+    final_selection = select_best_model(y, period)
+    future_pred = forecast_fitted(final_selection, args.horizon)
+
+    last_date = y.index[-1]
+    future_dates = pd.date_range(last_date + pd.Timedelta(days=1), periods=args.horizon, freq="D")
+    forecast_df = pd.DataFrame({
+        "date": future_dates.strftime("%Y-%m-%d"),
+        "forecast": np.round(future_pred, 4),
+    })
+
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    forecast_df.to_csv(args.output, index=False)
+    LOGGER.info("Wrote %d-day forecast to %s.", args.horizon, args.output)
+
+    if args.metrics_output is not None:
+        payload = {
+            "cleaning": asdict(report),
+            "final_model": final_selection.candidate.name,
+            "final_aic": final_selection.aic,
+            "evaluation": asdict(evaluation) if evaluation else None,
+        }
+        args.metrics_output.parent.mkdir(parents=True, exist_ok=True)
+        args.metrics_output.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        LOGGER.info("Wrote metrics to %s.", args.metrics_output)
+
+    return 0
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    args = parse_args(argv)
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        stream=sys.stderr,
+    )
+    try:
+        return run(args)
+    except (FileNotFoundError, DataValidationError, ModelFitError) as exc:
+        LOGGER.error("%s", exc)
+        return 1
+    except Exception:
+        LOGGER.exception("Unexpected failure.")
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

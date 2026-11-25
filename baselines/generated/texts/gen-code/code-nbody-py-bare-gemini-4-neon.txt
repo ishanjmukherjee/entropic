@@ -1,0 +1,300 @@
+"""N-body gravitational simulation using a vectorized Kick-Drift-Kick leapfrog integrator."""
+
+from __future__ import annotations
+
+import argparse
+import logging
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Tuple
+
+import numpy as np
+from numpy.typing import NDArray
+
+FloatArray = NDArray[np.float64]
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class SimulationConfig:
+    """Configuration parameters for the N-body simulation."""
+
+    num_bodies: int = 100
+    num_steps: int = 1000
+    dt: float = 0.01
+    g_const: float = 1.0
+    softening: float = 0.1
+    seed: int = 42
+    save_interval: int = 10
+    output_path: Path | None = None
+
+    def __post_init__(self) -> None:
+        if self.num_bodies < 2:
+            raise ValueError("num_bodies must be at least 2.")
+        if self.num_steps < 1:
+            raise ValueError("num_steps must be at least 1.")
+        if self.dt <= 0.0:
+            raise ValueError("dt must be positive.")
+        if self.g_const <= 0.0:
+            raise ValueError("g_const must be positive.")
+        if self.softening < 0.0:
+            raise ValueError("softening must be non-negative.")
+        if self.save_interval < 1:
+            raise ValueError("save_interval must be at least 1.")
+
+
+def compute_accelerations(
+    positions: FloatArray,
+    masses: FloatArray,
+    g_const: float,
+    softening: float,
+) -> FloatArray:
+    """Compute gravitational accelerations for all bodies.
+
+    Args:
+        positions: Array of shape (N, 3) containing particle positions.
+        masses: Array of shape (N,) containing particle masses.
+        g_const: Gravitational constant.
+        softening: Plummer softening length to prevent singularities.
+
+    Returns:
+        Array of shape (N, 3) containing particle accelerations.
+    """
+    diff = positions[np.newaxis, :, :] - positions[:, np.newaxis, :]
+    dist_sq = np.sum(diff * diff, axis=-1) + softening * softening
+    inv_dist_cube = dist_sq ** (-1.5)
+    np.fill_diagonal(inv_dist_cube, 0.0)
+
+    weights = inv_dist_cube * masses[np.newaxis, :]
+    return g_const * np.sum(diff * weights[:, :, np.newaxis], axis=1)
+
+
+def compute_energies(
+    positions: FloatArray,
+    velocities: FloatArray,
+    masses: FloatArray,
+    g_const: float,
+    softening: float,
+) -> Tuple[float, float, float]:
+    """Compute kinetic, potential, and total mechanical energy of the system.
+
+    Args:
+        positions: Array of shape (N, 3) containing particle positions.
+        velocities: Array of shape (N, 3) containing particle velocities.
+        masses: Array of shape (N,) containing particle masses.
+        g_const: Gravitational constant.
+        softening: Plummer softening length.
+
+    Returns:
+        Tuple of (kinetic_energy, potential_energy, total_energy).
+    """
+    kinetic = 0.5 * float(np.sum(masses * np.sum(velocities * velocities, axis=1)))
+
+    diff = positions[np.newaxis, :, :] - positions[:, np.newaxis, :]
+    dist_sq = np.sum(diff * diff, axis=-1) + softening * softening
+    inv_dist = 1.0 / np.sqrt(dist_sq)
+    np.fill_diagonal(inv_dist, 0.0)
+
+    mass_matrix = masses[:, np.newaxis] * masses[np.newaxis, :]
+    potential = -0.5 * g_const * float(np.sum(mass_matrix * inv_dist))
+
+    return kinetic, potential, kinetic + potential
+
+
+def generate_initial_conditions(
+    num_bodies: int,
+    seed: int,
+) -> Tuple[FloatArray, FloatArray, FloatArray]:
+    """Generate a centered, zero-momentum 3D Gaussian cluster of particles.
+
+    Args:
+        num_bodies: Number of particles to generate.
+        seed: Random seed for reproducibility.
+
+    Returns:
+        Tuple of (positions, velocities, masses).
+    """
+    rng = np.random.default_rng(seed)
+
+    masses = rng.uniform(0.5, 1.5, size=num_bodies).astype(np.float64)
+    positions = rng.normal(0.0, 1.0, size=(num_bodies, 3)).astype(np.float64)
+    velocities = rng.normal(0.0, 0.5, size=(num_bodies, 3)).astype(np.float64)
+
+    total_mass = np.sum(masses)
+    com_position = np.sum(positions * masses[:, np.newaxis], axis=0) / total_mass
+    com_velocity = np.sum(velocities * masses[:, np.newaxis], axis=0) / total_mass
+
+    positions -= com_position
+    velocities -= com_velocity
+
+    return positions, velocities, masses
+
+
+class NBodySimulation:
+    """N-body gravitational simulator using a Kick-Drift-Kick leapfrog integrator."""
+
+    def __init__(
+        self,
+        positions: FloatArray,
+        velocities: FloatArray,
+        masses: FloatArray,
+        config: SimulationConfig,
+    ) -> None:
+        if positions.shape != (config.num_bodies, 3):
+            raise ValueError(f"Expected positions shape {(config.num_bodies, 3)}, got {positions.shape}.")
+        if velocities.shape != (config.num_bodies, 3):
+            raise ValueError(f"Expected velocities shape {(config.num_bodies, 3)}, got {velocities.shape}.")
+        if masses.shape != (config.num_bodies,):
+            raise ValueError(f"Expected masses shape {(config.num_bodies,)}, got {masses.shape}.")
+
+        self.positions: FloatArray = positions.copy()
+        self.velocities: FloatArray = velocities.copy()
+        self.masses: FloatArray = masses.copy()
+        self.config: SimulationConfig = config
+        self.time: float = 0.0
+        self.accelerations: FloatArray = compute_accelerations(
+            self.positions,
+            self.masses,
+            self.config.g_const,
+            self.config.softening,
+        )
+
+    def step(self) -> None:
+        """Advance the simulation by one timestep using Kick-Drift-Kick leapfrog."""
+        dt = self.config.dt
+        half_dt = 0.5 * dt
+
+        # First half-kick
+        self.velocities += self.accelerations * half_dt
+        # Full drift
+        self.positions += self.velocities * dt
+        # Update accelerations
+        self.accelerations = compute_accelerations(
+            self.positions,
+            self.masses,
+            self.config.g_const,
+            self.config.softening,
+        )
+        # Second half-kick
+        self.velocities += self.accelerations * half_dt
+
+        self.time += dt
+
+    def run(self) -> dict[str, FloatArray]:
+        """Run the full simulation and return recorded trajectory and energy diagnostics."""
+        num_snapshots = (self.config.num_steps // self.config.save_interval) + 1
+        times = np.zeros(num_snapshots, dtype=np.float64)
+        pos_history = np.zeros((num_snapshots, self.config.num_bodies, 3), dtype=np.float64)
+        vel_history = np.zeros((num_snapshots, self.config.num_bodies, 3), dtype=np.float64)
+        energy_history = np.zeros((num_snapshots, 3), dtype=np.float64)
+
+        ke0, pe0, e0 = compute_energies(
+            self.positions,
+            self.velocities,
+            self.masses,
+            self.config.g_const,
+            self.config.softening,
+        )
+        times[0] = self.time
+        pos_history[0] = self.positions
+        vel_history[0] = self.velocities
+        energy_history[0] = (ke0, pe0, e0)
+
+        logger.info(
+            "Starting simulation: N=%d, steps=%d, dt=%.4g, E0=%.6f",
+            self.config.num_bodies,
+            self.config.num_steps,
+            self.config.dt,
+            e0,
+        )
+
+        snapshot_idx = 1
+        for step_idx in range(1, self.config.num_steps + 1):
+            self.step()
+
+            if step_idx % self.config.save_interval == 0:
+                ke, pe, etot = compute_energies(
+                    self.positions,
+                    self.velocities,
+                    self.masses,
+                    self.config.g_const,
+                    self.config.softening,
+                )
+                times[snapshot_idx] = self.time
+                pos_history[snapshot_idx] = self.positions
+                vel_history[snapshot_idx] = self.velocities
+                energy_history[snapshot_idx] = (ke, pe, etot)
+                snapshot_idx += 1
+
+        final_energy = energy_history[snapshot_idx - 1, 2]
+        rel_error = abs(final_energy - e0) / (abs(e0) if e0 != 0.0 else 1.0)
+        logger.info(
+            "Simulation complete: t=%.4f, E_final=%.6f, relative_energy_error=%.3e",
+            self.time,
+            final_energy,
+            rel_error,
+        )
+
+        results = {
+            "times": times[:snapshot_idx],
+            "positions": pos_history[:snapshot_idx],
+            "velocities": vel_history[:snapshot_idx],
+            "masses": self.masses,
+            "energies": energy_history[:snapshot_idx],
+        }
+
+        if self.config.output_path is not None:
+            self.config.output_path.parent.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(self.config.output_path, **results)
+            logger.info("Saved simulation output to %s", self.config.output_path)
+
+        return results
+
+
+def parse_args() -> SimulationConfig:
+    """Parse command-line arguments into a SimulationConfig."""
+    parser = argparse.ArgumentParser(
+        description="Run a 3D N-body gravitational simulation with a leapfrog integrator."
+    )
+    parser.add_argument("--num-bodies", type=int, default=100, help="Number of bodies.")
+    parser.add_argument("--num-steps", type=int, default=1000, help="Number of integration steps.")
+    parser.add_argument("--dt", type=float, default=0.01, help="Time step size.")
+    parser.add_argument("--g-const", type=float, default=1.0, help="Gravitational constant.")
+    parser.add_argument("--softening", type=float, default=0.1, help="Softening length.")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+    parser.add_argument("--save-interval", type=int, default=10, help="Steps between snapshots.")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Optional path to save compressed .npz trajectory output.",
+    )
+    args = parser.parse_args()
+
+    return SimulationConfig(
+        num_bodies=args.num_bodies,
+        num_steps=args.num_steps,
+        dt=args.dt,
+        g_const=args.g_const,
+        softening=args.softening,
+        seed=args.seed,
+        save_interval=args.save_interval,
+        output_path=args.output,
+    )
+
+
+def main() -> None:
+    """Entry point for CLI execution."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    )
+    config = parse_args()
+    positions, velocities, masses = generate_initial_conditions(config.num_bodies, config.seed)
+    sim = NBodySimulation(positions, velocities, masses, config)
+    sim.run()
+
+
+if __name__ == "__main__":
+    main()

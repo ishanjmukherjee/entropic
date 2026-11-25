@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-canal",
+ "style": "bare",
+ "prompt": "Write an essay about the Erie Canal and what it changed. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "essay-canal-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "When the Erie Canal opened in 1825, a barrel of flour produced in western New York could reach New York City without spending days jolting over muddy roads. A boat could carry it from Buffalo to Albany, where it could continue down the Hudson River to the harbor. For a farmer deciding whether it was worth hauling wheat to the nearest mill, that change mattered more than the canal’s impressive dimensions. By lowering the cost of moving ordinary goods, the Erie Canal altered what Americans grew, where they settled, and which cities prospered. Its benefits reached far beyond its banks, but so did the costs of its construction and the expansion it encouraged.\n\nBefore the canal, the Appalachian Mountains posed a stubborn problem for trade between the Atlantic coast and the interior. Rivers offered cheap transportation, but many waterways west of the mountains flowed toward the Mississippi and the Gulf of Mexico rather than toward eastern cities. New York possessed an unusual geographic advantage: the Hudson led north from an excellent harbor, and the Mohawk Valley offered a relatively low passage westward. Geography did not guarantee success, however. New York State had to borrow heavily to build a waterway that critics doubted would ever earn its keep. Governor DeWitt Clinton championed the project, and construction began in 1817.\n\nOver eight years, laborers cut through rock, dug across swamps, and built embankments to keep the channel level across uneven ground. Near the western end, at the settlement that became Lockport, a staircase of locks lifted boats over the steep Niagara Escarpment. The completed canal stretched approximately 363 miles, yet it was initially only four feet deep. Its economy depended less on size than on the simple fact that a horse or mule walking along a level towpath could pull a far heavier load through water than it could haul in a wagon. The cost of shipping a ton of freight between Buffalo and Albany fell from roughly $100 before the canal to about $10 afterward.\n\nCheaper freight changed the calculations of households hundreds of miles apart. Western farmers could sell grain in distant markets and buy manufactured goods that had once been prohibitively expensive to transport. Eastern consumers gained access to a growing supply of western food. In Rochester, millers used the falls of the Genesee River to power their machinery and the canal to ship their flour. Neither resource alone would have produced the same result: waterpower could grind more wheat than local people could eat, but affordable transportation made that extra production profitable. Buffalo likewise grew as workers unloaded grain from Great Lakes vessels and transferred it to canal boats for the journey east.\n\nAt the other end of the route, New York City strengthened its position as the country’s leading port. A merchant sending goods across the Atlantic now had access, through one harbor, to customers throughout much of the Great Lakes region. As cargo accumulated on the docks, so did opportunities for bankers who financed shipments, insurers who covered losses, and shipowners who carried goods overseas. The canal did not create the city’s commercial advantages from nothing, but it made them harder for rivals such as Philadelphia and Baltimore to match. Its toll revenues also demonstrated that a state-financed public work could repay its construction debt while generating wealth well beyond the tollgates.\n\nThe canal carried people and ideas as well as freight. Migrants heading west traveled on packet boats, while lecturers, preachers, and newspaper editors found audiences in the growing canal towns. Rochester became an important center of abolitionism, and nearby Seneca Falls hosted the 1848 women’s rights convention. Water transportation did not produce these movements, but it helped connect communities in which organizers could exchange arguments and recruit supporters. For the Haudenosaunee, however, the same route had a different meaning. The canal crossed their homelands at a time when treaties and land sales, many of them contested, had already reduced their territory. By making western land easier for settlers to reach and more valuable to speculators, it intensified pressure on the land that remained in Native hands.\n\nRailroads eventually drew passengers and freight away from the canal, but they did not erase the economic geography it had helped establish. Rail lines followed much of the same corridor, serving cities whose mills, warehouses, and markets were already in place. The canal’s most durable achievement was therefore not the channel itself, which later generations repeatedly enlarged and rerouted. It was the set of relationships that formed around it: between a wheat grower and a distant customer, a lakeside port and an ocean harbor, a state’s investment and the towns that grew along its course. It made distance less costly for some Americans while exposing others to new pressures, changing the meaning of a place without moving it on the map.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 32,
+  "completion_tokens": 952,
+  "total_tokens": 984,
+  "cost": 0.038336,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.038336,
+   "upstream_inference_prompt_cost": 0.000256,
+   "upstream_inference_completions_cost": 0.03808
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

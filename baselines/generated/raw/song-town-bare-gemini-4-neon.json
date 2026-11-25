@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "bare",
+ "prompt": "Write the lyrics of a country song about leaving a small town. Output only the lyrics.",
+ "model": "gemini-4-neon",
+ "max_tokens": 900,
+ "id": "song-town-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "[Verse 1]\nGot two cardboard boxes in the back of this Ford\nA guitar case and a suitcase I can barely afford\nThe sun ain't even up, just a pale blue gray\nAnd the gravel's crunching loud as I pull away\nMama's still asleep behind the kitchen light\nI kissed her on the forehead and I whispered goodbye\n\n[Chorus]\nYeah, I'm watching this town in the rearview glass\nTrading dirt road slow for the highway fast\nGot a tank full of gas and a heavy heart\nTearing up the map just to make a fresh start\nIt’s the only home I’ve ever known, it’s in my blood and bone\nBut you can’t stay a seed if you’re meant to grow\nSo I’m leaving this small town, yeah, I gotta go\n\n[Verse 2]\nPass the rusty water tower with the faded paint\nWhere we carved our names back in '08\nMain Street's quiet, just a blinking red light\nAnd the ghosts of a hundred Friday football nights\nEverybody knows your mama and the sins you've done\nIt's a good place to be from, just a hard place to run\n\n[Chorus]\nYeah, I'm watching this town in the rearview glass\nTrading dirt road slow for the highway fast\nGot a tank full of gas and a heavy heart\nTearing up the map just to make a fresh start\nIt’s the only home I’ve ever known, it’s in my blood and bone\nBut you can’t stay a seed if you’re meant to grow\nSo I’m leaving this small town, yeah, I gotta go\n\n[Bridge]\nI ain't running from the memories, ain't running from the past\nJust chasing down a dream that was moving too fast\nAnd when the city lights get too bright and cold\nI’ll still carry this red clay down in my soul\n\n[Chorus]\nAs I'm watching this town in the rearview glass\nTrading dirt road slow for the highway fast\nGot a tank full of gas and a heavy heart\nTearing up the map just to make a fresh start\nIt’s the only home I’ve ever known, it’s in my blood and bone\nBut you can’t stay a seed if you’re meant to grow\nSo I’m leaving this small town, yeah, I gotta go\n\n[Outro]\nCross the county line, roll the window down\nSay a little prayer for this little town\nYeah, I gotta go\nGoodbye, small town",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 52,
+  "completion_tokens": 1554,
+  "total_tokens": 1606,
+  "cost": 0.023466,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.023466,
+   "upstream_inference_prompt_cost": 0.000156,
+   "upstream_inference_completions_cost": 0.02331
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1008,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

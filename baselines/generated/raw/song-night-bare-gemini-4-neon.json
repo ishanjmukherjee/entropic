@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "bare",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city. Output only the lyrics.",
+ "model": "gemini-4-neon",
+ "max_tokens": 900,
+ "id": "song-night-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "(Verse 1)\nSun drops low, yeah, the skyline glows\nLace up the kicks, check the fit, let’s go\nPhone buzzin' up, got the crew on the line\nConcrete jungle where we come alive\nStep out the door, feel the breeze in the air\nNeon reflections on the wet thoroughfare\nBass in the trunk, yeah, we shaking the block\nCity never sleeps, we ain't watching the clock\n\n(Chorus)\nCity lights shining, yeah, we owning the night\nDowntown vibes and the feeling is right\nFrom the curb to the roof, yeah, we living it loud\nLost in the rhythm, moving through the crowd\nNo sleep 'til the morning, we chasing the thrill\nNight out in the city, yeah, we never sit still\n\n(Verse 2)\nSkip past the line, yeah, the bouncer’s a friend\nStep in the spot where the wild things bend\nStrobe lights flashing, DJ spinning the heat\nEverybody bouncing to the 808 beat\nClink of the glasses, toast to the grind\nLeaving all the stress of the week behind\nCaught a quick glance from across the floor\nFeet don't fail me, yeah, we wanting some more\n\n(Chorus)\nCity lights shining, yeah, we owning the night\nDowntown vibes and the feeling is right\nFrom the curb to the roof, yeah, we living it loud\nLost in the rhythm, moving through the crowd\nNo sleep 'til the morning, we chasing the thrill\nNight out in the city, yeah, we never sit still\n\n(Bridge)\nThree in the morning, we back on the street\nSteam from the grates rising under our feet\nCorner store stops and the late-night food\nNothing in the world gonna kill this mood\nSky turning purple, yeah, the sun’s on the rise\nStill got the fire burning bright in our eyes\n\n(Chorus)\nCity lights shining, yeah, we owning the night\nDowntown vibes and the feeling is right\nFrom the curb to the roof, yeah, we living it loud\nLost in the rhythm, moving through the crowd\nNo sleep 'til the morning, we chasing the thrill\nNight out in the city, yeah, we never sit still\n\n(Outro)\nYeah, downtown lights\nCity never sleeps\nWe out 'til the sunrise\nJust another night in the city\nYeah.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 56,
+  "completion_tokens": 1242,
+  "total_tokens": 1298,
+  "cost": 0.018798,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.018798,
+   "upstream_inference_prompt_cost": 0.000168,
+   "upstream_inference_completions_cost": 0.01863
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 741,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

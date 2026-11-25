@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-book",
+ "style": "bare",
+ "prompt": "Write an essay reviewing a book you think is underrated. About 800 words. Output only the essay, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-book-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "In a literary landscape saturated with apocalyptic fiction, it is easy to assume that every possible variation of the end of the world has already been explored. We are accustomed to stories of survival defined by spectacle: roving bands of marauders, collapsing cities, and desperate quests to uncover the truth behind a global catastrophe. Yet, tucked away in the mid-twentieth-century European canon is a quiet, devastating masterpiece that predates and transcends most of these tropes. Marlen Haushofer’s 1963 novel, *The Wall*, is one of the most underrated works of modern literature—a stark, hypnotic meditation on isolation, labor, and the fragile illusion of human civilization.\n\nThe premise is deceptively simple. An unnamed, middle-aged woman travels to a remote hunting lodge in the Austrian Alps with her wealthy cousin and her cousin’s husband. One evening, the couple walks down to the nearby village and fails to return. The next morning, the narrator sets out to find them, accompanied by their dog, Lynx. Walking down the mountain road, she abruptly collides with an invisible, impenetrable barrier. Looking through it, she sees a man frozen motionless by a fountain; beyond the glass-like partition, all human and animal life appears to have abruptly ceased. Trapped within a sprawling, forested valley, she is left completely alone save for Lynx, a pregnant cow she names Bella, and a stray cat.\n\nWhat makes *The Wall* so extraordinary—and so unjustly overlooked—is Haushofer’s refusal to indulge in the conventional mechanics of a thriller. The narrator never embarks on a quest to shatter the barrier, nor does she spend the novel theorizing about its origins. Was it a military experiment? An alien intervention? A divine punishment? She briefly considers these possibilities, then discards them as useless. The wall simply *is*. By stripping away the mystery, Haushofer redirects the reader’s attention entirely toward the grueling, unglamorous reality of physical survival. \n\nThe bulk of the novel is a meticulous chronicle of manual labor. The narrator must learn to plant and harvest potatoes, scythe grass for hay, chop firewood, and milk Bella. In lesser hands, this focus on the mundane would feel tedious, but Haushofer renders these daily chores with an almost spiritual intensity. Work becomes the sole barrier against madness. When the narrator’s watch eventually stops, time ceases to be a linear construct measured by clocks and instead becomes cyclical, dictated by the brutal rhythm of the alpine seasons. The novel argues that without the distractions of modern society, human existence boils down to a relentless negotiation with nature—a nature that is neither benevolent nor malicious, merely indifferent.\n\nAs the months turn into years, the narrator undergoes a profound psychological transformation. Stripped of her bourgeois past, her social roles, and even the gaze of other people, her former identity dissolves. She forgets what her own face looks like; her memories of her husband and children fade into something distant and unreal, like a book she read long ago. In place of her old self emerges a creature defined entirely by responsibility. Her relationship with the animals is the emotional core of the novel, yet Haushofer avoids all sentimentality. The narrator does not anthropomorphize Lynx or Bella; rather, she recognizes that her survival is inextricably bound to theirs. Caring for them is a heavy, terrifying burden, because to love anything in a world this precarious is to invite unbearable grief. Still, it is that very burden that tethers her to humanity.\n\nHaushofer’s prose—rendered with austere precision in Shaun Whiteside’s English translation—mirrors the starkness of the alpine landscape. The novel is framed as a report written by the narrator on the backs of old calendars, composed in the winter months as her supply of paper and pencil stubs dwindles. Her voice is calm, unsentimental, and fiercely pragmatic, even when confronting moments of profound despair or sudden, shocking violence. There is no melodrama here, only the quiet resilience of a woman trying to make sense of her own endurance.\n\nPerhaps *The Wall* remains underrated precisely because it resists easy categorization. It is too grounded in psychological realism to sit comfortably on the science-fiction shelf, yet its central conceit is too surreal for traditional literary realism. It is also a deeply unsettling book—not because of external monsters, but because it forces the reader to confront how little of our identity actually belongs to us. When the structures of society vanish, what remains? Haushofer’s answer is both chilling and strangely liberating. *The Wall* deserves a permanent place alongside the great existential works of the twentieth century, standing as a timeless reminder that even at the end of the world, the most radical act is simply to keep living.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 61,
+  "completion_tokens": 2260,
+  "total_tokens": 2321,
+  "cost": 0.034083,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.034083,
+   "upstream_inference_prompt_cost": 0.000183,
+   "upstream_inference_completions_cost": 0.0339
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1295,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

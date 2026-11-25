@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "bare",
+ "prompt": "Write a poem about a father's hands. Output only the poem, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-father-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Maps of quiet labor, etched in skin,\nWith calloused palms and knuckles scarred by time.\nThey hold the weight of all that he has been,\nThe steady grit, the grease, the stubborn grime.\n\nThey’ve swung the hammer, turned the rusted wrench,\nAnd built the shelter where we safely slept.\nThey’ve worked until the daylight had to quench,\nAnd guarded every promise that he kept.\n\nYet rough as bark, they knew a gentler art—\nTo steady wobbly wheels along the street,\nTo mend a broken toy, a heavy heart,\nAnd guide my small and stumbling, restless feet.\n\nNow silver veins trace rivers on the back,\nA little slower, weathered by the years,\nYet still they hold the strength I sometimes lack,\nAnd still they know the way to dry my tears.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 53,
+  "completion_tokens": 1172,
+  "total_tokens": 1225,
+  "cost": 0.017739,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.017739,
+   "upstream_inference_prompt_cost": 0.000159,
+   "upstream_inference_completions_cost": 0.01758
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 996,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-contact",
+ "style": "bare",
+ "prompt": "Write a science fiction short story about first contact. About 800 words. Output only the story, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "story-contact-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "For four years, Maya had listened to the sound of nothing. \n\nAboard the *Boreas* outpost, anchored to the fractured ice crust of Europa, \"nothing\" was a rich tapestry of groans, cracks, and the distant, bass-heavy thunder of shifting tectonic plates. Twenty kilometers beneath her boots lay a pitch-black ocean, untouched by sunlight since the birth of the solar system. Her job was simple: drop the acoustic array down the thermal borehole, ping the abyss, and map the seafloor. \n\nOn a Tuesday that felt identical to the thousand Tuesdays before it, the abyss pinged back.\n\nMaya was nursing a lukewarm mug of synthetic coffee when the hydrophone monitor spiked. She had just sent down a standard calibration pulse—a flat, forty-hertz drone meant to measure water density. The echo should have taken twelve seconds to return, muddied by silt and thermal vents.\n\nIt came back in four. And it wasn't muddied. It was sharper, cleaner, and pitched a perfect fifth higher than the original note.\n\nShe set her mug down, the plastic clattering against the console. \"Glitch,\" she muttered to the empty control room. The rest of the three-person crew was asleep in the hab-ring. \n\nShe ran a diagnostic on the array. The cabling was intact, the transponders nominal. Frowning, she bypassed the automated sequence and tapped the manual transmit key. *Tap. Tap. Pause. Tap.* \n\nShe watched the waterfall display scroll downward, a cascade of blue static. Four seconds later, a bright amber line cut across the screen. *Tap. Tap. Pause. Tap.* \n\nHer breath caught in her throat. It was an exact mimicry, stripped of all background noise. Before she could reach for the intercom to wake the commander, the display flared again. This time, it didn't wait for her. It sent a cascade of rapid, mathematical pulses—a Fibonacci sequence rendered in pure, crystalline sonar.\n\nThen, the proximity alarms on the borehole tether began to chime.\n\nSomething was climbing the cable. \n\nMaya didn't wake the others. A strange, heavy calm settled over her, eclipsing her fear. She grabbed a heavy parka and hurried down the narrow, frost-rimmed corridor to the moonpool—the pressurized chamber where the borehole breached the station’s underbelly.\n\nThe room smelled of ozone, machine oil, and the sharp, metallic tang of extraterrestrial brine. In the center of the floor, a circular pool of black water lapped gently against the steel retaining wall, kept from freezing by banks of submerged heating coils. The winch cable vanished straight down into the ink.\n\nMaya stepped onto the grated catwalk, her boots clanging loudly. She looked down. \n\nDeep beneath the surface, a faint luminescence was blooming. It wasn't the sickly green of Earthly bioluminescence, nor the harsh white of a mechanical floodlight. It was a warm, shifting gold, like sunlight filtering through autumn leaves. \n\nThe light rose, growing brighter until it illuminated the frosted ceiling of the chamber. The water’s surface didn't ripple or break; it simply parted, as if yielding to a polite request.\n\nWhat emerged was neither flesh nor metal. It was a shifting lattice of translucent filaments, no larger than a beach ball, woven into impossible, self-correcting geometries. Nodes of golden light raced along its threads, pulsing in complex, rhythmic waves. It hovered a foot above the black water, defying Europa’s weak gravity without a whisper of propulsion.\n\nMaya slowly dropped to her knees on the cold grating, her hands raised, palms open. She had no protocol for this. There were binders of directives back in the comms room—quarantine procedures, linguistic matrices, diplomatic scripts written by committees on a blue marble half a billion miles away. They all felt absurdly small.\n\nThe lattice drifted closer, stopping just an arm's length away. The air between them hummed, vibrating with a gentle static that made the hairs on her arms stand up. \n\nSlowly, the frantic golden light inside the entity slowed. The sharp, mathematical geometries softened into gentle, rolling curves. A low, resonant thrum filled the moonpool, vibrating through the steel deck and straight into Maya’s chest.\n\n*Thump-thump. Thump-thump.*\n\nMaya’s eyes widened. It was the exact rhythm of her own racing heart.\n\nShe laughed, a breathless, tear-choked sound that echoed off the bare metal walls. Slowly, she lowered one hand and pressed her palm flat against the steel grating, right next to the water's edge. \n\nThe entity drifted downward. A single, gossamer filament extended from the glowing core, trembling slightly as it reached across the impossible divide between two worlds. It touched the back of her bare hand.\n\nIt wasn't cold. It was as warm as summer rain.\n\nIn the quiet dark beneath the ice, humanity was finally no longer alone.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 60,
+  "completion_tokens": 2488,
+  "total_tokens": 2548,
+  "cost": 0.0375,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.0375,
+   "upstream_inference_prompt_cost": 0.00018,
+   "upstream_inference_completions_cost": 0.03732
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1443,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

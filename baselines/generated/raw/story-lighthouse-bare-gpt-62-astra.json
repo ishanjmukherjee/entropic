@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-lighthouse",
+ "style": "bare",
+ "prompt": "Write a short story about a lighthouse keeper. About 800 words. Output only the story, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "story-lighthouse-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "The first time the lighthouse went dark, Ada Bell was halfway through cutting her own hair. She put down the scissors and ran up the spiral stairs with a towel pinned around her neck. By the time she reached the lantern room, the backup lamp had come on. Beyond the glass, a ferry continued its slow passage toward the harbor, every square window lit.\n\nIn the official log she wrote: Main lamp failed at 21:14. Reserve operating. No interruption to traffic.\n\nIn the little blue notebook she kept in her apron, she wrote: Left side shorter. Fix tomorrow.\n\nFor thirty-one years, Ada had kept both records. The official volumes stood in a locked cabinet. The blue notebooks lived in a biscuit tin and contained, among other things, the date a wren built a nest in her spare boot, a recipe for pear chutney, and the last words her husband had spoken before boarding the supply boat for a routine appointment on the mainland: See if that milk’s still good.\n\nIt had been good for another three days.\n\nOn Monday a technician named Ellis arrived with a steel case and the news that he could finish the automation by Friday. He had expected this to please her. When it didn’t, he became very interested in wiping his feet.\n\n“You can leave your boots on,” Ada said. “It’s a floor.”\n\nHe was a careful worker. She gave him that. He placed screws in a saucer instead of holding them in his mouth, and whenever he moved something, he marked its place in chalk. For four days he fitted sensors and threaded cables. Ada made tea, packed books, and threw away things nobody could possibly want, including eleven rubber bands hardened into the shapes of the jars they had once encircled.\n\nOn Thursday evening Ellis found her in the lantern room, sitting on an upturned bucket.\n\n“May I ask something?” he said. “What do you look at?”\n\n“The sea, mostly.”\n\n“I mean, what are you looking for?”\n\nShe moved over, though there wasn’t room on the bucket for two. He sat on the floor.\n\nOut beyond the headland, the ferry was coming in. Ada pointed to its windows. “Third one from the stern. Wait for it.”\n\nThe window went black, then bright, then black again.\n\n“Galley door,” she said. “They prop it open when they fry onions. Doesn’t quite catch.”\n\nEllis watched until the ferry passed behind the headland.\n\n“That go in the log?” he asked.\n\n“Not the official one.”\n\nThe next morning, while they were carrying her boxes down to the landing, they heard three short blasts from the harbor. Ada straightened. A thick bank of fog lay across the water, close enough to hide the end of the jetty.\n\n“Ferry?” Ellis asked.\n\n“Ferry’s in for painting.”\n\nThree blasts again. Then a man shouted something neither of them could make out. Ellis reached for his radio. Ada took the iron ladle from the box marked KITCHEN and struck it against the handrail.\n\nFrom the fog came a furious answering clang.\n\n“That’s Leonard Pike,” she said. “Nobody else can sound so put out with a piece of metal.”\n\nIt took twenty minutes to bring him in. His engine had stopped and his portable radio was at home charging beside the toaster. He emerged from the fog standing in his little boat, striking a saucepan with a spanner. At the landing he handed Ada a paper sack.\n\n“Your sister sent these.”\n\nInside were six seed potatoes, each wrapped in newspaper.\n\n“You came out in this for potatoes?”\n\n“It was clear when I left.”\n\nEllis helped him tie up. Ada put the kettle on again. There was still tea, although the cups were packed, so the three of them drank from a measuring jug, a clean jam jar, and the lid of Ellis’s flask.\n\nAt noon the fog lifted. Leonard took Ada and her boxes across, leaving Ellis to run the final checks. From the stern she watched the lighthouse diminish until she could cover it with her thumb. She had imagined doing this for years. What she hadn’t imagined was Leonard beside her, explaining in tremendous detail what was wrong with his engine.\n\nHer new house had a strip of garden and a bedroom facing inland. That first night she woke at nine fourteen, got up, and walked barefoot to the kitchen. Across two backyards, through a gap between the roofs of the butcher’s shop and the bank, the light passed once, passed again.\n\nAda took the biscuit tin down from a box. After a moment she put it back unopened.\n\nIn the morning she planted the potatoes. The boy next door watched over the fence, eating toast.\n\n“What are you looking for?” he asked when she stopped digging and crumbled a handful of earth.\n\n“Worms,” she said.\n\nHe set his toast on the fence post. “I know where there’s loads.”\n\nAda fetched him a spoon.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 29,
+  "completion_tokens": 1010,
+  "total_tokens": 1039,
+  "cost": 0.040632,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.040632,
+   "upstream_inference_prompt_cost": 0.000232,
+   "upstream_inference_completions_cost": 0.0404
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

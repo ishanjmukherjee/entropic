@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-subway",
+ "style": "styled",
+ "prompt": "Write an essay of about 800 words on the subject below.\n\nWrite it the way an excellent, idiosyncratic human essayist would: someone with real expertise and strong opinions, writing in the first person for their own blog. Commit to a specific thesis that a thoughtful reader might disagree with. Use concrete particulars (names, numbers, incidents, things only someone who had done the work would know) in place of general statements. Vary sentence length. No headings, no bullet points, no summary paragraph at the end, and none of the stock phrases of AI writing.\n\nOutput only the essay, with no title.\n\nSubject: an essay on why building subways costs so much more in some countries than in others",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-subway-styled-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "If you ever want to understand why American infrastructure is broken, go stand on the mezzanine of the 86th Street station on New York’s Second Avenue Subway. Look up. The ceiling is absurdly high, a cavernous concrete vault carved out of solid Manhattan schist. It feels less like a place to catch a train and more like a brutalist cathedral. That single line—Phase 1, which runs for less than two miles—cost $4.5 billion. Now, if you have the time, fly to Madrid and take the MetroSur. The stations are shallow, tight, and aggressively utilitarian. You walk down a short flight of stairs, tap your card, and you are practically on the platform. Madrid built forty-one kilometers of that line in four years for roughly $60 million a kilometer.\n\nWhenever I bring up these numbers, people reach for the same two lazy explanations: greedy unions and litigious NIMBYs. Both are real, and both are maddening. I still remember reading Brian Rosenthal’s 2017 *New York Times* investigation into East Side Access, which found two hundred workers on the payroll whose jobs nobody could actually explain. And anyone who has watched California’s environmental review laws strangle transit projects knows how easily a handful of angry homeowners can delay a rail line for a decade. \n\nYet neither of these explains the sheer scale of the gap. If strong unions made subways impossibly expensive, France and Italy would be unable to lay a single meter of track. Have you ever seen a French rail union go on strike? They do not mess around. Still, Paris is currently building the Grand Paris Express—two hundred kilometers of brand-new automated metro—for a fraction of what New York pays per mile. As for NIMBYs, they add time and legal fees, sure, but the Anglosphere’s costs don’t just explode in courtrooms. They explode in the concrete, the steel, and the tunneling.\n\nThe real culprit is much less sexy than corruption or local politics. Rich English-speaking countries—the United States, the UK, Canada, Australia—have systematically destroyed their own in-house engineering capacity, and in doing so, they have turned subway construction into a bespoke luxury good. \n\nBeginning in the 1980s, public transit agencies like New York’s MTA and Toronto’s Metrolinx bought into the neoliberal fantasy that the private sector does everything better. They gutted their own staffs of civil engineers and project managers. Today, when an American city decides to build a subway, the agency doesn't actually know how to do it. So it hires a massive private engineering consultancy—WSP, AECOM, Jacobs—to design the project. Then, because the agency lacks the technical expertise to tell if the first consultant is ripping them off, it hires a *second* consultant to manage the first one. \n\nThis creates a perverse set of incentives. Private consultancies are paid a percentage of the total project cost, or by the billable hour. They have zero interest in telling a city, \"Hey, you don't need that extra ventilation shaft.\" Worse, everyone involved is terrified of being sued. When you have no institutional memory, you substitute over-engineering for competence. You design every single station from scratch, as if nobody has ever dug a hole in the ground before. You mine deep caverns to avoid the minor political headache of digging up a street for cut-and-cover construction, even though mining costs three times as much. You build colossal, empty mezzanines to house mechanical rooms that European engineers neatly tuck away at the ends of the platforms.\n\nContrast this with what Madrid did in the late 1990s under Manuel Melis, the chief engineer of Mintra, the city's public transit construction authority. Melis kept the brainpower in-house. More importantly, he treated the subway like an industrial product, not an architectural competition. Mintra used a standardized kit of parts. The stations were all ninety meters long, built with shallow cut-and-cover methods, using the exact same escalators, the same signaling, the same boring tiles. When a contractor finished one station, they moved down the road and built the exact same thing again. They got fast because they didn't reinvent the wheel every six blocks.\n\nWe don't do that here. In New York, London, and Toronto, every transit extension is treated as a once-in-a-generation monument, a chance for politicians to cut ribbons in gleaming, custom-designed underground palaces and for consulting firms to bill millions of hours managing \"risk.\" We have forgotten that a subway station is not supposed to be a museum. It is a concrete tube where you wait four minutes for a train. Until we rebuild the boring, unglamorous state capacity to build boring, unglamorous stations, we will keep paying cathedral prices for a ride to work.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 179,
+  "completion_tokens": 3248,
+  "total_tokens": 3427,
+  "cost": 0.049257,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.049257,
+   "upstream_inference_prompt_cost": 0.000537,
+   "upstream_inference_completions_cost": 0.04872
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2228,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

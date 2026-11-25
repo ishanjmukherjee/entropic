@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-crypto",
+ "style": "bare",
+ "prompt": "Write an essay explaining how public-key cryptography works. About 800 words. Output only the essay, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-crypto-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "For millennia, the art of secret writing—cryptography—relied on a single, fundamental premise: both the sender and the receiver had to possess the same secret key. Whether it was a simple shift cipher used by Julius Caesar or the complex electromechanical rotors of the Enigma machine, this \"symmetric\" cryptography suffered from a fatal flaw known as the key distribution problem. How could two people who had never met securely share a secret key over an insecure channel without an eavesdropper intercepting it? In the 1970s, a revolutionary breakthrough solved this dilemma: public-key cryptography, also known as asymmetric cryptography. Today, this ingenious system serves as the invisible backbone of internet security, protecting everything from online banking to private messaging.\n\nUnlike symmetric cryptography, which uses one key for both locking and unlocking information, public-key cryptography utilizes a pair of mathematically linked keys: a public key and a private key. As the names suggest, the public key is meant to be shared openly with the entire world, while the private key must be kept strictly secret by its owner. A helpful analogy is a physical mailbox with a slot at the top and a locked door at the bottom. Anyone walking by can drop a letter through the slot—this is the public key in action. However, once the letter is inside, only the person who holds the unique physical key to the bottom door can open it and read the mail. That unique key is the private key. In the digital realm, data encrypted with a public key can only be decrypted by its corresponding private key.\n\nTo see this in practice, consider the classic cryptographic characters, Alice and Bob. Suppose Alice wants to send a confidential document to Bob over the internet. Bob generates a key pair and publishes his public key online, perhaps on his website or in a public directory, while storing his private key safely on his personal device. Alice retrieves Bob’s public key and uses it to encrypt her document, transforming the readable plaintext into an unintelligible scramble of characters called ciphertext. She then sends this ciphertext over the internet. Even if a malicious hacker intercepts the message—and even though the hacker also has access to Bob’s public key—the message remains completely secure. The public key can only lock the data; it cannot unlock it. When the ciphertext reaches Bob, he applies his private key to reverse the process, effortlessly restoring the original document.\n\nPublic-key cryptography is not limited to keeping secrets; it also solves the problem of digital identity through a mechanism called digital signatures. In this scenario, the roles of the keys are reversed. Suppose Bob wants to send a public announcement and prove to everyone that he genuinely wrote it and that it has not been tampered with. Bob runs his message through a hashing algorithm, creating a unique digital fingerprint of the text, and then encrypts that fingerprint using his private key. This encrypted hash is the digital signature, which he attaches to his message. When Alice receives the message, she uses Bob’s public key to decrypt the signature. If the decrypted fingerprint matches the hash of the message she received, she has mathematical proof of two things: the message undeniably came from Bob, since only he possesses the private key, and not a single character was altered in transit.\n\nThe magic that makes this entire system possible lies in a branch of mathematics involving \"trapdoor one-way functions.\" These are mathematical operations that are very easy to compute in one direction, yet extraordinarily difficult to reverse without a specific piece of secret information—the trapdoor. The most famous implementation of this is the RSA algorithm, which relies on the difficulty of prime factorization. Multiplying two massive prime numbers together takes a computer a fraction of a second. However, taking that resulting product and figuring out which two prime numbers were multiplied to create it is computationally infeasible, potentially taking the world's fastest supercomputers thousands of years. In RSA, the product of the primes forms part of the public key, while the original prime factors are used to generate the private key. Other modern systems, like Elliptic Curve Cryptography, use different but similarly intractable mathematical problems to achieve the same security with smaller, faster keys.\n\nDespite its brilliance, public-key cryptography has one notable drawback: the complex mathematics involved make it relatively slow and computationally expensive compared to symmetric encryption. Consequently, the modern internet uses a hybrid approach. When you connect to a secure website using HTTPS, your browser and the web server use public-key cryptography to verify identities and securely negotiate a temporary, shared symmetric key. Once that secure handshake is complete, they switch to fast symmetric encryption to protect the actual data being transmitted. By bridging the gap between total strangers in an untrusted digital world, public-key cryptography has made modern e-commerce, digital privacy, and global communication possible. Though emerging technologies like quantum computing pose future challenges to current mathematical trapdoors, the fundamental principles of asymmetric cryptography will remain essential to securing our digital lives.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 61,
+  "completion_tokens": 2775,
+  "total_tokens": 2836,
+  "cost": 0.041808,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.041808,
+   "upstream_inference_prompt_cost": 0.000183,
+   "upstream_inference_completions_cost": 0.041625
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1778,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

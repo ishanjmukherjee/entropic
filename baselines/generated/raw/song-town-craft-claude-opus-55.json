@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "craft",
+ "prompt": "Write the lyrics of a country song about leaving a small town.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 900,
+ "id": "song-town-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "Mama bought the diner off of Dot in eighty-three,\nKept the name, said folks were used to it and paint ain't free.\nI been pouring Hunt's in Heinz bottles since the age of nine,\nNot a soul in Cordell ever caught it, not one time.\nNow the Silverado's sitting packed out by the curb,\nAnd Mama's wiping down a clean booth, and she ain't said a word.\n\nSomebody'll flip the sign at six,\nSomebody'll start the Bunn,\nSomebody'll know how Earl likes his eggs,\nA little past what you'd call done.\nSomebody'll ring the register,\nHang up the CLOSED at two.\nMama says somebody always will.\nIt don't have to be you.\n\nEleven months at Kentucky Truck, I'm working second shift,\nI mail a check home every first and tell her it's a gift.\nShe answers on her cell with \"Dot's,\" like I'm calling in to eat,\nBut I don't hear the fryer or the traffic off the street.\nEarl's niece put on my Facebook that the hours got cut back,\nAnd the sign's been saying OT'S since the D out front went black.\n\nSomebody'll flip the sign at six,\nSomebody'll start the Bunn,\nSomebody'll know how Earl likes his eggs,\nA little past what you'd call done.\nSomebody'll ring the register,\nHang up the CLOSED at two.\nMama says somebody always will.\nIt don't have to be you.\n\nI pulled in off of 183 at five on Christmas Eve,\nMama's sleeping up above the store, so I just let her sleep.\nEleven checks are taped along the register in a line,\nNot a one of them been cashed, and every signature is mine.\nI find the switch behind the pie case where it's always been,\nAnd Earl's already idling in his Buick, waiting to come in.\n\nSomebody'll flip the sign at six,\nSomebody'll start the Bunn,\nSomebody'll know how Earl likes his eggs,\nA little past what you'd call done.\nSomebody'll ring the register,\nHang up the CLOSED at two.\nMama says somebody always will.\nIt don't have to be you.\n\nMama says somebody always will.\nIt don't have to be you.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

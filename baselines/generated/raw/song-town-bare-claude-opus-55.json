@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "bare",
+ "prompt": "Write the lyrics of a country song about leaving a small town. Output only the lyrics.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 900,
+ "id": "song-town-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "**Rearview Mirror Town**\n\n*Verse 1*\nDaddy's truck still idles at the end of Maple Lane,\nGot my whole life in a duffel and a check that's just enough for gas and pain,\nThe water tower's fading, says \"Class of '09,\"\nAnd I swore I'd never leave here, but I guess I changed my mind.\n\n*Pre-Chorus*\nMama's on the porch, she's waving with a dish towel in her hand,\nShe don't say it but I know she understands.\n\n*Chorus*\nSo long to the Friday lights, the Dairy Queen, the one-way street,\nThe church bells and the cotton fields and the dust beneath my feet,\nI'm chasing something bigger than this county line allowed,\nBut I'll keep you shining in my rearview mirror, town.\n\n*Verse 2*\nPassed the diner where we'd split a plate of fries at 2 a.m.,\nSaw your car out in the lot, and I almost turned again,\nBut you got a ring and a baby, and a life that fits you right,\nAnd I got this highway calling like a train whistle at night.\n\n*Pre-Chorus*\nOld Hank down at the Texaco just tipped his cap at me,\nSaid, \"Son, don't let that city change the boy you used to be.\"\n\n*Chorus*\nSo long to the Friday lights, the Dairy Queen, the one-way street,\nThe church bells and the cotton fields and the dust beneath my feet,\nI'm chasing something bigger than this county line allowed,\nBut I'll keep you shining in my rearview mirror, town.\n\n*Bridge*\nAnd maybe I'll come back someday with gray up in my hair,\nFind my name still carved into that oak tree by the square,\n'Cause you can take the road away from where you're from,\nBut every mile I drive, I'm still your son.\n\n*Final Chorus*\nSo long to the Friday lights, the Dairy Queen, the one-way street,\nThe church bells and the cotton fields and the dust beneath my feet,\nI'm chasing something bigger, Lord, I hope I make you proud,\nAnd I'll keep you shining in my rearview mirror, town.\n\n*Outro*\nYeah, I'll keep you shining…\nIn my rearview mirror, town.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

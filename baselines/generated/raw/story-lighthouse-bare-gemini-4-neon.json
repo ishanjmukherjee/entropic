@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-lighthouse",
+ "style": "bare",
+ "prompt": "Write a short story about a lighthouse keeper. About 800 words. Output only the story, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "story-lighthouse-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Arthur knew the exact weight of the dark. For thirty-four years, he had measured it in pints of kerosene and the slow, steady descent of the cast-iron weights down the central shaft of the tower. The lighthouse stood on a jagged thumb of granite three miles off the mainland, a place where the wind never truly died, only caught its breath.\n\nThat Tuesday in November, the sky bruised early. By three in the afternoon, the horizon had vanished, swallowed by a slate-gray wall of rain. Arthur climbed the hundred and twelve spiral stairs, his left knee clicking in time with the wind rattling the iron shutters. In the lantern room, he checked the brass gears, wiped a smudge of salt from the glass panes, and trimmed the wicks with the precision of a surgeon.\n\nThe Fresnel lens was his pride—a towering beehive of crystal prisms that could catch the flame of a single lamp and throw it twenty miles across the water. When he struck the match at dusk, the room flooded with a warm, amber glow. He released the brake, and the clockwork mechanism hummed to life, the heavy brass carriage beginning its slow, hypnotic rotation. Flash, pause, flash. Three seconds of light, seven of dark. Every sailor on the coast knew the rhythm of the Point.\n\nBy midnight, the storm was a living thing. Waves detonated against the granite base, sending tremors all the way up the masonry until the tea mug on Arthur’s desk danced across the wood. He sat in the watch room just below the lantern, listening to the shriek of the gale. Then came a sound he had dreaded for three decades: a sharp, metallic crack, followed by the sickening roar of iron plummeting down the shaft.\n\nThe humming stopped.\n\nArthur was up the final ladder in seconds. The lamp still burned, casting a blinding, static beam out into the black, but the carriage was dead. Peering down the weight tube, he saw the snapped chain coiled like a dead snake at the bottom. A stationary light was worse than no light at all; a captain might mistake it for a distant harbor or another vessel and steer straight into the teeth of the reef.\n\nAs if to confirm his fear, a low, mournful groan cut through the howl of the wind. A foghorn. Close. Too close.\n\nArthur didn't waste time cursing the rusted link or the mainland inspectors who had promised a new chain in the spring. He stepped up to the massive brass carriage, gripped the iron crossbar, and leaned his weight into it.\n\nAt first, it refused to budge. The lens weighed nearly two tons, balanced on a bath of mercury, and without the gears to coax it, the inertia was immense. Arthur planted his boots on the grated floor, gritted his teeth, and pushed. Slowly, agonizingly, the crystal beehive began to turn.\n\n*One, two, three,* he counted in his head, matching the cadence of the coast charts. *Four, five, six, seven.*\n\nHe walked in a tight circle around the central pedestal, his shoulders burning, his bad knee screaming with every step. The heat from the kerosene lamp was suffocating, mixing with the chill drafts leaking through the storm-battered glass. Sweat stung his eyes, blurring the spinning reflections of the prisms. Outside, the rain lashed the panes like gravel.\n\nThe foghorn sounded again, louder now, vibrating in his teeth. Arthur squinted through the streaming glass, catching a fleeting glimpse of a red port light pitching violently in the troughs of the black swells. A freighter, driven off course by the gale.\n\n\"Come on,\" Arthur wheezed, his breath ragged. \"See me. Turn.\"\n\nHe kept walking. Around and around, a solitary cog in a broken machine. Minutes stretched into hours. His arms went numb, then came back to life with a dull, throbbing ache. He stopped thinking about the cold, the pain, or the years he had left. There was only the circle, the count, and the sweep of the beam cutting through the chaos. *Three seconds of light. Seven of dark.*\n\nSlowly, the frantic pitch of the foghorn grew fainter. The red light vanished, replaced briefly by the white glow of a stern lamp moving safely out toward the deep channel. The freighter had found its bearings.\n\nStill, Arthur did not stop. There could be others. A trawler, a coaster, a stray skiff. He pushed the brass until the black sky bruised to violet, and then to a pale, washed-out gray.\n\nWhen the first true rim of the sun finally broke the flattened horizon, Arthur let go of the bar. The lens coasted to a gentle halt. He extinguished the flame, his trembling fingers fumbling with the brass adjuster, and sank onto the iron grating with his back against the pedestal.\n\nThe sea was still rough, whitecaps foaming over the submerged rocks, but the wind had dropped to a tired sigh. Somewhere far out beyond the point, a ship was steaming safely toward port, its crew entirely unaware of the old man catching his breath in the quiet tower. Arthur closed his eyes, listening to the familiar rhythm of the tide, and smiled.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 59,
+  "completion_tokens": 3163,
+  "total_tokens": 3222,
+  "cost": 0.047622,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.047622,
+   "upstream_inference_prompt_cost": 0.000177,
+   "upstream_inference_completions_cost": 0.047445
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2087,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

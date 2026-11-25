@@ -1,0 +1,39 @@
+{
+ "set": "paper",
+ "kind": "paper",
+ "prompt_id": "paper-m-galaxies",
+ "style": "matched",
+ "prompt": "Write the introduction section of an academic paper titled “Do Submillimeter Galaxies Trace Megaparsec Large-scale Structures? An Overdensity Analysis of 449 Submillimeter Galaxies in COSMOS”. The paper is in astrophysics. About 700 words. Output only the text of the introduction, with no heading.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1500,
+ "matched_to": "papers/deng-smg-overdensity",
+ "id": "paper-m-galaxies-matched-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "In a Universe where structure grows hierarchically, the most massive galaxy clusters at the present epoch assembled from overdensities that extended over several comoving megaparsecs at high redshift. Identifying these regions before virialization offers a means of studying how the growth of the cosmic web relates to the formation of massive galaxies. Yet the galaxy populations that most readily reveal an overdensity need not be those that dominate its stellar mass or best trace its underlying matter distribution. This distinction is particularly important for submillimeter galaxies (SMGs), whose high luminosities make them visible across a broad redshift interval but whose selection is sensitive to a particular phase of galaxy evolution.\n\nFirst identified in deep submillimeter surveys (Smail et al. 1997; Hughes et al. 1998), SMGs are selected through thermal emission from dust that absorbs stellar radiation and reradiates it in the far-infrared. At submillimeter wavelengths, the negative $K$-correction partially offsets cosmological dimming, facilitating the detection of luminous dusty galaxies well beyond the peak of cosmic star formation. Many bright SMGs are gas-rich systems undergoing intense, obscured star formation, and their stellar masses and star formation rates have motivated a possible evolutionary connection to massive quiescent galaxies (Blain et al. 2002; Casey et al. 2014). If the progenitors of such galaxies preferentially formed in the density peaks that later became groups and clusters, then SMGs might provide useful signposts of large-scale structure at epochs when mature clusters were rare.\n\nThere are, however, distinct physical scales involved in this argument. A massive dark matter halo is statistically associated with an enhanced matter density on large scales, whereas the onset of a luminous dusty phase may depend on gas supply, a close interaction, or processes internal to an individual galaxy. An SMG could therefore occupy a biased halo without marking a conspicuous concentration of neighboring galaxies at the time of observation. Conversely, an extended overdensity may contain many massive galaxies but few detectable SMGs if their luminous phases are short or occur at different times. The question is thus not simply whether SMGs occur in protoclusters, but how often a region selected by the presence of an SMG is overdense on megaparsec scales.\n\nObservations provide evidence for both a connection and substantial diversity. Spectroscopically confirmed concentrations of dusty star-forming galaxies demonstrate that several such systems can be active within a single assembling structure (Chapman et al. 2009; Daddi et al. 2009). These striking associations establish what is possible, but regions targeted because they contain multiple luminous sources cannot establish what is typical. Clustering analyses provide a complementary population-averaged measure of bias, yet a mean clustering amplitude does not distinguish a modest excess around most sources from a strong excess around a small subset. Measuring the distribution of environments around individually selected SMGs addresses this distinction directly.\n\nSuch measurements require attention to both source identification and projection. A single-dish submillimeter detection can blend emission from several galaxies, and an incorrect counterpart can place the environmental measurement at the wrong redshift. Even when the counterpart is secure, unrelated foreground and background galaxies can dilute a true density contrast in projection. Narrowing the redshift interval reduces this contamination but can exclude physical neighbors when redshifts are uncertain. Equally important is the choice of reference population: because the abundance of detectable galaxies changes with redshift and survey depth, a neighbor count is informative only relative to counts obtained under comparable selection conditions.\n\nIn this work, we investigate the megaparsec-scale environments of 449 SMGs in the Cosmic Evolution Survey field (COSMOS; Scoville et al. 2007). The combination of extensive multiwavelength imaging, photometric redshift information, and contiguous sky coverage makes COSMOS well suited to measuring neighboring galaxy densities and characterizing their field-to-field fluctuations within a common survey footprint. We compare the environments of SMGs with reference regions at comparable redshifts, considering both the population-wide density excess and the incidence of individually overdense environments. Our aim is to assess whether the detection of a single SMG provides evidence for a surrounding large-scale structure, without assuming that every galaxy overdensity is a bound system or the progenitor of a present-day cluster.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 73,
+  "completion_tokens": 874,
+  "total_tokens": 947,
+  "cost": 0.035544,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.035544,
+   "upstream_inference_prompt_cost": 0.000584,
+   "upstream_inference_completions_cost": 0.03496
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

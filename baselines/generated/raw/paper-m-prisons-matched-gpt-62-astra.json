@@ -1,0 +1,39 @@
+{
+ "set": "paper",
+ "kind": "paper",
+ "prompt_id": "paper-m-prisons",
+ "style": "matched",
+ "prompt": "Write the introduction section of an academic paper titled “Closure without Resolution in European Prison Oversight”. The paper is in law. About 700 words. Output only the text of the introduction, with no heading.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1500,
+ "matched_to": "papers/ismail-prison-oversight-closure",
+ "id": "paper-m-prisons-matched-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "When the Committee of Ministers closes its supervision of a European Court of Human Rights judgment concerning prison conditions, what has come to an end? The immediate answer is clear: the state is no longer required to account for the execution of that judgment within the supervisory proceedings that have been closed. A more consequential question is whether a person detained in the conditions that gave rise to the judgment can now obtain relief. The two questions concern different legal relationships, are answered by different institutions and need not receive the same answer. Yet the public record of execution culminates in a document called a final resolution. This article examines the distance between the finality of that act and the resolution of the problem that brought a case to Strasbourg.\n\nUnder Article 46 of the European Convention on Human Rights, states undertake to abide by the Court’s final judgments in cases to which they are parties, and the Committee of Ministers supervises execution. A finding that detention in overcrowded or insanitary accommodation violated Article 3 may require more than payment of the just satisfaction awarded to the applicant. Execution may also call for individual measures to end the applicant’s exposure to those conditions and general measures to prevent similar violations. Each task has a different object of proof. A payment can be documented by a receipt. A transfer can be verified, although its significance depends on conditions at the receiving institution. Whether a newly available domestic remedy prevents prolonged exposure to degrading conditions is a harder question: the text conferring jurisdiction on a judge says little, by itself, about where a prison governor can find a suitable cell once an order is made.\n\n“Closure without resolution” describes the possibility that supervision ends while a material aspect of the underlying problem persists. It does not follow that every subsequent violation calls the closure decision into question. The Convention does not make the Committee a permanent inspector of national prisons, and a recurrence after a change in circumstances need not undermine an assessment reasonably made on earlier evidence. Nor does the closure of one case necessarily end scrutiny of the issue it raised: supervision of general measures may continue in a related case. The distinction matters in both directions. Counting closed cases as solved problems can exaggerate the reach of supervision; treating every closure in the face of continuing poor conditions as an abandonment of supervision can obscure where responsibility for follow-up actually lies.\n\nThe article argues that the adequacy of closure should be assessed by reference to the inference it asks the public to draw. Where the Committee relies on the introduction of a preventive remedy, the relevant question is not simply whether prisoners can bring proceedings, but whether a successful application is capable of changing their conditions within a meaningful time. Where it closes a case because the outstanding general measures are being examined elsewhere, the question is instead whether a reader can identify those measures and locate the proceedings in which they remain under review. These are distinct grounds for ending supervision of a particular judgment. Reasons adequate to support the second do not, without more, support the first.\n\nThe inquiry focuses on the Council of Europe and brings two bodies of material into conversation: the judgments and execution documents through which compliance is assessed, and the published reports of the European Committee for the Prevention of Torture, whose visits can illuminate conditions inside particular establishments. The latter are not appellate findings on execution. Their dates, institutional coverage and preventive mandate limit what can properly be inferred from them. Read with those limits in view, however, they provide a means of testing whether a proposition framed at national level—for example, that a complaints mechanism is operational—addresses the practical obstacle identified at establishment level.\n\nThe analysis proceeds from the legal object of execution to the evidential basis for closure and, finally, to the reasons given when supervision ends. Its claim is not that the Committee should keep a case open until it can guarantee against recurrence. It is that a final resolution should allow its readers to distinguish what has been remedied, what has been entrusted to domestic institutions and what remains under European supervision elsewhere. For a prisoner still seeking relief, that distinction identifies more than the limits of a past decision: it indicates which institution can now be called to account.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 48,
+  "completion_tokens": 819,
+  "total_tokens": 867,
+  "cost": 0.033144,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.033144,
+   "upstream_inference_prompt_cost": 0.000384,
+   "upstream_inference_completions_cost": 0.03276
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

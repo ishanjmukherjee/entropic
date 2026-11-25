@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""Simulate softened Newtonian gravity with a kick-drift-kick leapfrog.
+
+Run ``python nbody.py --help`` for options. The default initial conditions
+use dimensionless units with total mass one. An optional NPZ input file
+must contain masses (N,), positions (N, 3), and velocities (N, 3).
+"""
+
+import argparse
+import math
+import sys
+from pathlib import Path
+
+import numpy as np
+
+
+def validate(masses, positions, velocities):
+    """Check the shapes and physical domain of a particle state."""
+    if masses.ndim != 1 or not masses.size:
+        raise ValueError("masses must be a nonempty vector")
+    shape = (masses.size, 3)
+    if positions.shape != shape or velocities.shape != shape:
+        raise ValueError(f"positions and velocities must both have shape {shape}")
+    if not all(np.isfinite(a).all() for a in (masses, positions, velocities)):
+        raise ValueError("initial state contains nonfinite values")
+    if np.any(masses <= 0):
+        raise ValueError("all masses must be positive")
+
+
+def interactions(positions, masses, gravity, softening, block_size):
+    """Yield target slices, source offsets, and softened inverse distances.
+
+    Blocking bounds auxiliary storage by O(block_size * N). Self terms
+    have zero inverse distance and contribute neither force nor energy.
+    """
+    n = masses.size
+    for start in range(0, n, block_size):
+        stop = min(start + block_size, n)
+        rows = slice(start, stop)
+        offset = positions[None, :, :] - positions[rows, None, :]
+        squared = np.einsum("ijk,ijk->ij", offset, offset)
+        squared += softening * softening
+        squared[np.arange(stop - start), np.arange(start, stop)] = np.inf
+        yield rows, offset, 1.0 / np.sqrt(squared)
+
+
+def acceleration(positions, masses, gravity, softening, block_size):
+    """Evaluate the Plummer-softened acceleration of every particle."""
+    result = np.empty_like(positions)
+    for rows, offset, inverse in interactions(
+        positions, masses, gravity, softening, block_size
+    ):
+        weights = gravity * masses * inverse**3
+        result[rows] = np.einsum("ij,ijk->ik", weights, offset)
+    return result
+
+
+def energy(positions, velocities, masses, gravity, softening, block_size):
+    """Return kinetic plus pair potential energy, counting each pair once."""
+    total = 0.5 * np.dot(masses, np.einsum("ij,ij->i", velocities, velocities))
+    for rows, _, inverse in interactions(
+        positions, masses, gravity, softening, block_size
+    ):
+        total -= 0.5 * gravity * np.dot(masses[rows], inverse @ masses)
+    return float(total)
+
+
+def initial_state(args):
+    if args.input is not None:
+        with np.load(args.input, allow_pickle=False) as data:
+            arrays = []
+            for name in ("masses", "positions", "velocities"):
+                value = data[name]
+                if value.dtype.kind not in "fiu":
+                    raise ValueError(f"{name} must contain real numbers")
+                arrays.append(np.array(value, dtype=np.float64, order="C"))
+            return tuple(arrays)
+
+    rng = np.random.default_rng(args.seed)
+    masses = np.full(args.bodies, 1.0 / args.bodies)
+    positions = rng.normal(size=(args.bodies, 3))
+    velocities = rng.normal(scale=0.25 * math.sqrt(args.gravity), size=positions.shape)
+    positions -= np.average(positions, axis=0, weights=masses)
+    velocities -= np.average(velocities, axis=0, weights=masses)
+    return masses, positions, velocities
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, help="initial state NPZ")
+    parser.add_argument("--output", type=Path, help="write final state as NPZ")
+    parser.add_argument("--bodies", type=int, default=64, help="generated particle count")
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--steps", type=int, default=1000)
+    parser.add_argument("--dt", type=float, default=0.002, help="fixed timestep")
+    parser.add_argument("--gravity", type=float, default=1.0, help="gravitational constant")
+    parser.add_argument("--softening", type=float, default=0.05, help="softening length")
+    parser.add_argument("--block-size", type=int, default=128, help="targets per force batch")
+    args = parser.parse_args()
+
+    if args.steps < 0 or args.seed < 0:
+        parser.error("steps and seed must be nonnegative")
+    if args.block_size < 1 or args.bodies < 1:
+        parser.error("block-size and bodies must be positive")
+    if not all(math.isfinite(x) and x > 0 for x in (args.dt, args.gravity, args.softening)):
+        parser.error("dt, gravity, and softening must be finite and positive")
+
+    try:
+        with np.errstate(over="raise", divide="raise", invalid="raise"):
+            masses, positions, velocities = initial_state(args)
+            validate(masses, positions, velocities)
+            params = (masses, args.gravity, args.softening, args.block_size)
+            initial_energy = energy(positions, velocities, *params)
+            accel = acceleration(positions, *params)
+            half_dt = 0.5 * args.dt
+            for _ in range(args.steps):
+                velocities += half_dt * accel
+                positions += args.dt * velocities
+                accel = acceleration(positions, *params)
+                velocities += half_dt * accel
+            final_energy = energy(positions, velocities, *params)
+            elapsed = args.steps * args.dt
+            if args.output is not None:
+                with args.output.open("wb") as stream:
+                    np.savez_compressed(
+                        stream, masses=masses, positions=positions,
+                        velocities=velocities, time=elapsed, dt=args.dt,
+                        gravity=args.gravity, softening=args.softening,
+                    )
+            print(f"time={elapsed:.10g} energy={final_energy:.12g} "
+                  f"energy_change={final_energy - initial_energy:.6g}")
+    except (ValueError, KeyError, OSError, FloatingPointError, OverflowError) as exc:
+        print(f"{parser.prog}: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

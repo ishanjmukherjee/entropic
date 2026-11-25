@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-messenger",
+ "style": "bare",
+ "prompt": "Write a scene for a stage play in which a messenger brings a queen bad news from the war. About 700 words. Output only the script.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1500,
+ "id": "play-messenger-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "THE WESTERN WINDOW\n\n[The palace kitchen, just before dawn. QUEEN MARA stands at a table, cutting an apple into very thin slices. Across from her, NELL, the kitchen girl, tries to thread a needle in the poor light.]\n\nNELL: If you cut them any thinner, Majesty, there’ll only be one side.\n\nMARA: My husband likes them that way.\n\nNELL: Shall I put his plate in the warmer?\n\nMARA: No. Last time they curled up like toenails.\n\n[NELL laughs, then looks to see whether she ought to have. Three knocks at the yard door.]\n\nMARA: That’ll be him. He never could come home through a front door.\n\n[NELL opens it. A MESSENGER stands outside, one boot on, one foot wrapped in a flour sack.]\n\nMESSENGER: I was told the queen might be here.\n\nMARA: You were told correctly.\n\n[He takes off his cap. Inside it is a folded paper.]\n\nMESSENGER: The army at Bellwater has surrendered. The king agreed to terms yesterday, shortly after noon.\n\nMARA: Agreed to what terms?\n\nMESSENGER: The wounded could go home. The others were to be held until a settlement.\n\nMARA: And my husband is being held where?\n\n[The MESSENGER puts the paper on the table.]\n\nMESSENGER: He died yesterday evening, Majesty.\n\n[The pot on the stove boils over. NELL moves it.]\n\nMARA: You might have said that first.\n\nMESSENGER: Yes.\n\nMARA: Is that the order they told you to say it in?\n\nMESSENGER: No. I thought if I could get the first part out, I could get the rest out after.\n\nMARA: Nell, the gentleman needs a shoe.\n\nNELL: I can see that.\n\n[Neither moves.]\n\nMARA: Were you there when he died?\n\nMESSENGER: I was outside. They’d put him in the tollkeeper’s house. The doctor came out and asked if anybody had a pencil. I gave him mine. Then he went back in. That’s as near as I was.\n\nMARA: Thank you for not going inside.\n\nMESSENGER: Majesty?\n\nMARA: By the time this story reaches the council chamber, six men will have been holding his hand.\n\n[She unfolds the paper.]\n\nMARA: This is a bill for six hundredweight of onions.\n\nMESSENGER: Other side.\n\n[She turns it over. She knows the writing. She sits.]\n\nMARA: “Let the hospital carts cross without inspection.” He’s signed it twice.\n\nMESSENGER: His hand slipped on the first one. There are forty carts at the western gate. The watch won’t let them through on a dead king’s order.\n\nMARA: How did the watch learn he was dead before I did?\n\nMESSENGER: They asked me why I hadn’t brought him home. I’ve got a boy on the watch. I couldn’t look him in the eye and say his king was coming.\n\nMARA: But you could let me put an apple on a plate.\n\nMESSENGER: I’m sorry.\n\n[NELL takes the plate away. MARA catches her wrist.]\n\nMARA: Leave it. Please.\n\n[NELL sets it down.]\n\nMARA: Who’s in the carts?\n\nMESSENGER: Ours. Theirs. Some folk who lived by the river. One woman with a perfectly good leg who won’t leave her sister.\n\nMARA: Nell, fetch the blue seal from my desk.\n\n[NELL starts out.]\n\nMARA: No. Wait. How long does it take you to get upstairs and back?\n\nNELL: Depends who wants the seal.\n\nMARA: I do.\n\nNELL: Five minutes. If the prince hears me on the landing, half an hour. He’ll want to know if his father’s brought the little dog.\n\n[MARA looks toward the ceiling.]\n\nMARA: I’d forgotten about the dog.\n\n[Outside, a single cartwheel squeals. The MESSENGER turns toward the sound.]\n\nMESSENGER: They’ll have started moving up. You can see the gate from that window.\n\n[MARA opens the western window. Cold air lifts the paper off the table. NELL pins it down with the apple plate.]\n\nMARA: Gatekeeper! It’s Mara. Can you hear me?\n\n[A faint answering call.]\n\nMARA: Yes, in the kitchen. Open both gates. All the way, mind. They’ve people lying down in there.\n\n[A beat. Then the long scrape of the gates.]\n\nMARA: Nell, find this man two shoes. He shouldn’t have to keep the bad one just because it stayed on.\n\nMESSENGER: What shall I tell them about the king?\n\nMARA: Tell them what you told me. Only start with him.\n\n[She takes a slice of apple and goes upstairs.]",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 36,
+  "completion_tokens": 1018,
+  "total_tokens": 1054,
+  "cost": 0.041008,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.041008,
+   "upstream_inference_prompt_cost": 0.000288,
+   "upstream_inference_completions_cost": 0.04072
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

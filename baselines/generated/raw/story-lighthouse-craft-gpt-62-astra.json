@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-lighthouse",
+ "style": "craft",
+ "prompt": "Write a short story of about 800 words. Premise: a lighthouse keeper.\n\nWrite it as a fine literary short-story writer would. Open in the middle of a particular moment, not with scene-setting or weather. Give each character a want that is never stated. Let the important thing happen slightly off the page or in what goes unsaid, and trust the reader. Use precise, unglamorous physical detail in place of adjectives; dialogue people would actually say, oblique and at cross purposes; and at least one turn the premise does not predict. Choose names a census would contain. No sentence that explains what a moment meant, and no ending on a lesson, a reconciliation or a sunrise.\n\nOutput only the story, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "story-lighthouse-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "“Not by the handle,” June said, but the handle had come away in the boy’s hand. He stood holding the black curl of iron. The drawer stayed shut.\n\n“It does that,” she said.\n\nHe put the handle in his trouser pocket.\n\nHis mother was halfway up the stairs with a tape measure clipped to the back of her skirt. At each landing she leaned across the well to photograph the underside of the flight above her. She worked for the county now. June had seen the county car outside, its passenger door hanging open until the boy went back to shut it.\n\n“Raymond,” his mother called. “Don’t make work.”\n\n“He’s all right, Ellen.”\n\n“He’ll take your watch apart if you let him.”\n\nJune put two fingers into the holes where the handle had been and walked the drawer out an inch at a time. Inside were the wick scissors, though there had been nothing here with a wick for thirty years, and a stack of envelopes held together by a rubber band gone flat and brown.\n\n“Is the light on?” Raymond said.\n\n“It won’t show from in here.”\n\n“Then how can you tell?”\n\nShe took him to the service cupboard and showed him the meter. Every eleven seconds a red tooth came past the window. They watched it go by twice. Above them the tape measure ran out along the floor and went back into its case with a slap.\n\n“Does she have to measure everything?” he said.\n\n“Only what’s staying.”\n\nHe considered the cupboard. On the inside of the door June had pencilled the dates of the last six changes of lamp. Beneath them, at the height of his shoulder, was a row of little cuts, each with an E worked into the paint.\n\n“Those ants?”\n\n“Could be.”\n\nEllen came down backwards, wiping the soles of her shoes on the edge of each tread. “They’ll want the iron left. Anything fixed to the masonry.”\n\n“The stove’s mine.”\n\n“I put that down.”\n\n“It came on a handcart from Miller Street.”\n\n“I know what street.”\n\nShe took the envelopes from the drawer and slipped off the rubber band. It parted without a sound. June had written the addresses in green ink, care of a Mrs. Wallace in various towns, and on each envelope somebody had drawn a diagonal through the address in pencil. Ellen turned the stack over. On the back of the bottom one, in a child’s printing, was a sum in long division.\n\n“Your seven still looks like that,” June said.\n\nRaymond had gone into the room under the stairs. They could hear the biscuit tin in there being opened, then the dry rattle of buttons. Ellen laid the envelopes on the stove.\n\n“She died in March,” she said.\n\nJune wet the corner of her apron and rubbed at a ring on the stove top. “I saw. They put Wallace with one l.”\n\n“She did that herself at the end.”\n\nThe tin lid fell and rolled on its rim. Neither woman went in.\n\n“County giving you a place?” Ellen asked.\n\n“A flat. There’s a lift.”\n\n“Don’t take the one over the bins.”\n\n“I’ve had bins before.”\n\nEllen unclipped the tape and began on the door frame, holding the tongue against the jamb with her thumbnail. June could have told her thirty-one and a quarter. The quarter had mattered when they carried the bed out, Ellen at the foot in her school socks, her shoes already packed.\n\nRaymond emerged with a white button fastened through the hole in his shirt where a blue one was missing. It hung by a twist of wire.\n\n“Look at the back before you put that through the wash,” June said.\n\nHis mother bent to see. The boy held still under her hands, looking over her head at June. When Ellen straightened, the envelopes were no longer on the stove.\n\n“I’ll need a signature,” Ellen said.\n\nThey went through to the kitchen. June took her spectacles from a cup. The form was for the receipt of two keys, one brass and one steel, and the surrender of the keeper’s accommodation as of noon on Friday. Somebody had typed JUNE WALLACE and Ellen had crossed it out and printed JUNE BELL above it. June signed in the space for the witness. Ellen turned the sheet a little and June signed again.\n\nOutside, the boy was kneeling beside the county car, fishing under the front seat. He came back with a screwdriver and two short bolts dark with fluff. Without looking at either woman he went to the drawer. There was a minute of scraping, a bolt dropped, a minute more.\n\n“That won’t count as fixed,” Ellen said.\n\nJune took off her spectacles. One of the screws in the hinge was green.\n\nThe boy pulled the drawer open by its handle. He shut it with his knee and pulled it open again. From somewhere inside his shirt came the stiff complaint of paper. His mother held the door for him. He had to turn sideways to get past her with the drawer.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 157,
+  "completion_tokens": 1020,
+  "total_tokens": 1177,
+  "cost": 0.042056,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.042056,
+   "upstream_inference_prompt_cost": 0.001256,
+   "upstream_inference_completions_cost": 0.0408
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

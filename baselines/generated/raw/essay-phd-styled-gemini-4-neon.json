@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-phd",
+ "style": "styled",
+ "prompt": "Write an essay of about 800 words on the subject below.\n\nWrite it the way an excellent, idiosyncratic human essayist would: someone with real expertise and strong opinions, writing in the first person for their own blog. Commit to a specific thesis that a thoughtful reader might disagree with. Use concrete particulars (names, numbers, incidents, things only someone who had done the work would know) in place of general statements. Vary sentence length. No headings, no bullet points, no summary paragraph at the end, and none of the stock phrases of AI writing.\n\nOutput only the essay, with no title.\n\nSubject: an essay of advice for a new PhD student on choosing a research problem",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-phd-styled-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Every October, some well-meaning advisor emails their new PhD students a PDF of Richard Hamming’s 1986 talk, \"You and Your Research.\" You know the line. *What are the most important problems in your field, and why aren't you working on them?* Delete the email. Hamming was a genius at Bell Labs in the 1950s, backed by an AT&T monopoly that printed money. You are twenty-three, you make $34,000 a year, and you haven't figured out how to get the departmental printer to stop jamming. If you try to work on the most important problem in your field right now, you will be flattened.\n\nThe \"important\" problems are already occupied. They are crawling with tenured PIs who have fifteen postdocs, three R01 grants, and a direct line to the editors at *Nature*. In 2014, my first year in a biophysics program, I decided I was going to solve the relationship between chromatin folding and transcriptional bursting. I spent fourteen months reading papers, writing bloated Python scripts that crashed on the university cluster, and producing exactly zero usable data. Meanwhile, a lab at MIT with a $2 million microscope published the exact thing I was trying to do, only better, on a Tuesday in November. I sat in the stairwell next to the autoclave and seriously considered applying to law school.\n\nHere is the actual secret to choosing a dissertation topic: ignore the grand questions and look for something small, ugly, and slightly broken. Don't look for a gap in the literature. Look for an embarrassment. You want the footnote in a 2009 *Biophysical Journal* paper that casually mentions \"four samples were discarded due to unexplained baseline drift.\" You want the calibration error that everyone in your lab just works around by subtracting a magic number in Excel.\n\nI got my PhD because I got annoyed at a 4% fluctuation in fluorescence intensity. That’s it. I was imaging *E. coli* on a Zeiss LSM 710 at 2:00 AM, smelling like stale LB broth, and the signal kept dipping every twelve minutes. My advisor told me it was just photobleaching or the AC kicking on in the hallway. \"Just normalize it out,\" he said. Everyone in the lab normalized it out. I didn't, mostly out of petty stubbornness, because I had already wasted a year and I wanted to prove the microscope was broken. It took me four months to realize the microscope was fine. The bacteria were doing something weird with their membrane potential in response to the specific brand of agarose pad we were using. That petty annoyance turned into two *PNAS* papers and a postdoc.\n\nGrandiosity has a half-life of about eighteen months. Passion is even worse—it’s brittle, and it shatters the first time your western blot comes back completely blank for the sixth week in a row. You know what survives a five-year PhD? Spite. Irritation. The specific, low-grade obsession of a mechanic who hears a rattling noise under the hood that nobody else can hear. A friend of mine, Marcus, spent his first two years trying to build a \"unifying theory of cellular aging\" and nearly dropped out. He saved himself by pivoting to a stupidly narrow question: why did a specific GC-rich region of yeast chromosome IV keep stalling his polymerase? Nobody cared. His committee thought it was boring. He ended up finding a novel DNA secondary structure that now has his name attached to it in three textbooks.\n\nSo stop reading the Abstracts and Introductions of papers in *Science*. Those are press releases. Read the Methods sections. Read the Supplementary Information, specifically Figure S7, where people hide the data that didn't quite fit the story. Talk to the lab manager who has been ordering reagents since 1998, not the famous professor who hasn't touched a pipette since the Clinton administration. Ask the fifth-year grad student what part of their protocol makes them want to throw a centrifuge out the window.\n\nThere is a terrifying moment, usually around your third year, when you realize that your dissertation is going to be about something absurdly tiny. You will go home for Thanksgiving, and your uncle will ask if you're curing cancer, and you will have to explain that you are actually trying to figure out why a particular protein aggregates when the pH drops by 0.2. Let him look disappointed. The people who try to cure cancer from scratch in grad school usually end up leaving with a terminal master's and a deep hatred of biology. The people who stare at a weird bump on a graph until it confesses—they're the ones who actually find something real.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 177,
+  "completion_tokens": 3675,
+  "total_tokens": 3852,
+  "cost": 0.055656,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.055656,
+   "upstream_inference_prompt_cost": 0.000531,
+   "upstream_inference_completions_cost": 0.055125
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2688,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

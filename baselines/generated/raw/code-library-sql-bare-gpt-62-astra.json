@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-library-sql",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality SQL (PostgreSQL) source file that defines the schema for a library lending system and the queries for checking out, returning and reporting overdue loans. Output only the code.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 3000,
+ "domain": "databases",
+ "language": "SQL (PostgreSQL)",
+ "id": "code-library-sql-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "BEGIN;\n\nCREATE SCHEMA library;\n\nCREATE TABLE library.member (\n    member_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n    card_number text NOT NULL UNIQUE CHECK (btrim(card_number) <> ''),\n    display_name text NOT NULL CHECK (btrim(display_name) <> ''),\n    active boolean NOT NULL DEFAULT true\n);\n\n-- One catalog record describes an edition; each physical copy has its own barcode.\nCREATE TABLE library.edition (\n    edition_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n    title text NOT NULL CHECK (btrim(title) <> ''),\n    author_credit text\n);\n\nCREATE TABLE library.copy (\n    copy_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n    edition_id bigint NOT NULL REFERENCES library.edition (edition_id),\n    barcode text NOT NULL UNIQUE CHECK (btrim(barcode) <> ''),\n    lendable boolean NOT NULL DEFAULT true\n);\n\nCREATE INDEX copy_edition_idx ON library.copy (edition_id);\n\nCREATE TABLE library.loan (\n    loan_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n    member_id bigint NOT NULL REFERENCES library.member (member_id),\n    copy_id bigint NOT NULL REFERENCES library.copy (copy_id),\n    checked_out_at timestamptz NOT NULL CHECK (isfinite(checked_out_at)),\n    due_at timestamptz NOT NULL CHECK (isfinite(due_at) AND due_at > checked_out_at),\n    returned_at timestamptz CHECK (\n        isfinite(returned_at) AND returned_at >= checked_out_at\n    )\n);\n\n-- Enforce availability even if concurrent callers bypass the checkout function.\nCREATE UNIQUE INDEX loan_one_open_per_copy_idx\n    ON library.loan (copy_id) WHERE returned_at IS NULL;\n\nCREATE INDEX loan_open_due_idx\n    ON library.loan (due_at, loan_id) WHERE returned_at IS NULL;\n\nCREATE INDEX loan_member_history_idx ON library.loan (member_id, checked_out_at DESC);\nCREATE INDEX loan_copy_history_idx ON library.loan (copy_id, checked_out_at DESC);\n\n-- Returns the new loan ID. Eligibility checks and insertion share the caller's\n-- transaction; locks prevent changes to eligibility between check and insert.\nCREATE FUNCTION library.check_out(\n    p_member_id bigint,\n    p_copy_id bigint,\n    p_due_at timestamptz\n) RETURNS bigint\nLANGUAGE plpgsql\nSET search_path = pg_catalog\nAS $$\nDECLARE\n    v_now timestamptz;\n    v_loan_id bigint;\nBEGIN\n    PERFORM 1 FROM library.member\n      WHERE member_id = p_member_id AND active\n      FOR SHARE;\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'Member % does not exist or is inactive', p_member_id;\n    END IF;\n\n    PERFORM 1 FROM library.copy\n      WHERE copy_id = p_copy_id AND lendable\n      FOR UPDATE;\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'Copy % does not exist or is not lendable', p_copy_id;\n    END IF;\n\n    v_now := clock_timestamp();\n    IF p_due_at IS NULL OR NOT isfinite(p_due_at) OR p_due_at <= v_now THEN\n        RAISE EXCEPTION 'Due time must be finite and after checkout'\n            USING ERRCODE = '22023';\n    END IF;\n\n    INSERT INTO library.loan (member_id, copy_id, checked_out_at, due_at)\n    VALUES (p_member_id, p_copy_id, v_now, p_due_at)\n    ON CONFLICT (copy_id) WHERE returned_at IS NULL DO NOTHING\n    RETURNING loan_id INTO v_loan_id;\n\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'Copy % is already checked out', p_copy_id;\n    END IF;\n    RETURN v_loan_id;\nEND;\n$$;\n\n-- Identify the loan, not just the copy, so a delayed duplicate return cannot\n-- accidentally close a subsequent borrower's loan.\nCREATE FUNCTION library.return_loan(p_loan_id bigint)\nRETURNS timestamptz\nLANGUAGE plpgsql\nSET search_path = pg_catalog\nAS $$\nDECLARE\n    v_returned_at timestamptz;\nBEGIN\n    UPDATE library.loan\n       SET returned_at = clock_timestamp()\n     WHERE loan_id = p_loan_id AND returned_at IS NULL\n     RETURNING returned_at INTO v_returned_at;\n\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'Loan % does not exist or was already returned', p_loan_id;\n    END IF;\n    RETURN v_returned_at;\nEND;\n$$;\n\nCREATE VIEW library.overdue_loans AS\nSELECT l.loan_id,\n       m.member_id,\n       m.card_number,\n       m.display_name,\n       c.copy_id,\n       c.barcode,\n       e.title,\n       l.checked_out_at,\n       l.due_at,\n       statement_timestamp() - l.due_at AS time_overdue\nFROM library.loan AS l\nJOIN library.member AS m ON m.member_id = l.member_id\nJOIN library.copy AS c ON c.copy_id = l.copy_id\nJOIN library.edition AS e ON e.edition_id = c.edition_id\nWHERE l.returned_at IS NULL AND l.due_at < statement_timestamp();\n\nCOMMIT;\n\n-- Parameterized application queries:\n-- SELECT library.check_out($1, $2, $3);\n-- SELECT library.return_loan($1);\n-- SELECT * FROM library.overdue_loans ORDER BY due_at, loan_id;",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 47,
+  "completion_tokens": 1111,
+  "total_tokens": 1158,
+  "cost": 0.044816,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.044816,
+   "upstream_inference_prompt_cost": 0.000376,
+   "upstream_inference_completions_cost": 0.04444
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

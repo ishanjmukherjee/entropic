@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-rbtree-hs",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Haskell source file that implements a persistent red-black tree with insert, member and toList. Output only the code.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 3000,
+ "domain": "functional",
+ "language": "Haskell",
+ "id": "code-rbtree-hs-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "{-# LANGUAGE BangPatterns #-}\n{-# LANGUAGE Safe #-}\n\n-- | A persistent ordered set backed by a red-black tree.\n-- Element comparisons must obey the laws of 'Ord'.\nmodule RedBlackTree\n  ( Tree\n  , empty\n  , insert\n  , member\n  , toList\n  ) where\n\ndata Color = Red | Black\n\n-- | Constructors are private to preserve the ordering and color invariants.\ndata Tree a\n  = Leaf\n  | Node !Color !(Tree a) !a !(Tree a)\n\n-- | The empty tree. O(1).\nempty :: Tree a\nempty = Leaf\n\n-- | Insert an element in O(log n) time. If an equal element already\n-- exists, retain the original element and return the tree unchanged.\ninsert :: Ord a => a -> Tree a -> Tree a\ninsert !value tree =\n  case descend tree of\n    Nothing -> tree\n    Just (Node Red left key right) -> Node Black left key right\n    Just result -> result\n  where\n    descend Leaf = Just (Node Red Leaf value Leaf)\n    descend (Node color left key right) =\n      case compare value key of\n        LT -> do\n          left' <- descend left\n          pure (balance color left' key right)\n        EQ -> Nothing\n        GT -> do\n          right' <- descend right\n          pure (balance color left key right')\n\n-- Repair a red parent with a red child beneath a black node. Each\n-- rotation preserves both the in-order sequence and the black height.\nbalance :: Color -> Tree a -> a -> Tree a -> Tree a\nbalance Black (Node Red (Node Red a x b) y c) z d =\n  Node Red (Node Black a x b) y (Node Black c z d)\nbalance Black (Node Red a x (Node Red b y c)) z d =\n  Node Red (Node Black a x b) y (Node Black c z d)\nbalance Black a x (Node Red (Node Red b y c) z d) =\n  Node Red (Node Black a x b) y (Node Black c z d)\nbalance Black a x (Node Red b y (Node Red c z d)) =\n  Node Red (Node Black a x b) y (Node Black c z d)\nbalance color left key right = Node color left key right\n\n-- | Test membership in O(log n) time.\nmember :: Ord a => a -> Tree a -> Bool\nmember value = search\n  where\n    search Leaf = False\n    search (Node _ left key right) =\n      case compare value key of\n        LT -> search left\n        EQ -> True\n        GT -> search right\n\n-- | Enumerate the elements in ascending order in O(n) time.\ntoList :: Tree a -> [a]\ntoList tree = prepend tree []\n  where\n    prepend Leaf rest = rest\n    prepend (Node _ left key right) rest =\n      prepend left (key : prepend right rest)",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 36,
+  "completion_tokens": 623,
+  "total_tokens": 659,
+  "cost": 0.025208,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.025208,
+   "upstream_inference_prompt_cost": 0.000288,
+   "upstream_inference_completions_cost": 0.02492
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

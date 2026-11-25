@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "bare",
+ "prompt": "Write a poem about a kitchen. Output only the poem, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 700,
+ "id": "poem-kitchen-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "The kitchen keeps its own small hours:\nthe kettle’s click, the cooling bread,\na stripe of sun that takes all morning\nto cross the table’s wooden grain.\n\nMy father pares a single apple,\nturning the fruit toward his thumb.\nThe peel falls whole upon the counter.\nWe used to clap. Today I do.\n\nHe gives me half without a word.\nThe kettle starts its song again.\nOutside, the day has filled with errands.\nInside, we eat down to the seeds.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 22,
+  "completion_tokens": 103,
+  "total_tokens": 125,
+  "cost": 0.004296,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.004296,
+   "upstream_inference_prompt_cost": 0.000176,
+   "upstream_inference_completions_cost": 0.00412
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

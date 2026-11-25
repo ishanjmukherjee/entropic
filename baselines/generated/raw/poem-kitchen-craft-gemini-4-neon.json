@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a kitchen. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-kitchen-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "At five-fifteen the stove clock reads five-eighteen.\nI run the tap until the pipes stop knocking\nand fill the enamel kettle. The chip near the spout\nshows iron. Outside, a salt truck grinds\nin second gear up Fourth Street, its strobe\nsweeping the cabinets, then gone.\n\nThe radiator ticks. I strike a match,\nhold it to the burner until the ring catches.\nOn the sill, a geranium drops a leaf\nonto the Formica. Beside the dish soap,\nmy father's dentures sit in a jelly glass.\n\nI open the pantry for the oats.\nA mouse has chewed the corner of the box,\nleaving a crescent of cardboard on the shelf.\nThe kettle starts its hiss.\nDown by the harbor, a foghorn sounds once\nthrough the storm glass.\n\nI pour the water over the grounds,\nwatch the crust rise and split.\nThe linoleum buckles near the fridge\nwhere the defrost pan overflowed in August.\nSteam climbs the windowpane and blurs the streetlamp.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 212,
+  "completion_tokens": 2074,
+  "total_tokens": 2286,
+  "cost": 0.031746,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.031746,
+   "upstream_inference_prompt_cost": 0.000636,
+   "upstream_inference_completions_cost": 0.03111
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1852,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "bare",
+ "prompt": "Write a poem about the sea. Output only the poem, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-sea-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "A restless heart of shifting blue,\nIt breathes against the patient shore,\nForever breaking, always new,\nYet older than the earth it bore.\n\nBeneath the foam and sunlit glass,\nWhere tangled kelp and shadows sway,\nThe silent, ancient currents pass\nThrough kingdoms hidden from the day.\n\nIt rages with a silver roar\nWhen winter storms awake the deep,\nThen smooths the sand along the floor\nAnd rocks the sinking sun to sleep.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 50,
+  "completion_tokens": 678,
+  "total_tokens": 728,
+  "cost": 0.01032,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.01032,
+   "upstream_inference_prompt_cost": 0.00015,
+   "upstream_inference_completions_cost": 0.01017
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 581,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-dupes-go",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Go source file that is a command-line tool that walks a directory tree and reports duplicate files by content hash. Output only the code.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 3000,
+ "domain": "tooling",
+ "language": "Go",
+ "id": "code-dupes-go-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "package main\n\nimport (\n\t\"bufio\"\n\t\"bytes\"\n\t\"crypto/sha256\"\n\t\"errors\"\n\t\"flag\"\n\t\"fmt\"\n\t\"io\"\n\t\"io/fs\"\n\t\"os\"\n\t\"path/filepath\"\n\t\"sort\"\n\t\"strconv\"\n)\n\ntype candidate struct {\n\tpath string\n\tinfo fs.FileInfo\n}\n\ntype digest = [sha256.Size]byte\n\ntype group struct {\n\tsum   digest\n\tpaths []string\n}\n\nfunc unchanged(a, b fs.FileInfo) bool {\n\treturn b.Mode().IsRegular() && os.SameFile(a, b) &&\n\t\ta.Size() == b.Size() && a.ModTime().Equal(b.ModTime())\n}\n\nfunc hashFile(c candidate, buf []byte) (sum digest, err error) {\n\tf, err := os.Open(c.path)\n\tif err != nil {\n\t\treturn sum, err\n\t}\n\tdefer func() {\n\t\tif closeErr := f.Close(); err == nil {\n\t\t\terr = closeErr\n\t\t}\n\t}()\n\n\tbefore, err := f.Stat()\n\tif err != nil {\n\t\treturn sum, err\n\t}\n\tif !unchanged(c.info, before) {\n\t\treturn sum, errors.New(\"file changed before hashing\")\n\t}\n\n\th := sha256.New()\n\tvar n int64\n\tfor {\n\t\tcount, readErr := f.Read(buf)\n\t\tif count > 0 {\n\t\t\th.Write(buf[:count])\n\t\t\tn += int64(count)\n\t\t}\n\t\tif readErr == io.EOF {\n\t\t\tbreak\n\t\t}\n\t\tif readErr != nil {\n\t\t\treturn sum, readErr\n\t\t}\n\t}\n\n\tafter, err := os.Lstat(c.path)\n\tif err != nil {\n\t\treturn sum, err\n\t}\n\tif n != before.Size() || !unchanged(before, after) {\n\t\treturn sum, errors.New(\"file changed during hashing\")\n\t}\n\tcopy(sum[:], h.Sum(nil))\n\treturn sum, nil\n}\n\nfunc run(args []string, stdout, stderr io.Writer) int {\n\tflags := flag.NewFlagSet(\"dupes\", flag.ContinueOnError)\n\tflags.SetOutput(stderr)\n\tflags.Usage = func() {\n\t\tfmt.Fprintln(stderr, \"Usage: dupes [directory]\")\n\t\tfmt.Fprintln(stderr, \"Report groups of regular files with identical SHA-256 hashes.\")\n\t\tfmt.Fprintln(stderr, \"Defaults to the current directory. Symlinks are not followed.\")\n\t\tfmt.Fprintln(stderr, \"Paths are Go-quoted; hard links are reported as separate paths.\")\n\t}\n\tif err := flags.Parse(args); err != nil {\n\t\tif errors.Is(err, flag.ErrHelp) {\n\t\t\treturn 0\n\t\t}\n\t\treturn 2\n\t}\n\troot := \".\"\n\tswitch flags.NArg() {\n\tcase 0:\n\tcase 1:\n\t\troot = flags.Arg(0)\n\tdefault:\n\t\tflags.Usage()\n\t\treturn 2\n\t}\n\n\tstatus := 0\n\treport := func(path string, err error) {\n\t\tfmt.Fprintf(stderr, \"dupes: %q: %v\\n\", path, err)\n\t\tstatus = 1\n\t}\n\n\tbySize := make(map[int64][]candidate)\n\terr := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {\n\t\tif walkErr != nil {\n\t\t\treport(path, walkErr)\n\t\t\treturn nil\n\t\t}\n\t\tif path == root && !d.IsDir() {\n\t\t\treturn errors.New(\"root is not a directory\")\n\t\t}\n\t\tif !d.Type().IsRegular() {\n\t\t\treturn nil\n\t\t}\n\t\tinfo, err := d.Info()\n\t\tif err != nil {\n\t\t\treport(path, err)\n\t\t} else if info.Mode().IsRegular() {\n\t\t\tbySize[info.Size()] = append(bySize[info.Size()], candidate{path, info})\n\t\t}\n\t\treturn nil\n\t})\n\tif err != nil {\n\t\treport(root, err)\n\t\treturn status\n\t}\n\n\tbuf := make([]byte, 128*1024)\n\tvar groups []group\n\tfor _, files := range bySize {\n\t\tif len(files) < 2 {\n\t\t\tcontinue\n\t\t}\n\t\tbyHash := make(map[digest][]string)\n\t\tfor _, c := range files {\n\t\t\tsum, err := hashFile(c, buf)\n\t\t\tif err != nil {\n\t\t\t\treport(c.path, err)\n\t\t\t\tcontinue\n\t\t\t}\n\t\t\tbyHash[sum] = append(byHash[sum], c.path)\n\t\t}\n\t\tfor sum, paths := range byHash {\n\t\t\tif len(paths) > 1 {\n\t\t\t\tsort.Strings(paths)\n\t\t\t\tgroups = append(groups, group{sum, paths})\n\t\t\t}\n\t\t}\n\t}\n\tsort.Slice(groups, func(i, j int) bool {\n\t\tif cmp := bytes.Compare(groups[i].sum[:], groups[j].sum[:]); cmp != 0 {\n\t\t\treturn cmp < 0\n\t\t}\n\t\treturn groups[i].paths[0] < groups[j].paths[0]\n\t})\n\n\tout := bufio.NewWriter(stdout)\n\tfor _, g := range groups {\n\t\tfmt.Fprintf(out, \"%x\\n\", g.sum)\n\t\tfor _, path := range g.paths {\n\t\t\tfmt.Fprintf(out, \"  %s\\n\", strconv.QuoteToASCII(path))\n\t\t}\n\t}\n\tif err := out.Flush(); err != nil {\n\t\treport(\"stdout\", err)\n\t}\n\treturn status\n}\n\nfunc main() {\n\tos.Exit(run(os.Args[1:], os.Stdout, os.Stderr))\n}",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 39,
+  "completion_tokens": 1140,
+  "total_tokens": 1179,
+  "cost": 0.045912,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.045912,
+   "upstream_inference_prompt_cost": 0.000312,
+   "upstream_inference_completions_cost": 0.0456
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

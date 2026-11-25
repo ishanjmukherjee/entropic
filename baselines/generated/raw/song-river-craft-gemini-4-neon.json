@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "craft",
+ "prompt": "Write the lyrics of a folk song about a river being dammed.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 900,
+ "id": "song-river-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Two men in a Dodge with a government plate\nSet a brass-legged transit by the pasture gate\nThey tied orange ribbon to the low pecan\nWhere my daddy still hangs up his kerosene can\nThey bought two warm RCs at the Texaco store\nSaid the road won't be crossing at the ford no more\n\nLet it rise, let it rise to the sycamore mark\nWe'll be trading the mud for a state-line park\nYou can pack up the silver, you can burn the brush\nThe bottomland's keeping its own kind of hush\n\nBy the middle of June came the yellow D-eights\nWith the county men hauling the cemetery gates\nThey lifted Aunt Clara in a pine-board box\nOut of the clay and the limestone rocks\nUncle Ray signed his name on the carbon-copy sheet\nBought a two-room aluminum box up the street\n\nLet it rise, let it rise to the sycamore mark\nWe'll be trading the mud for a state-line park\nYou can pack up the silver, you can burn the brush\nThe bottomland's keeping its own kind of hush\n\nThey poured forty thousand gray Portland yards\nWhile the boys from the crew played a dollar a card\nIn October they dropped the big spillway gate\nAnd the current turned back on its own heavy weight\nIt crept through the weeds by the roller-mill door\nAnd it floated the linoleum off of the floor\n\nLet it rise, let it rise to the sycamore mark\nWe'll be trading the mud for a state-line park\nYou can pack up the silver, you can burn the brush\nThe bottomland's keeping its own kind of hush\n\nNow I run a small Evinrude out from the ramp\nPast the signs for the cabins and the Bible camp\nWhen the summer runs dry and the drawdown's low\nYou can see where the chimney bricks start to show\nI hung a brass spinner on the old pecan\nRight over the spot where the highway ran\n\nLet it rise, let it rise to the sycamore mark\nWe'll be trading the mud for a state-line park\nYou can pack up the silver, you can burn the brush\nThe bottomland's keeping its own kind of hush",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 173,
+  "completion_tokens": 4174,
+  "total_tokens": 4347,
+  "cost": 0.063129,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.063129,
+   "upstream_inference_prompt_cost": 0.000519,
+   "upstream_inference_completions_cost": 0.06261
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 3706,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

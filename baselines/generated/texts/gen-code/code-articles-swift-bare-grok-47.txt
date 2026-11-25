@@ -1,0 +1,258 @@
+import SwiftUI
+
+struct Article: Identifiable, Codable, Hashable, Sendable {
+    let id: Int
+    let title: String
+    let summary: String
+    let author: String
+    let publishedAt: Date
+}
+
+struct ArticlePage: Codable, Sendable {
+    let items: [Article]
+    let page: Int
+    let pageSize: Int
+    let total: Int
+
+    var hasMore: Bool {
+        page * pageSize < total
+    }
+}
+
+enum ArticleServiceError: LocalizedError, Sendable {
+    case invalidURL
+    case badStatus(Int)
+    case decoding(Error)
+    case transport(Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "The articles endpoint is invalid."
+        case .badStatus(let code):
+            return "The server returned status \(code)."
+        case .decoding:
+            return "The article response could not be read."
+        case .transport(let error):
+            return error.localizedDescription
+        }
+    }
+}
+
+protocol ArticleFetching: Sendable {
+    func fetchPage(_ page: Int, pageSize: Int) async throws -> ArticlePage
+}
+
+struct ArticleAPI: ArticleFetching {
+    var baseURL: URL
+    var session: URLSession = .shared
+
+    func fetchPage(_ page: Int, pageSize: Int) async throws -> ArticlePage {
+        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            throw ArticleServiceError.invalidURL
+        }
+        components.queryItems = [
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "pageSize", value: String(pageSize))
+        ]
+        guard let url = components.url else {
+            throw ArticleServiceError.invalidURL
+        }
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(from: url)
+        } catch {
+            throw ArticleServiceError.transport(error)
+        }
+
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw ArticleServiceError.badStatus(http.statusCode)
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        do {
+            return try decoder.decode(ArticlePage.self, from: data)
+        } catch {
+            throw ArticleServiceError.decoding(error)
+        }
+    }
+}
+
+@MainActor
+final class ArticleListViewModel: ObservableObject {
+    enum Phase: Equatable {
+        case idle
+        case loading
+        case loaded
+        case failed(String)
+    }
+
+    @Published private(set) var articles: [Article] = []
+    @Published private(set) var phase: Phase = .idle
+    @Published private(set) var isLoadingNextPage = false
+    @Published private(set) var hasMore = true
+
+    private let service: ArticleFetching
+    private let pageSize: Int
+    private var nextPage = 1
+    private var loadTask: Task<Void, Never>?
+
+    init(service: ArticleFetching, pageSize: Int = 20) {
+        self.service = service
+        self.pageSize = max(1, pageSize)
+    }
+
+    func loadInitialIfNeeded() async {
+        guard articles.isEmpty, phase != .loading else { return }
+        await reload()
+    }
+
+    func reload() async {
+        loadTask?.cancel()
+        nextPage = 1
+        hasMore = true
+        phase = .loading
+        isLoadingNextPage = false
+
+        let task = Task { [service, pageSize] in
+            try await service.fetchPage(1, pageSize: pageSize)
+        }
+        loadTask = Task { await apply(task, replacing: true) }
+        await loadTask?.value
+    }
+
+    func loadNextPageIfNeeded(current article: Article) async {
+        guard hasMore, !isLoadingNextPage, phase != .loading else { return }
+        guard article.id == articles.last?.id else { return }
+
+        isLoadingNextPage = true
+        let page = nextPage
+        let task = Task { [service, pageSize] in
+            try await service.fetchPage(page, pageSize: pageSize)
+        }
+        loadTask = Task { await apply(task, replacing: false) }
+        await loadTask?.value
+    }
+
+    private func apply(_ task: Task<ArticlePage, Error>, replacing: Bool) async {
+        do {
+            let page = try await task.value
+            if Task.isCancelled { return }
+            if replacing {
+                articles = page.items
+            } else {
+                let existing = Set(articles.map(\.id))
+                articles.append(contentsOf: page.items.filter { !existing.contains($0.id) })
+            }
+            hasMore = page.hasMore
+            nextPage = page.page + 1
+            phase = .loaded
+            isLoadingNextPage = false
+        } catch is CancellationError {
+            return
+        } catch {
+            if Task.isCancelled { return }
+            isLoadingNextPage = false
+            if replacing || articles.isEmpty {
+                phase = .failed(error.localizedDescription)
+            } else {
+                phase = .failed(error.localizedDescription)
+            }
+        }
+    }
+}
+
+struct ArticleListView: View {
+    @StateObject private var model: ArticleListViewModel
+
+    init(model: @autoclosure @escaping () -> ArticleListViewModel) {
+        _model = StateObject(wrappedValue: model())
+    }
+
+    var body: some View {
+        NavigationStack {
+            content
+                .navigationTitle("Articles")
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Refresh") {
+                            Task { await model.reload() }
+                        }
+                        .disabled(model.phase == .loading)
+                    }
+                }
+        }
+        .task { await model.loadInitialIfNeeded() }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch model.phase {
+        case .idle, .loading where model.articles.isEmpty:
+            ProgressView("Loading articles")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .failed(let message) where model.articles.isEmpty:
+            ContentUnavailableView {
+                Label("Couldn’t Load Articles", systemImage: "wifi.exclamationmark")
+            } description: {
+                Text(message)
+            } actions: {
+                Button("Try Again") {
+                    Task { await model.reload() }
+                }
+            }
+        default:
+            List {
+                ForEach(model.articles) { article in
+                    ArticleRow(article: article)
+                        .task { await model.loadNextPageIfNeeded(current: article) }
+                }
+                if model.isLoadingNextPage {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                }
+                if case .failed(let message) = model.phase, !model.articles.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(message)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Button("Retry") {
+                            Task { await model.reload() }
+                        }
+                    }
+                }
+            }
+            .refreshable { await model.reload() }
+        }
+    }
+}
+
+private struct ArticleRow: View {
+    let article: Article
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(article.title)
+                .font(.headline)
+            Text(article.summary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+            HStack {
+                Text(article.author)
+                Spacer()
+                Text(article.publishedAt, format: .dateTime.month().day().year())
+            }
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+}

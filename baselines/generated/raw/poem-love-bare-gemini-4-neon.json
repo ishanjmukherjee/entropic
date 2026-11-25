@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "bare",
+ "prompt": "Write a love poem. Output only the poem, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-love-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "You are the quiet hum of morning light,\nThe steady warmth that lingers in the room,\nA gentle harbor in the deepest night,\nA sudden garden breaking into bloom.\n\nIn every word, a melody I know,\nIn every touch, a language of our own,\nYou are the compass everywhere I go,\nThe truest home my wandering heart has known.\n\nLet seasons turn and scatter all their gold,\nLet years unfold like pages in the sun,\nWith you, my hand will never feel the cold,\nTwo separate lives now braided into one.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 48,
+  "completion_tokens": 597,
+  "total_tokens": 645,
+  "cost": 0.009099,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009099,
+   "upstream_inference_prompt_cost": 0.000144,
+   "upstream_inference_completions_cost": 0.008955
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 478,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

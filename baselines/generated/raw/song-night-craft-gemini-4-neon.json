@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "craft",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 900,
+ "id": "song-night-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Nine-fifteen, iron hissing on a linen sleeve\nTariq's blowing up my phone from the stoop, telling me to leave\nI tuck a folded MetroCard under my left Air Max sole\nJust to kill the rubber squeak before we hit the stroll\nCorner bodega, fluorescent buzz, cat's asleep on the lotto slips\nGrab a Dutch, two ginger ales, and a bag of plantain chips\nThe L-train rattles overhead, shaking rust onto the hood\nOf his cousin's '08 Civic, man, the transmission's barely good\nWe pull out onto Flatbush, bass rattling the trunk\nHalf the block is heading out, the other half is already drunk\nWindow cracked an inch, letting in the diesel and the rain\nChecking mirrors for the cherries as we merge into the lane\n\nSodium lamps on the wet concrete\nStill got a little bit of rhythm in the feet\nKeep the meter running, let the static play\nWe can settle up the rest by the break of day\n\nDown on Canal, where the metal grates lock\nLine's four deep, wrapping halfway down the block\nBig dude in a peacoat nods at Tariq, unhooks the brass chain\nSteps aside, we slip into the sweat and the champagne\nStrobe lights chopping up the room into a flipbook\nBartender pouring heavy for a twenty and a quick look\nSomebody left a single white Reebok on the speaker stack\nVibrating to the 808, inching toward the back\nGirl in a thrifted Fendi scarf leans in to ask my name\nI yell it twice over the snare, she laughs, says it's all the same\nThen a glass breaks by the velvet rope, elbows start to fly\nTariq taps my shoulder, gives the nod, time to say goodbye\n\nSodium lamps on the wet concrete\nStill got a little bit of rhythm in the feet\nKeep the meter running, let the static play\nWe can settle up the rest by the break of day\n\nThree-forty-five, ears ringing like a dial tone\nSteam rising from the manholes, everybody's walking home\nWe hit the cart on 4th, yellow awning flickering weak\nHands buried in our pockets, too hoarse to even speak\nSamir throws in extra pita when he sees Tariq's coat\nFixed his generator last November, kept the cart afloat\nWe eat off the hood of the Civic, white sauce on my cuff\nGarbage truck reversing down the avenue, brakes sounding rough\nSky's turning from black to that bruised-up shade of blue\nTariq turns the key, engine coughs once, then it catches true\n\nSodium lamps on the wet concrete\nStill got a little bit of rhythm in the feet\nKeep the meter running, let the static play\nWe can settle up the rest by the break of day",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 176,
+  "completion_tokens": 4145,
+  "total_tokens": 4321,
+  "cost": 0.062703,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.062703,
+   "upstream_inference_prompt_cost": 0.000528,
+   "upstream_inference_completions_cost": 0.062175
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 3554,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

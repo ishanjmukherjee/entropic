@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-ipo",
+ "style": "matched",
+ "prompt": "Write an essay titled “Anthropic Drops”. It is a finance newsletter column about Anthropic's shares falling in the days after its initial public offering while other artificial-intelligence stocks rallied. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "matched_to": "blogs-biz/levine-anthropic-drops",
+ "id": "essay-m-ipo-matched-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "Imagine that Anthropic goes public on a Thursday. The deal is oversubscribed, the opening trade is comfortably above the offer price, and by lunchtime someone on television has called the debut a referendum on the future of artificial intelligence. Then the shares slide. They slide again the next day. Meanwhile, the companies that sell chips, rent computing capacity, and put “AI-powered” in the first paragraph of their earnings releases rally. By Monday, the referendum has produced the awkward result that investors believe in the future of artificial intelligence but would prefer to own a different part of it.\n\nThis is a hypothetical IPO, but the market reaction is easy to imagine because the two trades aren’t contradictory. Buying an AI stock is a bet that somebody will make money from AI. Buying Anthropic at its IPO price is a bet that Anthropic will make enough money, on a particular timetable, to justify a particular valuation. The second proposition contains several more opportunities to be wrong. It also has the disadvantage that, for the first time, you can be wrong about it in public every fifteen seconds.\n\nStart with the price. In a private funding round, a small group of investors negotiates a valuation for a particular security, sometimes with protections that ordinary shareholders don’t get. A public quote is what someone will pay for a common share right now. Even the IPO price and the first trade answer different questions. The first tells you where the bankers could place the deal with a selected group of buyers. The second tells you what the next buyer had to pay once trading began. Neither tells you what a portfolio manager will pay on Monday after spending the weekend with the prospectus.\n\nThere is another mundane possibility: the people who most wanted to own Anthropic got their shares on Thursday. Some got fewer than they wanted and bought more at the open. Some got more than they expected and sold into the excitement. By Friday, the remaining buyers were people who liked the company but liked it better at a lower price. That is not a particularly dramatic explanation for a falling stock, which is one reason it tends to get less airtime than “Wall Street turns on AI.”\n\nStill, the rally elsewhere would raise a more interesting question: Who gets paid when a model gets better? A chip supplier gets paid when someone orders the chips. A cloud provider gets paid when someone rents the machines, though it has to build or lease the capacity first. A model developer has to sell enough access, at high enough prices, to cover both the cost of serving today’s customers and the cost of building something they’ll still want tomorrow. If two labs race to build a better model, both can spend more on computing even if neither winds up with much pricing power. You can be optimistic about the race without wanting to own either runner.\n\nThe counterargument is that customers don’t buy benchmark scores. A company that has spent a year integrating Claude into its software, getting its security team comfortable with it, and training employees to use it won’t necessarily switch because a rival is a little cheaper. That makes the enterprise business potentially stickier than a comparison of model prices would suggest. But there is a difference between being hard to replace and being able to raise prices. If a customer can send routine tasks to a cheaper model and reserve Claude for difficult ones, it can cut its bill without firing Anthropic at all. The prospectus I’d want to read would show not just how many customers stick around, but how much business those returning customers do and what it costs to serve them.\n\nA few down days wouldn’t settle any of that. They might tell you something about the initial valuation or the supply of shares. They would tell you almost nothing about whether customers renew in a year. And the rally in other AI names needn’t be a vote on Anthropic at all. A chipmaker can rise on its own earnings outlook while a new listing falls because a few funds are trimming positions. Put the two charts side by side and you get a story, but the charts did not agree to be in one.\n\nThe revealing moment would come later, when Anthropic reported a quarter in which customers used its models much more than expected. Would investors cheer the extra revenue, or would they ask how much more computing the company had to buy to earn it? For its suppliers, the answer could be simpler: more usage means somebody needs more capacity. Anthropic’s job as a public company would be to show that more usage means something equally straightforward for its own shareholders. A rising tide may lift all boats, but the company selling fuel gets paid before you find out how far yours can go.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 57,
+  "completion_tokens": 934,
+  "total_tokens": 991,
+  "cost": 0.009454,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009454,
+   "upstream_inference_prompt_cost": 0.000114,
+   "upstream_inference_completions_cost": 0.00934
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

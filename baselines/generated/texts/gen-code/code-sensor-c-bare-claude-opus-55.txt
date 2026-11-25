@@ -1,0 +1,741 @@
+/**
+ * @file    sht3x.c
+ * @brief   Bare-metal driver for the Sensirion SHT3x (SHT30/SHT31/SHT35)
+ *          I2C temperature and humidity sensor, with an interrupt-safe
+ *          ring buffer of timestamped readings.
+ *
+ * Features
+ *  - Hardware-agnostic: the application supplies I2C read/write, delay and
+ *    millisecond tick callbacks, so the driver runs on any Cortex-M MCU.
+ *  - Blocking single-shot measurement API.
+ *  - Non-blocking start/poll API for super-loop and cooperative schedulers.
+ *  - CRC-8 validation of every word received from the sensor.
+ *  - Integer-only conversion (no FPU or soft-float required).
+ *  - Fixed-size, overwrite-oldest ring buffer, guarded by PRIMASK critical
+ *    sections so it can be filled from an ISR and drained from thread code.
+ *  - Soft reset, status register, heater control and error statistics.
+ *
+ * Units
+ *  - Temperature: centi-degrees Celsius (int32_t), e.g. 2345 == 23.45 C
+ *  - Humidity:    centi-percent RH (uint32_t),     e.g. 4512 == 45.12 %RH
+ *
+ * The public interface is declared in the first section of this file. In a
+ * multi-file project, move that section into "sht3x.h" unchanged.
+ */
+
+/* ========================================================================== */
+/*                              PUBLIC INTERFACE                              */
+/* ========================================================================== */
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+/* ---- Compile-time configuration ----------------------------------------- */
+
+/** Number of readings kept in the ring buffer. Must be a power of two. */
+#ifndef SHT3X_RB_CAPACITY
+#define SHT3X_RB_CAPACITY 32u
+#endif
+
+/** 7-bit I2C addresses (ADDR pin low / high). */
+#define SHT3X_I2C_ADDR_DEFAULT 0x44u
+#define SHT3X_I2C_ADDR_ALT     0x45u
+
+/* ---- Types --------------------------------------------------------------- */
+
+typedef enum {
+    SHT3X_OK = 0,
+    SHT3X_ERR_PARAM   = -1, /**< Invalid argument or uninitialised device. */
+    SHT3X_ERR_I2C     = -2, /**< Bus error / NACK reported by platform.     */
+    SHT3X_ERR_CRC     = -3, /**< Checksum mismatch on received data.        */
+    SHT3X_ERR_BUSY    = -4, /**< A measurement is already in progress.      */
+    SHT3X_ERR_NOT_READY = -5, /**< Non-blocking measurement not finished.   */
+    SHT3X_ERR_EMPTY   = -6, /**< Ring buffer contains no readings.          */
+    SHT3X_ERR_STATE   = -7  /**< Operation not valid in current state.      */
+} sht3x_status_t;
+
+typedef enum {
+    SHT3X_REPEATABILITY_HIGH = 0,
+    SHT3X_REPEATABILITY_MEDIUM,
+    SHT3X_REPEATABILITY_LOW
+} sht3x_repeatability_t;
+
+/**
+ * Platform bus abstraction.
+ *
+ * write/read must perform a complete I2C transaction (START, address,
+ * data, STOP) to the given 7-bit address and return 0 on success or a
+ * non-zero value on any failure (NACK, arbitration loss, timeout...).
+ * Implementations must enforce their own bus timeouts.
+ *
+ * delay_ms is mandatory for the blocking API.
+ * get_tick_ms is mandatory for the non-blocking API and is used for
+ * timestamps; if NULL, timestamps are recorded as 0.
+ */
+typedef struct {
+    int      (*write)(void *ctx, uint8_t addr7, const uint8_t *data, size_t len);
+    int      (*read)(void *ctx, uint8_t addr7, uint8_t *data, size_t len);
+    void     (*delay_ms)(void *ctx, uint32_t ms);
+    uint32_t (*get_tick_ms)(void *ctx);
+    void      *ctx;
+} sht3x_bus_t;
+
+typedef struct {
+    int32_t  temperature_cdeg; /**< 0.01 degC  */
+    uint32_t humidity_cpct;    /**< 0.01 %RH   */
+    uint32_t timestamp_ms;     /**< Tick at which the result was fetched. */
+} sht3x_reading_t;
+
+typedef struct {
+    uint32_t samples_ok;
+    uint32_t i2c_errors;
+    uint32_t crc_errors;
+    uint32_t rb_overwrites;
+} sht3x_stats_t;
+
+typedef struct {
+    /* Configuration */
+    sht3x_bus_t            bus;
+    uint8_t                addr7;
+    sht3x_repeatability_t  repeatability;
+    bool                   initialised;
+
+    /* Non-blocking measurement state */
+    volatile bool          meas_pending;
+    uint32_t               meas_ready_tick;
+
+    /* Ring buffer */
+    sht3x_reading_t        rb[SHT3X_RB_CAPACITY];
+    volatile uint32_t      rb_head;   /**< Index of next write slot. */
+    volatile uint32_t      rb_count;  /**< Number of valid entries.  */
+
+    /* Diagnostics */
+    sht3x_stats_t          stats;
+} sht3x_dev_t;
+
+/* ---- Functions ----------------------------------------------------------- */
+
+sht3x_status_t sht3x_init(sht3x_dev_t *dev, const sht3x_bus_t *bus,
+                          uint8_t addr7, sht3x_repeatability_t rep);
+sht3x_status_t sht3x_soft_reset(sht3x_dev_t *dev);
+sht3x_status_t sht3x_set_repeatability(sht3x_dev_t *dev, sht3x_repeatability_t rep);
+sht3x_status_t sht3x_read_status(sht3x_dev_t *dev, uint16_t *status);
+sht3x_status_t sht3x_clear_status(sht3x_dev_t *dev);
+sht3x_status_t sht3x_set_heater(sht3x_dev_t *dev, bool enable);
+
+/* Blocking API */
+sht3x_status_t sht3x_measure(sht3x_dev_t *dev, sht3x_reading_t *out);
+sht3x_status_t sht3x_sample(sht3x_dev_t *dev, sht3x_reading_t *out);
+
+/* Non-blocking API */
+sht3x_status_t sht3x_start_measurement(sht3x_dev_t *dev);
+sht3x_status_t sht3x_poll(sht3x_dev_t *dev, sht3x_reading_t *out);
+bool           sht3x_measurement_pending(const sht3x_dev_t *dev);
+
+/* Ring buffer API */
+sht3x_status_t sht3x_rb_push(sht3x_dev_t *dev, const sht3x_reading_t *r);
+sht3x_status_t sht3x_rb_pop(sht3x_dev_t *dev, sht3x_reading_t *out);
+sht3x_status_t sht3x_rb_peek_latest(sht3x_dev_t *dev, sht3x_reading_t *out);
+sht3x_status_t sht3x_rb_get(sht3x_dev_t *dev, uint32_t age, sht3x_reading_t *out);
+sht3x_status_t sht3x_rb_average(sht3x_dev_t *dev, uint32_t n,
+                                int32_t *temp_cdeg, uint32_t *rh_cpct);
+uint32_t       sht3x_rb_count(sht3x_dev_t *dev);
+uint32_t       sht3x_rb_capacity(void);
+void           sht3x_rb_clear(sht3x_dev_t *dev);
+
+void           sht3x_get_stats(sht3x_dev_t *dev, sht3x_stats_t *out);
+
+/* ========================================================================== */
+/*                               IMPLEMENTATION                               */
+/* ========================================================================== */
+
+#if (SHT3X_RB_CAPACITY == 0u) || ((SHT3X_RB_CAPACITY & (SHT3X_RB_CAPACITY - 1u)) != 0u)
+#error "SHT3X_RB_CAPACITY must be a non-zero power of two"
+#endif
+
+#define SHT3X_RB_MASK (SHT3X_RB_CAPACITY - 1u)
+
+/* ---- Critical sections --------------------------------------------------- */
+/*
+ * Saves and restores PRIMASK so that nested use and calls from contexts that
+ * already have interrupts masked are handled correctly. May be overridden by
+ * defining SHT3X_CRITICAL_ENTER()/SHT3X_CRITICAL_EXIT(state) (e.g. to use
+ * BASEPRI or an RTOS primitive).
+ */
+#if !defined(SHT3X_CRITICAL_ENTER) || !defined(SHT3X_CRITICAL_EXIT)
+
+#if defined(__GNUC__) && (defined(__arm__) || defined(__thumb__))
+static inline uint32_t sht3x_irq_save(void)
+{
+    uint32_t primask;
+    __asm volatile ("mrs %0, primask\n\t"
+                    "cpsid i"
+                    : "=r" (primask) : : "memory");
+    return primask;
+}
+
+static inline void sht3x_irq_restore(uint32_t primask)
+{
+    __asm volatile ("msr primask, %0" : : "r" (primask) : "memory");
+}
+#elif defined(__ICCARM__)
+#include <intrinsics.h>
+static inline uint32_t sht3x_irq_save(void)
+{
+    uint32_t primask = __get_PRIMASK();
+    __disable_interrupt();
+    return primask;
+}
+
+static inline void sht3x_irq_restore(uint32_t primask)
+{
+    __set_PRIMASK(primask);
+}
+#else
+/* Host builds / unit tests: no interrupt masking. */
+static inline uint32_t sht3x_irq_save(void) { return 0u; }
+static inline void sht3x_irq_restore(uint32_t primask) { (void)primask; }
+#endif
+
+#define SHT3X_CRITICAL_ENTER()      sht3x_irq_save()
+#define SHT3X_CRITICAL_EXIT(state)  sht3x_irq_restore(state)
+#endif
+
+/* ---- Sensor command set -------------------------------------------------- */
+
+#define SHT3X_CMD_MEAS_HIGH_NOSTRETCH   0x2400u
+#define SHT3X_CMD_MEAS_MED_NOSTRETCH    0x240Bu
+#define SHT3X_CMD_MEAS_LOW_NOSTRETCH    0x2416u
+#define SHT3X_CMD_SOFT_RESET            0x30A2u
+#define SHT3X_CMD_BREAK                 0x3093u
+#define SHT3X_CMD_HEATER_ENABLE         0x306Du
+#define SHT3X_CMD_HEATER_DISABLE        0x3066u
+#define SHT3X_CMD_READ_STATUS           0xF32Du
+#define SHT3X_CMD_CLEAR_STATUS          0x3041u
+
+/* Worst-case timings from the datasheet, rounded up with margin (ms). */
+#define SHT3X_T_MEAS_HIGH_MS    16u
+#define SHT3X_T_MEAS_MED_MS     7u
+#define SHT3X_T_MEAS_LOW_MS     5u
+#define SHT3X_T_SOFT_RESET_MS   2u
+#define SHT3X_T_CMD_GAP_MS      1u
+
+#define SHT3X_CRC8_POLY         0x31u
+#define SHT3X_CRC8_INIT         0xFFu
+
+/* ---- Internal helpers ---------------------------------------------------- */
+
+static bool sht3x_dev_valid(const sht3x_dev_t *dev)
+{
+    return (dev != NULL) && dev->initialised;
+}
+
+static uint32_t sht3x_now(const sht3x_dev_t *dev)
+{
+    return (dev->bus.get_tick_ms != NULL) ? dev->bus.get_tick_ms(dev->bus.ctx) : 0u;
+}
+
+static void sht3x_delay(const sht3x_dev_t *dev, uint32_t ms)
+{
+    if (dev->bus.delay_ms != NULL) {
+        dev->bus.delay_ms(dev->bus.ctx, ms);
+    }
+}
+
+static uint8_t sht3x_crc8(const uint8_t *data, size_t len)
+{
+    uint8_t crc = SHT3X_CRC8_INIT;
+
+    for (size_t i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (uint8_t bit = 0; bit < 8u; bit++) {
+            crc = (crc & 0x80u) ? (uint8_t)((crc << 1) ^ SHT3X_CRC8_POLY)
+                                : (uint8_t)(crc << 1);
+        }
+    }
+    return crc;
+}
+
+static void sht3x_stat_inc(sht3x_dev_t *dev, uint32_t *counter)
+{
+    uint32_t s = SHT3X_CRITICAL_ENTER();
+    if (*counter != UINT32_MAX) {
+        (*counter)++;
+    }
+    SHT3X_CRITICAL_EXIT(s);
+    (void)dev;
+}
+
+static sht3x_status_t sht3x_write_cmd(sht3x_dev_t *dev, uint16_t cmd)
+{
+    const uint8_t buf[2] = { (uint8_t)(cmd >> 8), (uint8_t)(cmd & 0xFFu) };
+
+    if (dev->bus.write(dev->bus.ctx, dev->addr7, buf, sizeof buf) != 0) {
+        sht3x_stat_inc(dev, &dev->stats.i2c_errors);
+        return SHT3X_ERR_I2C;
+    }
+    return SHT3X_OK;
+}
+
+/**
+ * Read @p nwords 16-bit words, each followed by a CRC byte, and validate.
+ * @p words receives the decoded values. Maximum 2 words.
+ */
+static sht3x_status_t sht3x_read_words(sht3x_dev_t *dev, uint16_t *words, size_t nwords)
+{
+    uint8_t buf[6];
+    const size_t len = nwords * 3u;
+
+    if ((nwords == 0u) || (len > sizeof buf)) {
+        return SHT3X_ERR_PARAM;
+    }
+
+    if (dev->bus.read(dev->bus.ctx, dev->addr7, buf, len) != 0) {
+        sht3x_stat_inc(dev, &dev->stats.i2c_errors);
+        return SHT3X_ERR_I2C;
+    }
+
+    for (size_t i = 0; i < nwords; i++) {
+        const uint8_t *p = &buf[i * 3u];
+        if (sht3x_crc8(p, 2u) != p[2]) {
+            sht3x_stat_inc(dev, &dev->stats.crc_errors);
+            return SHT3X_ERR_CRC;
+        }
+        words[i] = (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
+    }
+    return SHT3X_OK;
+}
+
+static uint16_t sht3x_meas_cmd(sht3x_repeatability_t rep)
+{
+    switch (rep) {
+    case SHT3X_REPEATABILITY_MEDIUM: return SHT3X_CMD_MEAS_MED_NOSTRETCH;
+    case SHT3X_REPEATABILITY_LOW:    return SHT3X_CMD_MEAS_LOW_NOSTRETCH;
+    case SHT3X_REPEATABILITY_HIGH:
+    default:                         return SHT3X_CMD_MEAS_HIGH_NOSTRETCH;
+    }
+}
+
+static uint32_t sht3x_meas_time_ms(sht3x_repeatability_t rep)
+{
+    switch (rep) {
+    case SHT3X_REPEATABILITY_MEDIUM: return SHT3X_T_MEAS_MED_MS;
+    case SHT3X_REPEATABILITY_LOW:    return SHT3X_T_MEAS_LOW_MS;
+    case SHT3X_REPEATABILITY_HIGH:
+    default:                         return SHT3X_T_MEAS_HIGH_MS;
+    }
+}
+
+/*
+ * Datasheet conversions, performed in fixed point with rounding:
+ *   T  [degC] = -45 + 175 * raw / 65535
+ *   RH [%]    =       100 * raw / 65535
+ * 17500 * 65535 < 2^31, so 32-bit arithmetic is sufficient.
+ */
+static int32_t sht3x_convert_temp(uint16_t raw)
+{
+    const uint32_t scaled = ((uint32_t)raw * 17500u + 32767u) / 65535u;
+    return (int32_t)scaled - 4500;
+}
+
+static uint32_t sht3x_convert_rh(uint16_t raw)
+{
+    uint32_t rh = ((uint32_t)raw * 10000u + 32767u) / 65535u;
+    return (rh > 10000u) ? 10000u : rh;
+}
+
+static sht3x_status_t sht3x_fetch_result(sht3x_dev_t *dev, sht3x_reading_t *out)
+{
+    uint16_t raw[2];
+    sht3x_status_t st = sht3x_read_words(dev, raw, 2u);
+
+    if (st != SHT3X_OK) {
+        return st;
+    }
+
+    out->temperature_cdeg = sht3x_convert_temp(raw[0]);
+    out->humidity_cpct    = sht3x_convert_rh(raw[1]);
+    out->timestamp_ms     = sht3x_now(dev);
+
+    sht3x_stat_inc(dev, &dev->stats.samples_ok);
+    return SHT3X_OK;
+}
+
+/* ---- Initialisation and control ----------------------------------------- */
+
+sht3x_status_t sht3x_init(sht3x_dev_t *dev, const sht3x_bus_t *bus,
+                          uint8_t addr7, sht3x_repeatability_t rep)
+{
+    if ((dev == NULL) || (bus == NULL) ||
+        (bus->write == NULL) || (bus->read == NULL) || (bus->delay_ms == NULL) ||
+        ((addr7 != SHT3X_I2C_ADDR_DEFAULT) && (addr7 != SHT3X_I2C_ADDR_ALT)) ||
+        (rep > SHT3X_REPEATABILITY_LOW)) {
+        return SHT3X_ERR_PARAM;
+    }
+
+    memset(dev, 0, sizeof *dev);
+    dev->bus           = *bus;
+    dev->addr7         = addr7;
+    dev->repeatability = rep;
+    dev->initialised   = true;
+
+    /* Abort any periodic mode left over from a previous firmware run, then
+     * reset to a known state. A NACK on BREAK is expected if the sensor is
+     * already idle, so its result is deliberately ignored. */
+    (void)sht3x_write_cmd(dev, SHT3X_CMD_BREAK);
+    sht3x_delay(dev, SHT3X_T_CMD_GAP_MS);
+    dev->stats.i2c_errors = 0u;
+
+    sht3x_status_t st = sht3x_soft_reset(dev);
+    if (st != SHT3X_OK) {
+        dev->initialised = false;
+        return st;
+    }
+
+    /* Confirm communication by reading the status register. */
+    uint16_t status;
+    st = sht3x_read_status(dev, &status);
+    if (st != SHT3X_OK) {
+        dev->initialised = false;
+        return st;
+    }
+
+    (void)sht3x_clear_status(dev);
+    return SHT3X_OK;
+}
+
+sht3x_status_t sht3x_soft_reset(sht3x_dev_t *dev)
+{
+    if (!sht3x_dev_valid(dev)) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (dev->meas_pending) {
+        return SHT3X_ERR_BUSY;
+    }
+
+    sht3x_status_t st = sht3x_write_cmd(dev, SHT3X_CMD_SOFT_RESET);
+    sht3x_delay(dev, SHT3X_T_SOFT_RESET_MS);
+    return st;
+}
+
+sht3x_status_t sht3x_set_repeatability(sht3x_dev_t *dev, sht3x_repeatability_t rep)
+{
+    if (!sht3x_dev_valid(dev) || (rep > SHT3X_REPEATABILITY_LOW)) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (dev->meas_pending) {
+        return SHT3X_ERR_BUSY;
+    }
+    dev->repeatability = rep;
+    return SHT3X_OK;
+}
+
+sht3x_status_t sht3x_read_status(sht3x_dev_t *dev, uint16_t *status)
+{
+    if (!sht3x_dev_valid(dev) || (status == NULL)) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (dev->meas_pending) {
+        return SHT3X_ERR_BUSY;
+    }
+
+    sht3x_status_t st = sht3x_write_cmd(dev, SHT3X_CMD_READ_STATUS);
+    if (st != SHT3X_OK) {
+        return st;
+    }
+    sht3x_delay(dev, SHT3X_T_CMD_GAP_MS);
+    return sht3x_read_words(dev, status, 1u);
+}
+
+sht3x_status_t sht3x_clear_status(sht3x_dev_t *dev)
+{
+    if (!sht3x_dev_valid(dev)) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (dev->meas_pending) {
+        return SHT3X_ERR_BUSY;
+    }
+
+    sht3x_status_t st = sht3x_write_cmd(dev, SHT3X_CMD_CLEAR_STATUS);
+    sht3x_delay(dev, SHT3X_T_CMD_GAP_MS);
+    return st;
+}
+
+sht3x_status_t sht3x_set_heater(sht3x_dev_t *dev, bool enable)
+{
+    if (!sht3x_dev_valid(dev)) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (dev->meas_pending) {
+        return SHT3X_ERR_BUSY;
+    }
+
+    sht3x_status_t st = sht3x_write_cmd(dev, enable ? SHT3X_CMD_HEATER_ENABLE
+                                                    : SHT3X_CMD_HEATER_DISABLE);
+    sht3x_delay(dev, SHT3X_T_CMD_GAP_MS);
+    return st;
+}
+
+/* ---- Blocking measurement ----------------------------------------------- */
+
+sht3x_status_t sht3x_measure(sht3x_dev_t *dev, sht3x_reading_t *out)
+{
+    if (!sht3x_dev_valid(dev) || (out == NULL)) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (dev->meas_pending) {
+        return SHT3X_ERR_BUSY;
+    }
+
+    sht3x_status_t st = sht3x_write_cmd(dev, sht3x_meas_cmd(dev->repeatability));
+    if (st != SHT3X_OK) {
+        return st;
+    }
+
+    sht3x_delay(dev, sht3x_meas_time_ms(dev->repeatability));
+    return sht3x_fetch_result(dev, out);
+}
+
+sht3x_status_t sht3x_sample(sht3x_dev_t *dev, sht3x_reading_t *out)
+{
+    sht3x_reading_t r;
+    sht3x_status_t st = sht3x_measure(dev, &r);
+
+    if (st != SHT3X_OK) {
+        return st;
+    }
+
+    (void)sht3x_rb_push(dev, &r);
+    if (out != NULL) {
+        *out = r;
+    }
+    return SHT3X_OK;
+}
+
+/* ---- Non-blocking measurement ------------------------------------------- */
+
+sht3x_status_t sht3x_start_measurement(sht3x_dev_t *dev)
+{
+    if (!sht3x_dev_valid(dev) || (dev->bus.get_tick_ms == NULL)) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (dev->meas_pending) {
+        return SHT3X_ERR_BUSY;
+    }
+
+    sht3x_status_t st = sht3x_write_cmd(dev, sht3x_meas_cmd(dev->repeatability));
+    if (st != SHT3X_OK) {
+        return st;
+    }
+
+    dev->meas_ready_tick = sht3x_now(dev) + sht3x_meas_time_ms(dev->repeatability);
+    dev->meas_pending    = true;
+    return SHT3X_OK;
+}
+
+/**
+ * Call periodically after sht3x_start_measurement().
+ * Returns SHT3X_ERR_NOT_READY until the conversion time has elapsed, then
+ * fetches the result, pushes it into the ring buffer and optionally copies
+ * it to @p out. Any terminal outcome (success or error) clears the pending
+ * state so a new measurement may be started.
+ */
+sht3x_status_t sht3x_poll(sht3x_dev_t *dev, sht3x_reading_t *out)
+{
+    if (!sht3x_dev_valid(dev) || (dev->bus.get_tick_ms == NULL)) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (!dev->meas_pending) {
+        return SHT3X_ERR_STATE;
+    }
+
+    /* Wrap-safe comparison of free-running tick counter. */
+    if ((int32_t)(sht3x_now(dev) - dev->meas_ready_tick) < 0) {
+        return SHT3X_ERR_NOT_READY;
+    }
+
+    sht3x_reading_t r;
+    sht3x_status_t st = sht3x_fetch_result(dev, &r);
+    dev->meas_pending = false;
+
+    if (st != SHT3X_OK) {
+        return st;
+    }
+
+    (void)sht3x_rb_push(dev, &r);
+    if (out != NULL) {
+        *out = r;
+    }
+    return SHT3X_OK;
+}
+
+bool sht3x_measurement_pending(const sht3x_dev_t *dev)
+{
+    return (dev != NULL) && dev->meas_pending;
+}
+
+/* ---- Ring buffer --------------------------------------------------------- */
+
+sht3x_status_t sht3x_rb_push(sht3x_dev_t *dev, const sht3x_reading_t *r)
+{
+    if ((dev == NULL) || (r == NULL)) {
+        return SHT3X_ERR_PARAM;
+    }
+
+    uint32_t s = SHT3X_CRITICAL_ENTER();
+
+    dev->rb[dev->rb_head] = *r;
+    dev->rb_head = (dev->rb_head + 1u) & SHT3X_RB_MASK;
+
+    if (dev->rb_count < SHT3X_RB_CAPACITY) {
+        dev->rb_count++;
+    } else if (dev->stats.rb_overwrites != UINT32_MAX) {
+        dev->stats.rb_overwrites++;
+    }
+
+    SHT3X_CRITICAL_EXIT(s);
+    return SHT3X_OK;
+}
+
+/** Remove and return the oldest reading (FIFO order). */
+sht3x_status_t sht3x_rb_pop(sht3x_dev_t *dev, sht3x_reading_t *out)
+{
+    if ((dev == NULL) || (out == NULL)) {
+        return SHT3X_ERR_PARAM;
+    }
+
+    sht3x_status_t st = SHT3X_ERR_EMPTY;
+    uint32_t s = SHT3X_CRITICAL_ENTER();
+
+    if (dev->rb_count > 0u) {
+        uint32_t tail = (dev->rb_head - dev->rb_count) & SHT3X_RB_MASK;
+        *out = dev->rb[tail];
+        dev->rb_count--;
+        st = SHT3X_OK;
+    }
+
+    SHT3X_CRITICAL_EXIT(s);
+    return st;
+}
+
+/** Return the most recent reading without removing it. */
+sht3x_status_t sht3x_rb_peek_latest(sht3x_dev_t *dev, sht3x_reading_t *out)
+{
+    return sht3x_rb_get(dev, 0u, out);
+}
+
+/**
+ * Return a reading by age without removing it: age 0 is the newest,
+ * age (count - 1) is the oldest.
+ */
+sht3x_status_t sht3x_rb_get(sht3x_dev_t *dev, uint32_t age, sht3x_reading_t *out)
+{
+    if ((dev == NULL) || (out == NULL)) {
+        return SHT3X_ERR_PARAM;
+    }
+
+    sht3x_status_t st;
+    uint32_t s = SHT3X_CRITICAL_ENTER();
+
+    if (dev->rb_count == 0u) {
+        st = SHT3X_ERR_EMPTY;
+    } else if (age >= dev->rb_count) {
+        st = SHT3X_ERR_PARAM;
+    } else {
+        uint32_t idx = (dev->rb_head - 1u - age) & SHT3X_RB_MASK;
+        *out = dev->rb[idx];
+        st = SHT3X_OK;
+    }
+
+    SHT3X_CRITICAL_EXIT(s);
+    return st;
+}
+
+/**
+ * Average the @p n most recent readings (n == 0 means all available).
+ * If fewer than @p n readings exist, all available readings are averaged.
+ * Results are rounded to nearest. Either output pointer may be NULL.
+ */
+sht3x_status_t sht3x_rb_average(sht3x_dev_t *dev, uint32_t n,
+                                int32_t *temp_cdeg, uint32_t *rh_cpct)
+{
+    if ((dev == NULL) || ((temp_cdeg == NULL) && (rh_cpct == NULL))) {
+        return SHT3X_ERR_PARAM;
+    }
+
+    /* Snapshot under lock so the averaging loop does not hold off IRQs
+     * for longer than a bounded copy of index state. Data is summed inside
+     * the critical section to guarantee a consistent window; the cost is
+     * bounded by SHT3X_RB_CAPACITY iterations. */
+    int64_t  t_sum  = 0;
+    uint64_t rh_sum = 0;
+    uint32_t count;
+
+    uint32_t s = SHT3X_CRITICAL_ENTER();
+
+    count = dev->rb_count;
+    if ((n != 0u) && (n < count)) {
+        count = n;
+    }
+    for (uint32_t i = 0; i < count; i++) {
+        const sht3x_reading_t *r = &dev->rb[(dev->rb_head - 1u - i) & SHT3X_RB_MASK];
+        t_sum  += r->temperature_cdeg;
+        rh_sum += r->humidity_cpct;
+    }
+
+    SHT3X_CRITICAL_EXIT(s);
+
+    if (count == 0u) {
+        return SHT3X_ERR_EMPTY;
+    }
+
+    if (temp_cdeg != NULL) {
+        const int64_t half = (int64_t)(count / 2u);
+        *temp_cdeg = (int32_t)((t_sum >= 0) ? (t_sum + half) / (int64_t)count
+                                            : (t_sum - half) / (int64_t)count);
+    }
+    if (rh_cpct != NULL) {
+        *rh_cpct = (uint32_t)((rh_sum + (count / 2u)) / count);
+    }
+    return SHT3X_OK;
+}
+
+uint32_t sht3x_rb_count(sht3x_dev_t *dev)
+{
+    if (dev == NULL) {
+        return 0u;
+    }
+    return dev->rb_count; /* Single aligned 32-bit read: atomic on Cortex-M. */
+}
+
+uint32_t sht3x_rb_capacity(void)
+{
+    return SHT3X_RB_CAPACITY;
+}
+
+void sht3x_rb_clear(sht3x_dev_t *dev)
+{
+    if (dev == NULL) {
+        return;
+    }
+
+    uint32_t s = SHT3X_CRITICAL_ENTER();
+    dev->rb_head  = 0u;
+    dev->rb_count = 0u;
+    SHT3X_CRITICAL_EXIT(s);
+}
+
+/* ---- Diagnostics --------------------------------------------------------- */
+
+void sht3x_get_stats(sht3x_dev_t *dev, sht3x_stats_t *out)
+{
+    if ((dev == NULL) || (out == NULL)) {
+        return;
+    }
+
+    uint32_t s = SHT3X_CRITICAL_ENTER();
+    *out = dev->stats;
+    SHT3X_CRITICAL_EXIT(s);
+}

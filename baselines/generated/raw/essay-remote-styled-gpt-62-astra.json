@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-remote",
+ "style": "styled",
+ "prompt": "Write an essay of about 800 words on the subject below.\n\nWrite it the way an excellent, idiosyncratic human essayist would: someone with real expertise and strong opinions, writing in the first person for their own blog. Commit to a specific thesis that a thoughtful reader might disagree with. Use concrete particulars (names, numbers, incidents, things only someone who had done the work would know) in place of general statements. Vary sentence length. No headings, no bullet points, no summary paragraph at the end, and none of the stock phrases of AI writing.\n\nOutput only the essay, with no title.\n\nSubject: an essay arguing for or against the claim that remote work is better than office work for software teams",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "essay-remote-styled-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "I’ll take a remote software team over an office team, even if the office has doors that close and somebody has finally figured out how to buy a pear that will ripen on a weekday. My reason has little to do with commuting. Software has an awkward property: the people who need to know why a decision was made are almost never all present when somebody makes it. Often the person who most needs to know hasn’t been hired yet. An office lets a team get away, for years, with doing nothing about this.\n\nConsider a small, defensible piece of ugliness: a billing job that waits until 00:07 UTC to run. Why seven minutes? In a room of eight engineers, chances are somebody can swivel around and tell you. The payment processor used to deliver its last settlement file a few minutes after midnight. At 00:00 the job occasionally closed a day with six hundred dollars missing; at 00:07 it never did. Good answer. Now try getting that answer at midnight on a Saturday, two acquisitions later, when the job has failed and the engineer on call is deciding whether to rerun it for yesterday or today.\n\nWhat I want in that situation is a comment next to the schedule, ideally with a link to the processor’s settlement terms. I don’t want a recording of a forty-minute meeting. I especially don’t want to search Slack for “seven,” a word which everyone involved will turn out to have written as “7.” The advantage of working remotely is that the cost of a missing comment comes due early, while the person who knows the answer still works here. Somebody in Lisbon loses half a day waiting for somebody in Denver to wake up. It happens twice. The third time, if the team is any good, somebody fixes the comment.\n\nThe strongest office advocates I know make a different argument. They talk about a junior engineer who spends an afternoon hunting a bug that a senior engineer would recognize from three desks away. This happens. You can lose four hours to a stale Docker image and emerge with no transferable insight whatsoever, except perhaps a prouder and more intricate hatred of Docker. But notice how much has to go right in the office version. The senior engineer has to be at her desk, free enough to listen, and sufficiently approachable that a twenty-three-year-old on probation will interrupt her to announce that he can’t get the tests to run.\n\nI prefer an explicit bargain: for the first month, one named person owes the new hire an interruption. Call me. Share the whole screen, including the terminal tab you think has nothing to do with it. I’ll watch you run the command. Afterward we’ll put the fix in the setup script, where it can do the next hire some good. This costs senior engineering time, which is precisely why I like it. Onboarding has always cost senior engineering time. A line on the calendar is harder for a manager to pretend is free.\n\nRemote work can, of course, reproduce every defect of an office and add a small green dot to each. I have particularly little patience for the remote stand-up in which nine people take turns reciting ticket numbers available on a board visible to all nine people. At twelve minutes a day, that ceremony consumes nine engineer-hours a week. Spend two of those hours with two people puzzling over why a queue grows only on Tuesdays. Give the other seven back. A team that cannot think of anything better to do with seven hours should at least stop complaining about its backlog.\n\nThere is one office pleasure for which I know no adequate substitute. Two people walking out for sandwiches can disagree about something neither would have gone to the trouble of scheduling. Halfway back, with their mouths full, they discover that one means “customer” as in the person who pays and the other means “customer” as in the poor soul who uses the product. A surprising amount of good design begins this way. I would pay for the train tickets and the sandwiches several times a year. I wouldn’t sign a ten-year lease on the theory that this might happen on Thursday.\n\nMy test for a team is what happens to the second person who encounters a problem. The first person may have to trace a request through five services, phone a former colleague, or wait up for a file that lands at six minutes past midnight. That’s engineering; some days the work is finding out what the work is. But if the second person has to do the same thing, the team has bought the answer twice. Put everyone in one pleasant room and the second purchase feels almost free. It’s just a question over the back of a chair. I want to work somewhere that can hear the till ring.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 153,
+  "completion_tokens": 951,
+  "total_tokens": 1104,
+  "cost": 0.039264,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.039264,
+   "upstream_inference_prompt_cost": 0.001224,
+   "upstream_inference_completions_cost": 0.03804
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,504 @@
+// Command dupfind walks one or more directory trees and reports files with
+// identical contents.
+//
+// It works in three stages to avoid unnecessary I/O:
+//
+//  1. Files are grouped by size. A file with a unique size cannot have a duplicate.
+//  2. Files in same-size groups are hashed over their first few KiB. Files with a
+//     unique (size, partial hash) pair are discarded.
+//  3. The remaining candidates are fully hashed with SHA-256 and grouped by digest.
+//
+// Usage:
+//
+//	dupfind [flags] [dir ...]
+//
+// Exit status: 0 on success, 1 on usage or fatal error, 2 if the scan completed
+// but some files could not be read, 130 if interrupted.
+package main
+
+import (
+	"bufio"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+	"syscall"
+)
+
+const (
+	partialHashSize = 4 * 1024
+	copyBufferSize  = 128 * 1024
+)
+
+const (
+	exitOK          = 0
+	exitFatal       = 1
+	exitPartial     = 2
+	exitInterrupted = 130
+)
+
+type config struct {
+	roots      []string
+	minSize    int64
+	workers    int
+	jsonOut    bool
+	skipHidden bool
+	quiet      bool
+}
+
+// Group is a set of files sharing identical content.
+type Group struct {
+	Hash   string   `json:"hash"`
+	Size   int64    `json:"size"`
+	Wasted int64    `json:"wasted"`
+	Files  []string `json:"files"`
+}
+
+// Report is the complete result of a scan.
+type Report struct {
+	FilesScanned int64   `json:"files_scanned"`
+	BytesScanned int64   `json:"bytes_scanned"`
+	Groups       []Group `json:"groups"`
+	TotalWasted  int64   `json:"total_wasted"`
+	Errors       int     `json:"errors"`
+}
+
+// warnings collects non-fatal errors safely across goroutines.
+type warnings struct {
+	mu    sync.Mutex
+	count int
+	quiet bool
+}
+
+func (w *warnings) add(err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.count++
+	if !w.quiet {
+		fmt.Fprintf(os.Stderr, "dupfind: warning: %v\n", err)
+	}
+}
+
+func (w *warnings) n() int {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.count
+}
+
+var bufPool = sync.Pool{
+	New: func() any {
+		b := make([]byte, copyBufferSize)
+		return &b
+	},
+}
+
+func main() {
+	os.Exit(run())
+}
+
+func run() int {
+	cfg, err := parseFlags()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "dupfind: %v\n", err)
+		return exitFatal
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	warn := &warnings{quiet: cfg.quiet}
+	report, err := scan(ctx, cfg, warn)
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			fmt.Fprintln(os.Stderr, "dupfind: interrupted")
+			return exitInterrupted
+		}
+		fmt.Fprintf(os.Stderr, "dupfind: %v\n", err)
+		return exitFatal
+	}
+
+	out := bufio.NewWriter(os.Stdout)
+	if cfg.jsonOut {
+		err = writeJSON(out, report)
+	} else {
+		err = writeText(out, report)
+	}
+	if err == nil {
+		err = out.Flush()
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "dupfind: writing output: %v\n", err)
+		return exitFatal
+	}
+
+	if report.Errors > 0 {
+		return exitPartial
+	}
+	return exitOK
+}
+
+func parseFlags() (*config, error) {
+	cfg := &config{}
+	fsFlags := flag.NewFlagSet("dupfind", flag.ContinueOnError)
+	fsFlags.Usage = func() {
+		fmt.Fprintf(fsFlags.Output(), "Usage: dupfind [flags] [dir ...]\n\n")
+		fmt.Fprintf(fsFlags.Output(), "Report files with duplicate content under the given directories (default \".\").\n\nFlags:\n")
+		fsFlags.PrintDefaults()
+	}
+	fsFlags.Int64Var(&cfg.minSize, "min-size", 1, "ignore files smaller than this many bytes")
+	fsFlags.IntVar(&cfg.workers, "workers", runtime.NumCPU(), "number of concurrent hashing workers")
+	fsFlags.BoolVar(&cfg.jsonOut, "json", false, "emit results as JSON")
+	fsFlags.BoolVar(&cfg.skipHidden, "skip-hidden", false, "skip files and directories whose names begin with '.'")
+	fsFlags.BoolVar(&cfg.quiet, "quiet", false, "suppress warnings about unreadable files")
+
+	if err := fsFlags.Parse(os.Args[1:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			os.Exit(exitOK)
+		}
+		return nil, err
+	}
+	if cfg.minSize < 0 {
+		return nil, fmt.Errorf("-min-size must be >= 0, got %d", cfg.minSize)
+	}
+	if cfg.workers < 1 {
+		return nil, fmt.Errorf("-workers must be >= 1, got %d", cfg.workers)
+	}
+
+	cfg.roots = fsFlags.Args()
+	if len(cfg.roots) == 0 {
+		cfg.roots = []string{"."}
+	}
+	for _, r := range cfg.roots {
+		info, err := os.Stat(r)
+		if err != nil {
+			return nil, err
+		}
+		if !info.IsDir() {
+			return nil, fmt.Errorf("%s: not a directory", r)
+		}
+	}
+	return cfg, nil
+}
+
+func scan(ctx context.Context, cfg *config, warn *warnings) (*Report, error) {
+	sizes, bySize, filesScanned, bytesScanned, err := collect(ctx, cfg, warn)
+	if err != nil {
+		return nil, err
+	}
+
+	// Stage 2: partial hashes for large same-size candidates.
+	var needPartial, smallCandidates []string
+	for size, paths := range bySize {
+		if len(paths) < 2 {
+			continue
+		}
+		if size <= partialHashSize {
+			// A partial hash would read the whole file anyway; go straight to full.
+			smallCandidates = append(smallCandidates, paths...)
+		} else {
+			needPartial = append(needPartial, paths...)
+		}
+	}
+
+	partials, err := hashAll(ctx, needPartial, partialHashSize, cfg.workers, warn)
+	if err != nil {
+		return nil, err
+	}
+
+	byPartial := make(map[string][]string)
+	for _, p := range needPartial {
+		sum, ok := partials[p]
+		if !ok {
+			continue // unreadable; already warned
+		}
+		key := fmt.Sprintf("%d:%s", sizes[p], sum)
+		byPartial[key] = append(byPartial[key], p)
+	}
+
+	needFull := smallCandidates
+	for _, paths := range byPartial {
+		if len(paths) > 1 {
+			needFull = append(needFull, paths...)
+		}
+	}
+
+	// Stage 3: full content hashes.
+	fulls, err := hashAll(ctx, needFull, 0, cfg.workers, warn)
+	if err != nil {
+		return nil, err
+	}
+
+	type key struct {
+		size int64
+		sum  string
+	}
+	byFull := make(map[key][]string)
+	for _, p := range needFull {
+		sum, ok := fulls[p]
+		if !ok {
+			continue
+		}
+		k := key{sizes[p], sum}
+		byFull[k] = append(byFull[k], p)
+	}
+
+	report := &Report{
+		FilesScanned: filesScanned,
+		BytesScanned: bytesScanned,
+		Groups:       []Group{},
+	}
+	for k, paths := range byFull {
+		if len(paths) < 2 {
+			continue
+		}
+		sort.Strings(paths)
+		wasted := k.size * int64(len(paths)-1)
+		report.Groups = append(report.Groups, Group{
+			Hash:   k.sum,
+			Size:   k.size,
+			Wasted: wasted,
+			Files:  paths,
+		})
+		report.TotalWasted += wasted
+	}
+	sort.Slice(report.Groups, func(i, j int) bool {
+		a, b := report.Groups[i], report.Groups[j]
+		if a.Wasted != b.Wasted {
+			return a.Wasted > b.Wasted
+		}
+		if a.Size != b.Size {
+			return a.Size > b.Size
+		}
+		return a.Files[0] < b.Files[0]
+	})
+	report.Errors = warn.n()
+	return report, nil
+}
+
+// collect walks all roots and groups regular files by size.
+func collect(ctx context.Context, cfg *config, warn *warnings) (
+	sizes map[string]int64, bySize map[int64][]string, count, total int64, err error,
+) {
+	sizes = make(map[string]int64)
+	bySize = make(map[int64][]string)
+	seen := make(map[string]struct{})
+
+	for _, root := range cfg.roots {
+		root = filepath.Clean(root)
+		walkErr := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return ctxErr
+			}
+			if err != nil {
+				warn.add(err)
+				return nil // skip this entry (and its subtree, if a directory)
+			}
+			if cfg.skipHidden && path != root && strings.HasPrefix(d.Name(), ".") {
+				if d.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if !d.Type().IsRegular() {
+				return nil // directories, symlinks, devices, sockets, etc.
+			}
+
+			abs, err := filepath.Abs(path)
+			if err != nil {
+				abs = path
+			}
+			if _, dup := seen[abs]; dup {
+				return nil // reached via overlapping roots
+			}
+			seen[abs] = struct{}{}
+
+			info, err := d.Info()
+			if err != nil {
+				warn.add(err)
+				return nil
+			}
+			size := info.Size()
+			if size < cfg.minSize {
+				return nil
+			}
+			sizes[path] = size
+			bySize[size] = append(bySize[size], path)
+			count++
+			total += size
+			return nil
+		})
+		if walkErr != nil {
+			return nil, nil, 0, 0, walkErr
+		}
+	}
+	return sizes, bySize, count, total, nil
+}
+
+// hashAll hashes the given paths concurrently. If limit > 0, only the first
+// limit bytes of each file are hashed. Files that cannot be read are reported
+// as warnings and omitted from the result.
+func hashAll(ctx context.Context, paths []string, limit int64, workers int, warn *warnings) (map[string]string, error) {
+	results := make(map[string]string, len(paths))
+	if len(paths) == 0 {
+		return results, nil
+	}
+	if workers > len(paths) {
+		workers = len(paths)
+	}
+
+	type result struct {
+		path string
+		sum  string
+	}
+
+	jobs := make(chan string)
+	out := make(chan result)
+	var wg sync.WaitGroup
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for p := range jobs {
+				sum, err := hashFile(ctx, p, limit)
+				if err != nil {
+					if ctx.Err() == nil {
+						warn.add(err)
+					}
+					continue
+				}
+				select {
+				case out <- result{p, sum}:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
+
+	go func() {
+		defer close(jobs)
+		for _, p := range paths {
+			select {
+			case jobs <- p:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+
+	for r := range out {
+		results[r.path] = r.sum
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func hashFile(ctx context.Context, path string, limit int64) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	var r io.Reader = f
+	if limit > 0 {
+		r = io.LimitReader(f, limit)
+	}
+
+	bp := bufPool.Get().(*[]byte)
+	defer bufPool.Put(bp)
+	buf := *bp
+
+	h := sha256.New()
+	for {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		n, rerr := r.Read(buf)
+		if n > 0 {
+			h.Write(buf[:n]) // hash.Hash.Write never returns an error
+		}
+		if rerr == io.EOF {
+			break
+		}
+		if rerr != nil {
+			return "", fmt.Errorf("%s: %w", path, rerr)
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func writeJSON(w io.Writer, r *Report) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(r)
+}
+
+func writeText(w io.Writer, r *Report) error {
+	bw := &errWriter{w: w}
+	for i, g := range r.Groups {
+		if i > 0 {
+			bw.printf("\n")
+		}
+		bw.printf("%s  %s each, %d copies, %s reclaimable\n",
+			g.Hash[:16], humanSize(g.Size), len(g.Files), humanSize(g.Wasted))
+		for _, f := range g.Files {
+			bw.printf("  %s\n", f)
+		}
+	}
+	if len(r.Groups) > 0 {
+		bw.printf("\n")
+	}
+	bw.printf("Scanned %d files (%s). Found %d duplicate groups; %s reclaimable.\n",
+		r.FilesScanned, humanSize(r.BytesScanned), len(r.Groups), humanSize(r.TotalWasted))
+	if r.Errors > 0 {
+		bw.printf("%d files or directories could not be read.\n", r.Errors)
+	}
+	return bw.err
+}
+
+// errWriter records the first write error and turns later writes into no-ops.
+type errWriter struct {
+	w   io.Writer
+	err error
+}
+
+func (e *errWriter) printf(format string, args ...any) {
+	if e.err != nil {
+		return
+	}
+	_, e.err = fmt.Fprintf(e.w, format, args...)
+}
+
+func humanSize(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for m := n / unit; m >= unit; m /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
+}

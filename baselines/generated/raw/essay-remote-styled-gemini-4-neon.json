@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-remote",
+ "style": "styled",
+ "prompt": "Write an essay of about 800 words on the subject below.\n\nWrite it the way an excellent, idiosyncratic human essayist would: someone with real expertise and strong opinions, writing in the first person for their own blog. Commit to a specific thesis that a thoughtful reader might disagree with. Use concrete particulars (names, numbers, incidents, things only someone who had done the work would know) in place of general statements. Vary sentence length. No headings, no bullet points, no summary paragraph at the end, and none of the stock phrases of AI writing.\n\nOutput only the essay, with no title.\n\nSubject: an essay arguing for or against the claim that remote work is better than office work for software teams",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-remote-styled-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "I am writing this in sweatpants, forty feet from a very good espresso machine, with a dog asleep on my feet. I have not sat in traffic since March of 2020. If you told me I had to commute to a glass tower in downtown Seattle tomorrow, I would probably quit. And yet, after four years of building and managing distributed engineering teams, I am convinced that remote work is quietly ruining software.\n\nNotice who defends remote work the loudest. It is almost always senior, staff, and principal engineers—people like me. We already have the mental models. We know where the bodies are buried, we know how to read a flamegraph, and we have enough social capital that nobody questions us when our Slack dot turns gray for three hours. When we say, \"I am so much more productive at home,\" we are telling the truth. *I* am more productive at home. I can put on noise-canceling headphones, ignore the world, and ship a complex refactor in half the time it would take in an open-plan office. \n\nThe problem is that software engineering is not a solo sport, and optimizing for the comfort of senior developers is a great way to starve the rest of the team.\n\nI learned how to be a real engineer in 2015, in a cramped, slightly smelly office above a dry cleaner. I sat next to a staff engineer named Elena. One Tuesday afternoon, I heard her mutter, \"What the hell is holding this lock?\" I didn't wait for a calendar invite. I just rolled my chair three feet to the left and stared at her monitor. Over the next twenty minutes, she walked me through `pg_stat_activity`, showed me how to spot a blocking transaction in Postgres, and explained why our ORM was generating terrible SQL. That twenty-minute accident taught me more about production databases than two years of reading documentation. \n\nThat kind of ambient apprenticeship is dead. Last year, I hired a brilliant junior engineer—sharp kid, great instincts—and watched him lose two full days to a local Docker networking bug. When I finally asked him why he hadn't spoken up, he admitted he didn't want to look stupid in `#eng-help` in front of forty people, and he felt guilty DMing a senior engineer to ask for a \"quick huddle.\" In an office, you lean over and point at a screen. Remote, every tiny question requires a formal request for someone's time, complete with the low-grade anxiety of the \"hey, got a sec?\" message. We have turned a craft built on osmosis into a series of isolated bedrooms where juniors silently drown.\n\nRemote evangelists love to claim that this is just a tooling problem, that we simply need to embrace \"async writing culture.\" I used to buy that. Now I think async culture is mostly an excuse to replace fast, messy conversations with slow, polite bureaucracy. Last month, my team spent nine days arguing in the margin comments of a twelve-page Notion document about whether to migrate a billing job from a cron script to a Kafka consumer. Nine days. People were writing paragraphs to defend their egos, anticipating objections that hadn't been raised yet, performing thoroughness for an invisible audience. In 2018, four of us would have walked to a whiteboard, drawn three boxes, argued loudly for fifteen minutes, realized the cron script was fine if we just added a composite index, and been back at our desks by 2:30.\n\nThere is also the matter of trust, which decays faster over fiber-optic cables than anyone likes to admit. Code review is a brutal, weird social ritual even in the best of times. When someone leaves a terse comment on your pull request—\"Why are we doing an O(n²) lookup here?\"—your brain has to fill in the tone. If you just ate mediocre Thai food with that person an hour ago and laughed about their terrible landlord, you read the comment as a helpful catch. If you only know them as a two-inch square on Zoom who always has a blurred background, you read it as an indictment of your competence. Without the low-stakes friction of sharing physical space, every disagreement sharpens into a grudge.\n\nI am not going back to the office. I like my dog, I like my espresso, and I like getting an extra ninety minutes of my life back every day. Most of the best engineers I know feel the exact same way, which means the genie is never going back in the bottle. We will keep hiring remotely, we will keep writing our bloated Notion docs, and we will keep pretending that a monthly virtual trivia night is a substitute for actually knowing the people we build things with. It is a great deal for my lifestyle. I just wish we could be honest about what we are trading for it.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 181,
+  "completion_tokens": 3039,
+  "total_tokens": 3220,
+  "cost": 0.046128,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.046128,
+   "upstream_inference_prompt_cost": 0.000543,
+   "upstream_inference_completions_cost": 0.045585
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2044,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

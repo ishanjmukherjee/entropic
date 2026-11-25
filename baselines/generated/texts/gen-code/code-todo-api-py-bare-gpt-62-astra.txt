@@ -1,0 +1,191 @@
+#!/usr/bin/env python3
+"""Local to-do API: GET/POST /todos; GET/PATCH/DELETE /todos/{id}.
+
+POST requires {"title": "..."} and accepts an optional boolean "done".
+PATCH accepts either or both fields. Data is stored in SQLite.
+Place behind an authenticating TLS reverse proxy for non-local use.
+"""
+
+import argparse
+import json
+import logging
+import re
+import sqlite3
+from contextlib import closing
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
+
+MAX_BODY = 16384
+LOG = logging.getLogger("todos")
+
+
+class APIError(Exception):
+    def __init__(self, status, message):
+        super().__init__(message)
+        self.status = status
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def todo(row):
+    return {"id": row[0], "title": row[1], "done": bool(row[2])}
+
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = "TodoAPI/1"
+    sys_version = ""
+
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(15)
+
+    def reply(self, status, data=None, **headers):
+        body = b"" if data is None else json.dumps(
+            data, separators=(",", ":"), allow_nan=False
+        ).encode("ascii")
+        self.send_response(status)
+        if data is not None:
+            self.send_header("Content-Type", "application/json")
+        if status != 204:
+            self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        for name, value in headers.items():
+            self.send_header(name, value)
+        self.end_headers()
+        if body and self.command != "HEAD":
+            self.wfile.write(body)
+
+    def send_error(self, code, message=None, explain=None):
+        self.close_connection = True
+        self.reply(code, {"error": HTTPStatus(code).phrase})
+
+    def fields(self):
+        if self.headers.get_content_type() != "application/json":
+            raise APIError(415, "Expected application/json")
+        lengths = self.headers.get_all("Content-Length", [])
+        if not lengths:
+            raise APIError(411, "Content-Length required")
+        if len(lengths) != 1 or not re.fullmatch(r"[0-9]+", lengths[0]):
+            raise APIError(400, "Invalid Content-Length")
+        digits = lengths[0].lstrip("0") or "0"
+        if len(digits) > len(str(MAX_BODY)) or int(digits) > MAX_BODY:
+            raise APIError(413, "Body too large")
+        raw = self.rfile.read(int(digits))
+        if len(raw) != int(digits):
+            raise APIError(400, "Incomplete request body")
+        try:
+            data = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object)
+        except (ValueError, RecursionError):
+            raise APIError(400, "Invalid JSON") from None
+        if not isinstance(data, dict) or not data or data.keys() - {"title", "done"}:
+            raise APIError(400, "Expected an object with title and/or done")
+        if "title" in data:
+            title = data["title"]
+            if not isinstance(title, str) or not 1 <= len(title.strip()) <= 500:
+                raise APIError(400, "Title must contain 1 to 500 characters")
+            try:
+                title.encode("utf-8")
+            except UnicodeError:
+                raise APIError(400, "Invalid Unicode in title") from None
+            data["title"] = title.strip()
+        if "done" in data and not isinstance(data["done"], bool):
+            raise APIError(400, "done must be boolean")
+        return data
+
+    def dispatch(self):
+        try:
+            status, body, headers = self.route()
+        except APIError as exc:
+            status, body, headers = exc.status, {"error": str(exc)}, {}
+        except TimeoutError:
+            status, body, headers = 408, {"error": "Request timed out"}, {}
+        except sqlite3.OperationalError as exc:
+            LOG.exception("Database operation failed")
+            if getattr(exc, "sqlite_errorcode", 0) & 255 in (5, 6):
+                status, body, headers = 503, {"error": "Database busy"}, {"Retry-After": "1"}
+            else:
+                status, body, headers = 500, {"error": "Database error"}, {}
+        except Exception:
+            LOG.exception("Unhandled API error")
+            status, body, headers = 500, {"error": "Internal server error"}, {}
+        self.reply(status, body, **headers)
+
+    do_GET = do_POST = do_PATCH = do_DELETE = do_HEAD = do_PUT = do_OPTIONS = dispatch
+
+    def route(self):
+        if "Transfer-Encoding" in self.headers:
+            raise APIError(400, "Transfer-Encoding is not supported")
+        match = re.fullmatch(r"/todos(?:/([1-9][0-9]{0,18}))?", self.path)
+        if not match:
+            raise APIError(404, "Resource not found")
+        ident = int(match[1]) if match[1] else None
+        if ident and ident > 2**63 - 1:
+            raise APIError(404, "To-do not found")
+        allowed = ("GET", "HEAD", "PATCH", "DELETE") if ident else ("GET", "HEAD", "POST")
+        if self.command not in allowed:
+            return 405, {"error": "Method not allowed"}, {"Allow": ", ".join(allowed)}
+        fields = self.fields() if self.command in ("POST", "PATCH") else {}
+        with closing(sqlite3.connect(self.server.database)) as db, db:
+            if self.command == "POST":
+                if "title" not in fields:
+                    raise APIError(400, "Title required")
+                ident = db.execute(
+                    "INSERT INTO todos(title, done) VALUES (?, ?)",
+                    (fields["title"], fields.get("done", False)),
+                ).lastrowid
+            elif self.command == "DELETE":
+                if not db.execute("DELETE FROM todos WHERE id=?", (ident,)).rowcount:
+                    raise APIError(404, "To-do not found")
+                return 204, None, {}
+            elif self.command == "PATCH":
+                db.execute(
+                    "UPDATE todos SET title=coalesce(?,title), done=coalesce(?,done) WHERE id=?",
+                    (fields.get("title"), fields.get("done"), ident),
+                )
+            if ident is None:
+                rows = db.execute("SELECT id,title,done FROM todos ORDER BY id")
+                return 200, [todo(row) for row in rows], {}
+            row = db.execute("SELECT id,title,done FROM todos WHERE id=?", (ident,)).fetchone()
+            if row is None:
+                raise APIError(404, "To-do not found")
+            if self.command == "POST":
+                return 201, todo(row), {"Location": f"/todos/{ident}"}
+            return 200, todo(row), {}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--database", default="todos.sqlite3")
+    args = parser.parse_args()
+    if not args.database or args.database == ":memory:":
+        parser.error("a persistent database path is required")
+    logging.basicConfig(level=logging.INFO)
+    with closing(sqlite3.connect(args.database)) as db, db:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS todos ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, "
+            "done INTEGER NOT NULL CHECK(done IN (0,1)))"
+        )
+    with ThreadingHTTPServer((args.host, args.port), Handler) as server:
+        server.database = args.database
+        LOG.info("Listening on %s:%d", *server.server_address[:2])
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+
+
+if __name__ == "__main__":
+    main()

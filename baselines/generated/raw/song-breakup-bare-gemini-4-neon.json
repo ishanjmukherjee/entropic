@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "bare",
+ "prompt": "Write the lyrics of a pop song about a breakup. Output only the lyrics.",
+ "model": "gemini-4-neon",
+ "max_tokens": 900,
+ "id": "song-breakup-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "(Verse 1)\nYour hoodie’s still hanging on the back of my door\nA ghost of the nights that we don't have anymore\nTwo coffee cups sitting in the sink getting cold\nA story we started that’ll never get told\n\n(Pre-Chorus)\nWe used to burn like a neon light\nNow we’re just shadows in the middle of the night\nI tried to hold on, yeah, I tried to stay\nBut you were already halfway away\n\n(Chorus)\nSo take your keys off the counter, leave the memories here\nI’m gonna cry for a minute, then I’ll disappear\nYeah, it hurts like hell watching us fade to black\nI’m locking the door and I’m not looking back\nWe were a wildfire, now we’re just smoke in the air\nI’m learning to breathe without you standing there\n\n(Verse 2)\nI’m scrolling through pictures of a summer ago\nSmiling at the camera like we didn't know\nThat the cracks in the glass were starting to show\nFunny how fast a forever can go\n\n(Pre-Chorus)\nWe used to burn like a neon light\nNow we’re just shadows in the middle of the night\nI tried to hold on, yeah, I tried to stay\nBut you were already halfway away\n\n(Chorus)\nSo take your keys off the counter, leave the memories here\nI’m gonna cry for a minute, then I’ll disappear\nYeah, it hurts like hell watching us fade to black\nI’m locking the door and I’m not looking back\nWe were a wildfire, now we’re just smoke in the air\nI’m learning to breathe without you standing there\n\n(Bridge)\nNo more waiting by the phone at 2 AM\nNo more pretending we can be just friends\nI’m picking up the pieces of my broken heart\nTurns out the ending is my brand new start\n\n(Chorus)\nSo take your keys off the counter, leave the memories here\nI’m gonna cry for a minute, then I’ll disappear\nYeah, it hurts like hell watching us fade to black\nI’m locking the door and I’m not looking back\nWe were a wildfire, now we’re just smoke in the air\nI’m learning to breathe without you standing there\n\n(Outro)\nWithout you standing there\nJust smoke in the air\nYeah, I’m learning to breathe\nI’m finally free",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 50,
+  "completion_tokens": 1458,
+  "total_tokens": 1508,
+  "cost": 0.02202,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.02202,
+   "upstream_inference_prompt_cost": 0.00015,
+   "upstream_inference_completions_cost": 0.02187
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 934,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,139 @@
+BEGIN;
+
+CREATE SCHEMA library;
+
+CREATE TABLE library.member (
+    member_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    card_number text NOT NULL UNIQUE CHECK (btrim(card_number) <> ''),
+    display_name text NOT NULL CHECK (btrim(display_name) <> ''),
+    active boolean NOT NULL DEFAULT true
+);
+
+-- One catalog record describes an edition; each physical copy has its own barcode.
+CREATE TABLE library.edition (
+    edition_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title text NOT NULL CHECK (btrim(title) <> ''),
+    author_credit text
+);
+
+CREATE TABLE library.copy (
+    copy_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    edition_id bigint NOT NULL REFERENCES library.edition (edition_id),
+    barcode text NOT NULL UNIQUE CHECK (btrim(barcode) <> ''),
+    lendable boolean NOT NULL DEFAULT true
+);
+
+CREATE INDEX copy_edition_idx ON library.copy (edition_id);
+
+CREATE TABLE library.loan (
+    loan_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    member_id bigint NOT NULL REFERENCES library.member (member_id),
+    copy_id bigint NOT NULL REFERENCES library.copy (copy_id),
+    checked_out_at timestamptz NOT NULL CHECK (isfinite(checked_out_at)),
+    due_at timestamptz NOT NULL CHECK (isfinite(due_at) AND due_at > checked_out_at),
+    returned_at timestamptz CHECK (
+        isfinite(returned_at) AND returned_at >= checked_out_at
+    )
+);
+
+-- Enforce availability even if concurrent callers bypass the checkout function.
+CREATE UNIQUE INDEX loan_one_open_per_copy_idx
+    ON library.loan (copy_id) WHERE returned_at IS NULL;
+
+CREATE INDEX loan_open_due_idx
+    ON library.loan (due_at, loan_id) WHERE returned_at IS NULL;
+
+CREATE INDEX loan_member_history_idx ON library.loan (member_id, checked_out_at DESC);
+CREATE INDEX loan_copy_history_idx ON library.loan (copy_id, checked_out_at DESC);
+
+-- Returns the new loan ID. Eligibility checks and insertion share the caller's
+-- transaction; locks prevent changes to eligibility between check and insert.
+CREATE FUNCTION library.check_out(
+    p_member_id bigint,
+    p_copy_id bigint,
+    p_due_at timestamptz
+) RETURNS bigint
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_now timestamptz;
+    v_loan_id bigint;
+BEGIN
+    PERFORM 1 FROM library.member
+      WHERE member_id = p_member_id AND active
+      FOR SHARE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Member % does not exist or is inactive', p_member_id;
+    END IF;
+
+    PERFORM 1 FROM library.copy
+      WHERE copy_id = p_copy_id AND lendable
+      FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Copy % does not exist or is not lendable', p_copy_id;
+    END IF;
+
+    v_now := clock_timestamp();
+    IF p_due_at IS NULL OR NOT isfinite(p_due_at) OR p_due_at <= v_now THEN
+        RAISE EXCEPTION 'Due time must be finite and after checkout'
+            USING ERRCODE = '22023';
+    END IF;
+
+    INSERT INTO library.loan (member_id, copy_id, checked_out_at, due_at)
+    VALUES (p_member_id, p_copy_id, v_now, p_due_at)
+    ON CONFLICT (copy_id) WHERE returned_at IS NULL DO NOTHING
+    RETURNING loan_id INTO v_loan_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Copy % is already checked out', p_copy_id;
+    END IF;
+    RETURN v_loan_id;
+END;
+$$;
+
+-- Identify the loan, not just the copy, so a delayed duplicate return cannot
+-- accidentally close a subsequent borrower's loan.
+CREATE FUNCTION library.return_loan(p_loan_id bigint)
+RETURNS timestamptz
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_returned_at timestamptz;
+BEGIN
+    UPDATE library.loan
+       SET returned_at = clock_timestamp()
+     WHERE loan_id = p_loan_id AND returned_at IS NULL
+     RETURNING returned_at INTO v_returned_at;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Loan % does not exist or was already returned', p_loan_id;
+    END IF;
+    RETURN v_returned_at;
+END;
+$$;
+
+CREATE VIEW library.overdue_loans AS
+SELECT l.loan_id,
+       m.member_id,
+       m.card_number,
+       m.display_name,
+       c.copy_id,
+       c.barcode,
+       e.title,
+       l.checked_out_at,
+       l.due_at,
+       statement_timestamp() - l.due_at AS time_overdue
+FROM library.loan AS l
+JOIN library.member AS m ON m.member_id = l.member_id
+JOIN library.copy AS c ON c.copy_id = l.copy_id
+JOIN library.edition AS e ON e.edition_id = c.edition_id
+WHERE l.returned_at IS NULL AND l.due_at < statement_timestamp();
+
+COMMIT;
+
+-- Parameterized application queries:
+-- SELECT library.check_out($1, $2, $3);
+-- SELECT library.return_loan($1);
+-- SELECT * FROM library.overdue_loans ORDER BY due_at, loan_id;

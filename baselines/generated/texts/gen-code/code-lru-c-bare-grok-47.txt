@@ -1,0 +1,352 @@
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <errno.h>
+
+/*
+ * Production-quality LRU cache.
+ *
+ * - Fixed capacity, O(1) get/put/delete (average) via open-addressed hash table
+ *   of pointers into a doubly linked list ordered most-recent -> least-recent.
+ * - Keys and values are opaque byte blobs copied into the cache (caller retains
+ *   ownership of the buffers passed in).
+ * - Thread-safety is the caller's responsibility.
+ * - All public functions return 0 on success and a negative errno-style code
+ *   on failure. get() writes the value into a caller-provided buffer.
+ */
+
+typedef struct lru_node {
+    struct lru_node *prev;
+    struct lru_node *next;
+    struct lru_node *hash_next; /* collision chain */
+    uint64_t hash;
+    size_t key_len;
+    size_t val_len;
+    unsigned char *key;
+    unsigned char *val;
+} lru_node;
+
+typedef struct lru_cache {
+    size_t capacity;     /* max live entries */
+    size_t size;         /* live entries */
+    size_t bucket_count; /* power of two */
+    lru_node **buckets;
+    lru_node *head;      /* most recently used */
+    lru_node *tail;      /* least recently used */
+} lru_cache;
+
+static uint64_t lru_hash(const unsigned char *data, size_t len)
+{
+    /* FNV-1a 64-bit */
+    uint64_t h = 14695981039346656037ULL;
+    size_t i;
+    for (i = 0; i < len; i++) {
+        h ^= (uint64_t)data[i];
+        h *= 1099511628211ULL;
+    }
+    return h;
+}
+
+static int key_eq(const lru_node *n, const unsigned char *key, size_t key_len, uint64_t h)
+{
+    return n->hash == h && n->key_len == key_len &&
+           memcmp(n->key, key, key_len) == 0;
+}
+
+static void list_detach(lru_cache *c, lru_node *n)
+{
+    if (n->prev)
+        n->prev->next = n->next;
+    else
+        c->head = n->next;
+    if (n->next)
+        n->next->prev = n->prev;
+    else
+        c->tail = n->prev;
+    n->prev = n->next = NULL;
+}
+
+static void list_push_front(lru_cache *c, lru_node *n)
+{
+    n->prev = NULL;
+    n->next = c->head;
+    if (c->head)
+        c->head->prev = n;
+    c->head = n;
+    if (!c->tail)
+        c->tail = n;
+}
+
+static void hash_unlink(lru_cache *c, lru_node *n)
+{
+    size_t idx = (size_t)(n->hash & (c->bucket_count - 1));
+    lru_node **pp = &c->buckets[idx];
+    while (*pp) {
+        if (*pp == n) {
+            *pp = n->hash_next;
+            n->hash_next = NULL;
+            return;
+        }
+        pp = &(*pp)->hash_next;
+    }
+}
+
+static void hash_link(lru_cache *c, lru_node *n)
+{
+    size_t idx = (size_t)(n->hash & (c->bucket_count - 1));
+    n->hash_next = c->buckets[idx];
+    c->buckets[idx] = n;
+}
+
+static lru_node *hash_find(const lru_cache *c, const unsigned char *key,
+                           size_t key_len, uint64_t h)
+{
+    size_t idx = (size_t)(h & (c->bucket_count - 1));
+    lru_node *n = c->buckets[idx];
+    while (n) {
+        if (key_eq(n, key, key_len, h))
+            return n;
+        n = n->hash_next;
+    }
+    return NULL;
+}
+
+static void node_free(lru_node *n)
+{
+    if (!n)
+        return;
+    free(n->key);
+    free(n->val);
+    free(n);
+}
+
+static void evict_lru(lru_cache *c)
+{
+    lru_node *victim = c->tail;
+    if (!victim)
+        return;
+    list_detach(c, victim);
+    hash_unlink(c, victim);
+    node_free(victim);
+    c->size--;
+}
+
+static size_t next_pow2(size_t n)
+{
+    size_t p = 1;
+    if (n < 4)
+        return 4;
+    while (p < n) {
+        if (p > (SIZE_MAX / 2))
+            return p;
+        p <<= 1;
+    }
+    return p;
+}
+
+int lru_create(lru_cache **out, size_t capacity)
+{
+    lru_cache *c;
+    if (!out || capacity == 0)
+        return -EINVAL;
+    c = calloc(1, sizeof(*c));
+    if (!c)
+        return -ENOMEM;
+    c->capacity = capacity;
+    c->bucket_count = next_pow2(capacity * 2);
+    c->buckets = calloc(c->bucket_count, sizeof(lru_node *));
+    if (!c->buckets) {
+        free(c);
+        return -ENOMEM;
+    }
+    *out = c;
+    return 0;
+}
+
+void lru_destroy(lru_cache *c)
+{
+    lru_node *n;
+    if (!c)
+        return;
+    n = c->head;
+    while (n) {
+        lru_node *next = n->next;
+        node_free(n);
+        n = next;
+    }
+    free(c->buckets);
+    free(c);
+}
+
+size_t lru_size(const lru_cache *c)
+{
+    return c ? c->size : 0;
+}
+
+size_t lru_capacity(const lru_cache *c)
+{
+    return c ? c->capacity : 0;
+}
+
+/*
+ * Lookup. On hit, moves the entry to MRU and copies the value into
+ * val_out (up to val_out_cap bytes). *val_len is always set to the
+ * stored length. Returns 0 on hit, -ENOENT on miss, -EINVAL on bad args,
+ * -ERANGE if the caller buffer is too small (entry is still promoted;
+ * *val_len reports the required size and nothing is copied).
+ */
+int lru_get(lru_cache *c, const void *key, size_t key_len,
+            void *val_out, size_t val_out_cap, size_t *val_len)
+{
+    uint64_t h;
+    lru_node *n;
+    if (!c || (!key && key_len) || !val_len)
+        return -EINVAL;
+    h = lru_hash((const unsigned char *)key, key_len);
+    n = hash_find(c, (const unsigned char *)key, key_len, h);
+    if (!n)
+        return -ENOENT;
+    list_detach(c, n);
+    list_push_front(c, n);
+    *val_len = n->val_len;
+    if (n->val_len > val_out_cap)
+        return -ERANGE;
+    if (n->val_len && val_out)
+        memcpy(val_out, n->val, n->val_len);
+    return 0;
+}
+
+/*
+ * Insert or replace. Evicts the LRU entry when at capacity and the key
+ * is new. Returns 0, or -EINVAL / -ENOMEM.
+ */
+int lru_put(lru_cache *c, const void *key, size_t key_len,
+            const void *val, size_t val_len)
+{
+    uint64_t h;
+    lru_node *n;
+    unsigned char *kcopy, *vcopy;
+    if (!c || (!key && key_len) || (!val && val_len))
+        return -EINVAL;
+    h = lru_hash((const unsigned char *)key, key_len);
+    n = hash_find(c, (const unsigned char *)key, key_len, h);
+    if (n) {
+        vcopy = NULL;
+        if (val_len) {
+            vcopy = malloc(val_len);
+            if (!vcopy)
+                return -ENOMEM;
+            memcpy(vcopy, val, val_len);
+        }
+        free(n->val);
+        n->val = vcopy;
+        n->val_len = val_len;
+        list_detach(c, n);
+        list_push_front(c, n);
+        return 0;
+    }
+    if (c->size >= c->capacity)
+        evict_lru(c);
+    n = calloc(1, sizeof(*n));
+    if (!n)
+        return -ENOMEM;
+    if (key_len) {
+        kcopy = malloc(key_len);
+        if (!kcopy) {
+            free(n);
+            return -ENOMEM;
+        }
+        memcpy(kcopy, key, key_len);
+        n->key = kcopy;
+    }
+    if (val_len) {
+        vcopy = malloc(val_len);
+        if (!vcopy) {
+            free(n->key);
+            free(n);
+            return -ENOMEM;
+        }
+        memcpy(vcopy, val, val_len);
+        n->val = vcopy;
+    }
+    n->key_len = key_len;
+    n->val_len = val_len;
+    n->hash = h;
+    hash_link(c, n);
+    list_push_front(c, n);
+    c->size++;
+    return 0;
+}
+
+/* Remove a key. Returns 0 if removed, -ENOENT if absent, -EINVAL on bad args. */
+int lru_delete(lru_cache *c, const void *key, size_t key_len)
+{
+    uint64_t h;
+    lru_node *n;
+    if (!c || (!key && key_len))
+        return -EINVAL;
+    h = lru_hash((const unsigned char *)key, key_len);
+    n = hash_find(c, (const unsigned char *)key, key_len, h);
+    if (!n)
+        return -ENOENT;
+    list_detach(c, n);
+    hash_unlink(c, n);
+    node_free(n);
+    c->size--;
+    return 0;
+}
+
+void lru_clear(lru_cache *c)
+{
+    lru_node *n;
+    if (!c)
+        return;
+    n = c->head;
+    while (n) {
+        lru_node *next = n->next;
+        node_free(n);
+        n = next;
+    }
+    memset(c->buckets, 0, c->bucket_count * sizeof(lru_node *));
+    c->head = c->tail = NULL;
+    c->size = 0;
+}
+
+#ifdef LRU_TEST
+static void expect(int cond, const char *msg)
+{
+    if (!cond) {
+        fprintf(stderr, "FAIL: %s\n", msg);
+        exit(1);
+    }
+}
+
+int main(void)
+{
+    lru_cache *c = NULL;
+    char buf[64];
+    size_t len = 0;
+    int rc;
+
+    expect(lru_create(&c, 2) == 0, "create");
+    expect(lru_put(c, "a", 1, "1", 1) == 0, "put a");
+    expect(lru_put(c, "b", 1, "2", 1) == 0, "put b");
+    expect(lru_put(c, "c", 1, "3", 1) == 0, "put c evicts a");
+    rc = lru_get(c, "a", 1, buf, sizeof buf, &len);
+    expect(rc == -ENOENT, "a evicted");
+    rc = lru_get(c, "b", 1, buf, sizeof buf, &len);
+    expect(rc == 0 && len == 1 && buf[0] == '2', "b hit");
+    /* b is now MRU; inserting d should evict c */
+    expect(lru_put(c, "d", 1, "4", 1) == 0, "put d");
+    rc = lru_get(c, "c", 1, buf, sizeof buf, &len);
+    expect(rc == -ENOENT, "c evicted");
+    expect(lru_delete(c, "b", 1) == 0, "delete b");
+    expect(lru_size(c) == 1, "size 1");
+    lru_clear(c);
+    expect(lru_size(c) == 0, "cleared");
+    lru_destroy(c);
+    printf("ok\n");
+    return 0;
+}
+#endif

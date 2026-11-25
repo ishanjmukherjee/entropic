@@ -1,0 +1,75 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE Safe #-}
+
+-- | A persistent ordered set backed by a red-black tree.
+-- Element comparisons must obey the laws of 'Ord'.
+module RedBlackTree
+  ( Tree
+  , empty
+  , insert
+  , member
+  , toList
+  ) where
+
+data Color = Red | Black
+
+-- | Constructors are private to preserve the ordering and color invariants.
+data Tree a
+  = Leaf
+  | Node !Color !(Tree a) !a !(Tree a)
+
+-- | The empty tree. O(1).
+empty :: Tree a
+empty = Leaf
+
+-- | Insert an element in O(log n) time. If an equal element already
+-- exists, retain the original element and return the tree unchanged.
+insert :: Ord a => a -> Tree a -> Tree a
+insert !value tree =
+  case descend tree of
+    Nothing -> tree
+    Just (Node Red left key right) -> Node Black left key right
+    Just result -> result
+  where
+    descend Leaf = Just (Node Red Leaf value Leaf)
+    descend (Node color left key right) =
+      case compare value key of
+        LT -> do
+          left' <- descend left
+          pure (balance color left' key right)
+        EQ -> Nothing
+        GT -> do
+          right' <- descend right
+          pure (balance color left key right')
+
+-- Repair a red parent with a red child beneath a black node. Each
+-- rotation preserves both the in-order sequence and the black height.
+balance :: Color -> Tree a -> a -> Tree a -> Tree a
+balance Black (Node Red (Node Red a x b) y c) z d =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balance Black (Node Red a x (Node Red b y c)) z d =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balance Black a x (Node Red (Node Red b y c) z d) =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balance Black a x (Node Red b y (Node Red c z d)) =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balance color left key right = Node color left key right
+
+-- | Test membership in O(log n) time.
+member :: Ord a => a -> Tree a -> Bool
+member value = search
+  where
+    search Leaf = False
+    search (Node _ left key right) =
+      case compare value key of
+        LT -> search left
+        EQ -> True
+        GT -> search right
+
+-- | Enumerate the elements in ascending order in O(n) time.
+toList :: Tree a -> [a]
+toList tree = prepend tree []
+  where
+    prepend Leaf rest = rest
+    prepend (Node _ left key right) rest =
+      prepend left (key : prepend right rest)

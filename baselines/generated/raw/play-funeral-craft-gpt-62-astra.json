@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-funeral",
+ "style": "craft",
+ "prompt": "Write a scene for a stage play, about 700 words. Situation: two estranged brothers meet at their father's funeral.\n\nWrite it as a skilled playwright would. Each character wants something from the other and will not say what; the scene is the manoeuvring. Lines should be short and speakable, with people cutting across each other, changing the subject, answering the question they wish they had been asked. Keep stage directions few and physical. Let one object on stage matter. No speech that explains a feeling or a history, and no tidy resolution: end on an action or a line that leaves the question open.\n\nFormat: character names in capitals on their own line, the speech on the next line, stage directions in parentheses. Output only the script, with no title or cast list.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1500,
+ "id": "play-funeral-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "(A funeral parlour. A coffin on trestles. LEN is at the head of it. MICHAEL stops at the foot.)\n\nLEN\nThey gave him a parting.\n\nMICHAEL\nDid they.\n\nLEN\nCome round here. You can see the line.\n\nMICHAEL\nI can see from here.\n\nLEN\nThat's the lid you're looking at.\n\nMICHAEL\nI know what I'm looking at.\n\nLEN\nIt's on hinges now. Used to be they lifted it right off.\n\nMICHAEL\nAre they waiting?\n\nLEN\nThey can wait. There's a lady out there eating a pear.\n\nMICHAEL\nThat's Auntie Val.\n\nLEN\nI know my own aunt.\n\nMICHAEL\nThen why's she a lady?\n\nLEN\nWell, look who's come to sort us out.\n\nMICHAEL\nI said I'd come.\n\nLEN\nYou said you'd see.\n\nMICHAEL\nAnd here I am.\n\nLEN\nAt the wrong end.\n\n(MICHAEL moves up one side of the coffin.)\n\nLEN\nOther side. You'll get my shadow.\n\nMICHAEL\nLeave off a minute.\n\nLEN\nSee what I mean about his hair?\n\nMICHAEL\nIt's fine.\n\nLEN\nIt's not his parting.\n\nMICHAEL\nRun your hand through it then.\n\nLEN\nYou do it.\n\nMICHAEL\nI didn't say there was anything wrong with it.\n\nLEN\nYou've still got that nail.\n\nMICHAEL\nWhat nail?\n\nLEN\nThumb. The ridge in it.\n\nMICHAEL\nThey don't grow out, Len.\n\nLEN\nFunny what does and what doesn't.\n\nMICHAEL\nHave you got enough men?\n\nLEN\nMen?\n\nMICHAEL\nTo carry.\n\nLEN\nThere's a thing on wheels.\n\nMICHAEL\nI saw Colin outside. He said six.\n\nLEN\nSix to the wheels. Then nobody. Then six again.\n\nMICHAEL\nSo you've got six.\n\nLEN\nColin can count to six. That's not the same thing.\n\nMICHAEL\nWhich side are you on?\n\nLEN\nWhy?\n\nMICHAEL\nYou've got a bad shoulder.\n\nLEN\nHave I?\n\nMICHAEL\nI can see it from here.\n\nLEN\nYou can see a lot from where you are.\n\nMICHAEL\nI can go that side.\n\nLEN\nIn those shoes?\n\nMICHAEL\nThey're black.\n\nLEN\nThey're very black. You could tip him up and show him his parting.\n\n(MICHAEL steps back.)\n\nLEN\nWhere are you going?\n\nMICHAEL\nGive you your light.\n\nLEN\nI haven't got a bad shoulder.\n\nMICHAEL\nAll right.\n\nLEN\nIt's the elbow. I can take weight. I can't straighten it after. That's all.\n\nMICHAEL\nColin can take the foot. He's tall.\n\nLEN\nYou worked it all out in the car?\n\nMICHAEL\nI came on the bus.\n\nLEN\nYou could've rung.\n\nMICHAEL\nYou'd have been busy.\n\nLEN\nI drove past the stop.\n\nMICHAEL\nWhat time?\n\nLEN\nWhat does it matter what time?\n\nMICHAEL\nI'd have been there or I wouldn't.\n\nLEN\nI went past twice.\n\nMICHAEL\nWas it raining?\n\nLEN\nWhat?\n\nMICHAEL\nI'm trying to work out if it was me. There was a fellow there before me.\n\nLEN\nNobody said I saw you.\n\nMICHAEL\nNo.\n\nLEN\nYou can't see much going past.\n\nMICHAEL\nNo.\n\nLEN\nHe hasn't got his glasses.\n\nMICHAEL\nHe wouldn't. Lying down.\n\nLEN\nThey asked me and I said no. Then Val said yes. Then they'd taken them away.\n\nMICHAEL\nYou were right.\n\nLEN\nYou haven't seen him without.\n\nMICHAEL\nI'm seeing him now.\n\nLEN\nI mean lately.\n\nMICHAEL\nI know what you mean.\n\nLEN\nThere was a fortnight he didn't put them on once.\n\nMICHAEL\nWhat did you do with them?\n\nLEN\nWhat do you mean what did I do? They're by the bed.\n\nMICHAEL\nI could get them.\n\nLEN\nOn the bus?\n\nMICHAEL\nIf you wanted them for after.\n\nLEN\nWhat after? We're not opening him up again.\n\nMICHAEL\nNo. Of course.\n\nLEN\nYou can have them if that's what you're at.\n\nMICHAEL\nWhat would I do with his glasses?\n\nLEN\nPut them by your bed. See how you get on.\n\n(MICHAEL puts his hand under the coffin handle.)\n\nLEN\nNot yet.\n\nMICHAEL\nI'm seeing how high.\n\nLEN\nIt comes up.\n\nMICHAEL\nI know.\n\nLEN\nDon't pull on it. They hear that out there, they'll come in.\n\nMICHAEL\nWhen do you want them?\n\nLEN\nShe hasn't finished her pear.\n\nMICHAEL\nLen.\n\nLEN\nWhat?\n\nMICHAEL\nMove over a bit.\n\n(LEN moves. MICHAEL puts his hand to their father's hair.)\n\nLEN\nWhich way are you going to do it?",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 166,
+  "completion_tokens": 1047,
+  "total_tokens": 1213,
+  "cost": 0.043208,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.043208,
+   "upstream_inference_prompt_cost": 0.001328,
+   "upstream_inference_completions_cost": 0.04188
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

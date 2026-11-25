@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-backup-sh",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Bash source file that backs up a PostgreSQL database to S3 with rotation of old backups and error handling. Output only the code.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 3000,
+ "domain": "devops",
+ "language": "Bash",
+ "id": "code-backup-sh-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "#!/usr/bin/env bash\n# Requires Bash 4+, PostgreSQL client tools, AWS CLI v2, flock, and GNU date.\n# Configure PostgreSQL via libpq (PGDATABASE, PGHOST, PGSERVICE, PGPASSFILE,\n# etc.) and AWS via the normal AWS CLI credential/region provider chain.\n# Required: S3_BUCKET, S3_PREFIX (a dedicated, nonempty prefix per database).\n# Optional: RETENTION_DAYS (default 30), TMPDIR, LOCK_FILE (private directory).\n# Retention is based on S3 LastModified, not the host-generated filename.\n# On versioned buckets, configure lifecycle expiration for noncurrent versions.\nset -Eeuo pipefail\numask 077\nexport LC_ALL=C AWS_PAGER='' AWS_CLI_AUTO_PROMPT=off\n\nlog() { printf '%s %s\\n' \"$(date -u +'%FT%TZ')\" \"$*\" >&2; }\ndie() { log \"ERROR: $*\"; exit 1; }\ntrap 'log \"ERROR: command failed at line $LINENO (status $?)\"' ERR\n\n: \"${S3_BUCKET:?Set S3_BUCKET}\"\n: \"${S3_PREFIX:?Set S3_PREFIX to a dedicated backup prefix}\"\nretention=${RETENTION_DAYS:-30}\n[[ $retention =~ ^[1-9][0-9]{0,4}$ ]] || die 'RETENTION_DAYS must be 1..99999'\n[[ $S3_BUCKET =~ ^[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]] || die 'Invalid bucket name'\nprefix=${S3_PREFIX%/}\n[[ $prefix =~ ^[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)*$ ]] || die 'Invalid prefix'\n[[ /$prefix/ != */../* && /$prefix/ != */./* ]] || die 'Invalid prefix component'\n\nfor cmd in pg_dump pg_restore aws flock date mktemp stat sha256sum python3; do\n    command -v \"$cmd\" >/dev/null || die \"Missing dependency: $cmd\"\ndone\n\nif [[ -n ${LOCK_FILE:-} ]]; then\n    exec 9>>\"$LOCK_FILE\"\nelse\n    # A private persistent directory avoids lock-file replacement races.\n    lockdir=${XDG_STATE_HOME:-${HOME:?}/.local/state}/pg-s3-backup\n    mkdir -p -- \"$lockdir\"\n    lockid=$(printf '%s/%s' \"$S3_BUCKET\" \"$prefix\" | sha256sum)\n    exec 9>>\"$lockdir/${lockid%% *}.lock\"\nfi\nflock -n 9 || die 'Could not acquire backup lock'\n\nwork=$(mktemp -d -- \"${TMPDIR:-/tmp}/pg-s3.XXXXXXXXXX\")\ncleanup() {\n    local rc=$?\n    trap - EXIT\n    rm -rf -- \"$work\" || rc=1\n    exit \"$rc\"\n}\ntrap cleanup EXIT\ntrap 'exit 129' HUP\ntrap 'exit 130' INT\ntrap 'exit 143' TERM\n\nstamp=$(date -u +'%Y%m%dT%H%M%SZ')\nnonce=$(python3 -c 'import uuid; print(uuid.uuid4().hex)')\nkey=\"$prefix/pgbackup-$stamp-$nonce.dump\"\nuri=\"s3://$S3_BUCKET/$key\"\narchive=\"$work/backup.dump\"\n\nlog 'Creating PostgreSQL custom-format archive'\npg_dump --no-password --format=custom --file=\"$archive\"\npg_restore --list \"$archive\" >/dev/null\nsize=$(stat -c %s -- \"$archive\")\n(( size > 0 )) || die 'Empty archive'\n\nlog \"Uploading $uri\"\naws s3 cp \"$archive\" \"$uri\" --only-show-errors --no-progress \\\n    --checksum-algorithm SHA256\nremote_size=$(aws s3api head-object --bucket \"$S3_BUCKET\" --key \"$key\" \\\n    --query ContentLength --output text)\n[[ $remote_size == \"$size\" ]] || die 'Uploaded object size mismatch; skipping rotation'\n\n# AWS CLI automatically paginates. Finish listing and validating the entire\n# deletion plan before deleting anything; never parse arbitrary keys in shell.\naws s3api list-objects-v2 --bucket \"$S3_BUCKET\" --prefix \"$prefix/pgbackup-\" \\\n    --query 'Contents[].{key:Key,modified:LastModified}' --output json >\"$work/list\"\n\npython3 - \"$work/list\" \"$prefix\" \"$key\" \"$retention\" >\"$work/expired\" <<'PY'\nimport datetime as dt\nimport json\nimport re\nimport sys\n\npath, prefix, current, days = sys.argv[1:]\npattern = re.compile(re.escape(prefix) + r\"/pgbackup-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{32}\\.dump\")\ncutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=int(days))\nwith open(path, encoding=\"utf-8\") as stream:\n    objects = json.load(stream)\nif not isinstance(objects, list) or not any(o[\"key\"] == current for o in objects):\n    sys.exit(\"Uploaded backup missing from listing; refusing rotation\")\nfor obj in objects:\n    key = obj[\"key\"]\n    if key != current and pattern.fullmatch(key):\n        when = dt.datetime.fromisoformat(obj[\"modified\"].replace(\"Z\", \"+00:00\"))\n        if when < cutoff:\n            print(key)\nPY\n\nremoved=0\nwhile IFS= read -r expired; do\n    aws s3api delete-object --bucket \"$S3_BUCKET\" --key \"$expired\" >/dev/null\n    removed=$((removed + 1))\ndone <\"$work/expired\"\nlog \"Backup complete: $uri ($size bytes); expired $removed backup(s)\"",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 39,
+  "completion_tokens": 1238,
+  "total_tokens": 1277,
+  "cost": 0.049832,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.049832,
+   "upstream_inference_prompt_cost": 0.000312,
+   "upstream_inference_completions_cost": 0.04952
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

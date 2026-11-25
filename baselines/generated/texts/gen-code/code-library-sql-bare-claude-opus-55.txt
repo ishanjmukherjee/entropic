@@ -1,0 +1,524 @@
+-- =============================================================================
+-- Library Lending System: Schema and Circulation Routines
+-- Target: PostgreSQL 13+
+--
+-- Contents
+--   1. Schema and types
+--   2. Tables, constraints and indexes
+--   3. Triggers (updated_at maintenance)
+--   4. Helper functions
+--   5. Circulation: checkout_copy, return_copy
+--   6. Reporting: overdue_loans, v_overdue_loans
+--
+-- Error codes raised by this module (SQLSTATE class 'LB'):
+--   LB001  member not found
+--   LB002  member not in good standing (suspended / expired / closed)
+--   LB003  member has reached the maximum number of concurrent loans
+--   LB004  member has overdue items
+--   LB005  copy not found
+--   LB006  copy is not available for circulation (lost / withdrawn / repair)
+--   LB007  copy is already on loan
+--   LB008  no open loan exists for the copy
+--   LB009  invalid argument
+-- =============================================================================
+
+BEGIN;
+
+CREATE SCHEMA IF NOT EXISTS library;
+
+SET LOCAL search_path = library, pg_catalog;
+
+-- -----------------------------------------------------------------------------
+-- 1. Enumerated types
+-- -----------------------------------------------------------------------------
+
+CREATE TYPE library.member_status AS ENUM ('active', 'suspended', 'closed');
+
+-- Circulation state of a physical copy. "On loan" is deliberately NOT stored
+-- here: it is derived from the existence of an open loan, so the two can never
+-- disagree.
+CREATE TYPE library.copy_status AS ENUM ('circulating', 'repair', 'lost', 'withdrawn');
+
+-- -----------------------------------------------------------------------------
+-- 2. Tables
+-- -----------------------------------------------------------------------------
+
+-- Lending policy per category of member (e.g. adult, child, staff).
+CREATE TABLE library.member_types (
+    member_type_id  smallint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    code            text          NOT NULL,
+    description     text          NOT NULL,
+    max_loans       integer       NOT NULL,
+    loan_period     interval      NOT NULL,
+    daily_fine      numeric(8,2)  NOT NULL DEFAULT 0,
+    max_fine        numeric(8,2)  NOT NULL DEFAULT 0,
+    created_at      timestamptz   NOT NULL DEFAULT now(),
+    updated_at      timestamptz   NOT NULL DEFAULT now(),
+
+    CONSTRAINT member_types_code_uk        UNIQUE (code),
+    CONSTRAINT member_types_code_format_ck CHECK (code ~ '^[a-z][a-z0-9_]*$'),
+    CONSTRAINT member_types_max_loans_ck   CHECK (max_loans >= 0),
+    CONSTRAINT member_types_period_ck      CHECK (loan_period > interval '0'),
+    CONSTRAINT member_types_daily_fine_ck  CHECK (daily_fine >= 0),
+    CONSTRAINT member_types_max_fine_ck    CHECK (max_fine >= 0)
+);
+
+CREATE TABLE library.members (
+    member_id       bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    member_type_id  smallint              NOT NULL
+                        REFERENCES library.member_types (member_type_id),
+    card_number     text                  NOT NULL,
+    full_name       text                  NOT NULL,
+    email           text,
+    phone           text,
+    status          library.member_status NOT NULL DEFAULT 'active',
+    expires_on      date,
+    created_at      timestamptz           NOT NULL DEFAULT now(),
+    updated_at      timestamptz           NOT NULL DEFAULT now(),
+
+    CONSTRAINT members_card_number_uk      UNIQUE (card_number),
+    CONSTRAINT members_card_number_ck      CHECK (btrim(card_number) <> ''),
+    CONSTRAINT members_full_name_ck        CHECK (btrim(full_name) <> ''),
+    CONSTRAINT members_email_ck            CHECK (email IS NULL OR email ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$')
+);
+
+CREATE UNIQUE INDEX members_email_lower_uk
+    ON library.members (lower(email))
+    WHERE email IS NOT NULL;
+
+CREATE INDEX members_member_type_id_idx ON library.members (member_type_id);
+
+-- Bibliographic record (a "work" / edition).
+CREATE TABLE library.titles (
+    title_id        bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    isbn13          char(13),
+    title           text        NOT NULL,
+    authors         text        NOT NULL,
+    publisher       text,
+    published_year  smallint,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at      timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT titles_isbn13_uk     UNIQUE (isbn13),
+    CONSTRAINT titles_isbn13_ck     CHECK (isbn13 IS NULL OR isbn13 ~ '^[0-9]{13}$'),
+    CONSTRAINT titles_title_ck      CHECK (btrim(title) <> ''),
+    CONSTRAINT titles_year_ck       CHECK (published_year IS NULL OR published_year BETWEEN 1400 AND 2200)
+);
+
+CREATE INDEX titles_title_lower_idx ON library.titles (lower(title));
+
+-- Physical item that can be lent.
+CREATE TABLE library.copies (
+    copy_id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title_id        bigint              NOT NULL
+                        REFERENCES library.titles (title_id) ON DELETE RESTRICT,
+    barcode         text                NOT NULL,
+    status          library.copy_status NOT NULL DEFAULT 'circulating',
+    shelf_location  text,
+    acquired_on     date                NOT NULL DEFAULT current_date,
+    created_at      timestamptz         NOT NULL DEFAULT now(),
+    updated_at      timestamptz         NOT NULL DEFAULT now(),
+
+    CONSTRAINT copies_barcode_uk UNIQUE (barcode),
+    CONSTRAINT copies_barcode_ck CHECK (btrim(barcode) <> '')
+);
+
+CREATE INDEX copies_title_id_idx ON library.copies (title_id);
+
+-- A loan is "open" while returned_at IS NULL.
+CREATE TABLE library.loans (
+    loan_id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    copy_id         bigint        NOT NULL
+                        REFERENCES library.copies (copy_id) ON DELETE RESTRICT,
+    member_id       bigint        NOT NULL
+                        REFERENCES library.members (member_id) ON DELETE RESTRICT,
+    checked_out_at  timestamptz   NOT NULL DEFAULT now(),
+    due_at          timestamptz   NOT NULL,
+    returned_at     timestamptz,
+    fine_amount     numeric(8,2)  NOT NULL DEFAULT 0,
+    created_at      timestamptz   NOT NULL DEFAULT now(),
+    updated_at      timestamptz   NOT NULL DEFAULT now(),
+
+    CONSTRAINT loans_due_after_checkout_ck    CHECK (due_at > checked_out_at),
+    CONSTRAINT loans_return_after_checkout_ck CHECK (returned_at IS NULL OR returned_at >= checked_out_at),
+    CONSTRAINT loans_fine_nonneg_ck           CHECK (fine_amount >= 0),
+    CONSTRAINT loans_fine_only_when_closed_ck CHECK (returned_at IS NOT NULL OR fine_amount = 0)
+);
+
+-- Hard guarantee: a copy can have at most one open loan.
+CREATE UNIQUE INDEX loans_one_open_per_copy_uk
+    ON library.loans (copy_id)
+    WHERE returned_at IS NULL;
+
+-- Open loans per member (loan-limit and overdue checks).
+CREATE INDEX loans_member_open_idx
+    ON library.loans (member_id, due_at)
+    WHERE returned_at IS NULL;
+
+-- Overdue report scans open loans by due date.
+CREATE INDEX loans_open_due_at_idx
+    ON library.loans (due_at)
+    WHERE returned_at IS NULL;
+
+-- Loan history lookups.
+CREATE INDEX loans_member_history_idx ON library.loans (member_id, checked_out_at DESC);
+CREATE INDEX loans_copy_history_idx   ON library.loans (copy_id, checked_out_at DESC);
+
+-- -----------------------------------------------------------------------------
+-- 3. Triggers
+-- -----------------------------------------------------------------------------
+
+CREATE FUNCTION library.tg_set_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = library, pg_catalog, pg_temp
+AS $$
+BEGIN
+    NEW.updated_at := now();
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER member_types_set_updated_at BEFORE UPDATE ON library.member_types
+    FOR EACH ROW EXECUTE FUNCTION library.tg_set_updated_at();
+CREATE TRIGGER members_set_updated_at      BEFORE UPDATE ON library.members
+    FOR EACH ROW EXECUTE FUNCTION library.tg_set_updated_at();
+CREATE TRIGGER titles_set_updated_at       BEFORE UPDATE ON library.titles
+    FOR EACH ROW EXECUTE FUNCTION library.tg_set_updated_at();
+CREATE TRIGGER copies_set_updated_at       BEFORE UPDATE ON library.copies
+    FOR EACH ROW EXECUTE FUNCTION library.tg_set_updated_at();
+CREATE TRIGGER loans_set_updated_at        BEFORE UPDATE ON library.loans
+    FOR EACH ROW EXECUTE FUNCTION library.tg_set_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- 4. Helper functions
+-- -----------------------------------------------------------------------------
+
+-- Number of chargeable overdue days: any started 24h period past due counts
+-- as a full day. Returns 0 when not overdue.
+CREATE FUNCTION library.days_overdue(p_due_at timestamptz, p_as_of timestamptz)
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = library, pg_catalog, pg_temp
+AS $$
+    SELECT CASE
+               WHEN p_as_of <= p_due_at THEN 0
+               ELSE ceil(extract(epoch FROM (p_as_of - p_due_at)) / 86400.0)::integer
+           END;
+$$;
+
+-- Fine for a given overdue period under a policy, capped at max_fine
+-- (a max_fine of 0 means "no cap").
+CREATE FUNCTION library.compute_fine(
+    p_due_at     timestamptz,
+    p_as_of      timestamptz,
+    p_daily_fine numeric,
+    p_max_fine   numeric
+)
+RETURNS numeric(8,2)
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = library, pg_catalog, pg_temp
+AS $$
+    SELECT CASE
+               WHEN p_max_fine > 0
+                   THEN least(library.days_overdue(p_due_at, p_as_of) * p_daily_fine, p_max_fine)
+               ELSE library.days_overdue(p_due_at, p_as_of) * p_daily_fine
+           END::numeric(8,2);
+$$;
+
+-- -----------------------------------------------------------------------------
+-- 5. Circulation
+-- -----------------------------------------------------------------------------
+
+-- Check out a copy (by barcode) to a member.
+--
+-- Concurrency: the member row and the copy row are locked FOR UPDATE, which
+-- serialises concurrent checkouts for the same member (loan-limit check) and
+-- for the same copy. The partial unique index on open loans is the final
+-- backstop against double lending.
+--
+-- p_loan_period overrides the member type's default period when supplied.
+-- p_now exists for deterministic testing and back-dated data entry.
+CREATE FUNCTION library.checkout_copy(
+    p_member_id   bigint,
+    p_barcode     text,
+    p_loan_period interval    DEFAULT NULL,
+    p_now         timestamptz DEFAULT now()
+)
+RETURNS library.loans
+LANGUAGE plpgsql
+SET search_path = library, pg_catalog, pg_temp
+AS $$
+DECLARE
+    v_member      library.members%ROWTYPE;
+    v_policy      library.member_types%ROWTYPE;
+    v_copy        library.copies%ROWTYPE;
+    v_open_loans  integer;
+    v_overdue     integer;
+    v_period      interval;
+    v_loan        library.loans%ROWTYPE;
+BEGIN
+    IF p_member_id IS NULL OR p_barcode IS NULL OR btrim(p_barcode) = '' OR p_now IS NULL THEN
+        RAISE EXCEPTION 'member_id, barcode and timestamp are required'
+            USING ERRCODE = 'LB009';
+    END IF;
+
+    IF p_loan_period IS NOT NULL AND p_loan_period <= interval '0' THEN
+        RAISE EXCEPTION 'loan period must be positive (got %)', p_loan_period
+            USING ERRCODE = 'LB009';
+    END IF;
+
+    -- Lock order: member first, then copy (consistent across all routines).
+    SELECT * INTO v_member
+      FROM library.members
+     WHERE member_id = p_member_id
+       FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'member % not found', p_member_id
+            USING ERRCODE = 'LB001';
+    END IF;
+
+    IF v_member.status <> 'active' THEN
+        RAISE EXCEPTION 'member % is %', p_member_id, v_member.status
+            USING ERRCODE = 'LB002';
+    END IF;
+
+    IF v_member.expires_on IS NOT NULL AND v_member.expires_on < p_now::date THEN
+        RAISE EXCEPTION 'membership for member % expired on %', p_member_id, v_member.expires_on
+            USING ERRCODE = 'LB002';
+    END IF;
+
+    SELECT * INTO STRICT v_policy
+      FROM library.member_types
+     WHERE member_type_id = v_member.member_type_id;
+
+    SELECT count(*),
+           count(*) FILTER (WHERE due_at < p_now)
+      INTO v_open_loans, v_overdue
+      FROM library.loans
+     WHERE member_id = p_member_id
+       AND returned_at IS NULL;
+
+    IF v_overdue > 0 THEN
+        RAISE EXCEPTION 'member % has % overdue item(s)', p_member_id, v_overdue
+            USING ERRCODE = 'LB004',
+                  HINT    = 'Return overdue items before borrowing more.';
+    END IF;
+
+    IF v_open_loans >= v_policy.max_loans THEN
+        RAISE EXCEPTION 'member % has reached the loan limit of %', p_member_id, v_policy.max_loans
+            USING ERRCODE = 'LB003';
+    END IF;
+
+    SELECT * INTO v_copy
+      FROM library.copies
+     WHERE barcode = btrim(p_barcode)
+       FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'copy with barcode "%" not found', p_barcode
+            USING ERRCODE = 'LB005';
+    END IF;
+
+    IF v_copy.status <> 'circulating' THEN
+        RAISE EXCEPTION 'copy "%" is not available (status: %)', v_copy.barcode, v_copy.status
+            USING ERRCODE = 'LB006';
+    END IF;
+
+    IF EXISTS (SELECT 1
+                 FROM library.loans
+                WHERE copy_id = v_copy.copy_id
+                  AND returned_at IS NULL) THEN
+        RAISE EXCEPTION 'copy "%" is already on loan', v_copy.barcode
+            USING ERRCODE = 'LB007';
+    END IF;
+
+    v_period := coalesce(p_loan_period, v_policy.loan_period);
+
+    BEGIN
+        INSERT INTO library.loans (copy_id, member_id, checked_out_at, due_at)
+        VALUES (v_copy.copy_id, p_member_id, p_now, p_now + v_period)
+        RETURNING * INTO v_loan;
+    EXCEPTION
+        WHEN unique_violation THEN
+            RAISE EXCEPTION 'copy "%" is already on loan', v_copy.barcode
+                USING ERRCODE = 'LB007';
+    END;
+
+    RETURN v_loan;
+END;
+$$;
+
+COMMENT ON FUNCTION library.checkout_copy(bigint, text, interval, timestamptz) IS
+    'Lend a copy (by barcode) to a member, enforcing membership status, loan limit, '
+    'overdue block and copy availability. Returns the new loan row.';
+
+-- Return a copy (by barcode), closing its open loan and assessing any fine.
+CREATE FUNCTION library.return_copy(
+    p_barcode text,
+    p_now     timestamptz DEFAULT now()
+)
+RETURNS library.loans
+LANGUAGE plpgsql
+SET search_path = library, pg_catalog, pg_temp
+AS $$
+DECLARE
+    v_copy_id  bigint;
+    v_loan     library.loans%ROWTYPE;
+    v_policy   library.member_types%ROWTYPE;
+BEGIN
+    IF p_barcode IS NULL OR btrim(p_barcode) = '' OR p_now IS NULL THEN
+        RAISE EXCEPTION 'barcode and timestamp are required'
+            USING ERRCODE = 'LB009';
+    END IF;
+
+    SELECT copy_id INTO v_copy_id
+      FROM library.copies
+     WHERE barcode = btrim(p_barcode);
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'copy with barcode "%" not found', p_barcode
+            USING ERRCODE = 'LB005';
+    END IF;
+
+    SELECT * INTO v_loan
+      FROM library.loans
+     WHERE copy_id = v_copy_id
+       AND returned_at IS NULL
+       FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'copy "%" has no open loan', p_barcode
+            USING ERRCODE = 'LB008';
+    END IF;
+
+    IF p_now < v_loan.checked_out_at THEN
+        RAISE EXCEPTION 'return time % precedes checkout time %', p_now, v_loan.checked_out_at
+            USING ERRCODE = 'LB009';
+    END IF;
+
+    SELECT mt.* INTO STRICT v_policy
+      FROM library.members m
+      JOIN library.member_types mt USING (member_type_id)
+     WHERE m.member_id = v_loan.member_id;
+
+    UPDATE library.loans
+       SET returned_at = p_now,
+           fine_amount = library.compute_fine(v_loan.due_at, p_now,
+                                              v_policy.daily_fine, v_policy.max_fine)
+     WHERE loan_id = v_loan.loan_id
+    RETURNING * INTO v_loan;
+
+    RETURN v_loan;
+END;
+$$;
+
+COMMENT ON FUNCTION library.return_copy(text, timestamptz) IS
+    'Close the open loan for a copy (by barcode), recording the return time and '
+    'any overdue fine. Returns the updated loan row.';
+
+-- -----------------------------------------------------------------------------
+-- 6. Reporting
+-- -----------------------------------------------------------------------------
+
+-- All loans that are open and past due as of p_as_of, with accrued fines.
+CREATE FUNCTION library.overdue_loans(p_as_of timestamptz DEFAULT now())
+RETURNS TABLE (
+    loan_id         bigint,
+    member_id       bigint,
+    card_number     text,
+    member_name     text,
+    member_email    text,
+    copy_id         bigint,
+    barcode         text,
+    title           text,
+    authors         text,
+    checked_out_at  timestamptz,
+    due_at          timestamptz,
+    days_overdue    integer,
+    accrued_fine    numeric(8,2)
+)
+LANGUAGE sql
+STABLE
+SET search_path = library, pg_catalog, pg_temp
+AS $$
+    SELECT l.loan_id,
+           m.member_id,
+           m.card_number,
+           m.full_name,
+           m.email,
+           c.copy_id,
+           c.barcode,
+           t.title,
+           t.authors,
+           l.checked_out_at,
+           l.due_at,
+           library.days_overdue(l.due_at, p_as_of),
+           library.compute_fine(l.due_at, p_as_of, mt.daily_fine, mt.max_fine)
+      FROM library.loans        l
+      JOIN library.members      m  ON m.member_id       = l.member_id
+      JOIN library.member_types mt ON mt.member_type_id = m.member_type_id
+      JOIN library.copies       c  ON c.copy_id         = l.copy_id
+      JOIN library.titles       t  ON t.title_id        = c.title_id
+     WHERE l.returned_at IS NULL
+       AND l.due_at < p_as_of
+     ORDER BY l.due_at, l.loan_id;
+$$;
+
+COMMENT ON FUNCTION library.overdue_loans(timestamptz) IS
+    'Open loans past their due date as of the given time, oldest first, with accrued fines.';
+
+-- Convenience view of overdue loans as of the current time.
+CREATE VIEW library.v_overdue_loans AS
+    SELECT * FROM library.overdue_loans(now());
+
+-- Per-member overdue summary (useful for notices and account blocks).
+CREATE FUNCTION library.overdue_summary_by_member(p_as_of timestamptz DEFAULT now())
+RETURNS TABLE (
+    member_id          bigint,
+    card_number        text,
+    member_name        text,
+    member_email       text,
+    overdue_items      bigint,
+    oldest_due_at      timestamptz,
+    max_days_overdue   integer,
+    total_accrued_fine numeric(10,2)
+)
+LANGUAGE sql
+STABLE
+SET search_path = library, pg_catalog, pg_temp
+AS $$
+    SELECT o.member_id,
+           o.card_number,
+           o.member_name,
+           o.member_email,
+           count(*),
+           min(o.due_at),
+           max(o.days_overdue),
+           sum(o.accrued_fine)::numeric(10,2)
+      FROM library.overdue_loans(p_as_of) o
+     GROUP BY o.member_id, o.card_number, o.member_name, o.member_email
+     ORDER BY max(o.days_overdue) DESC, o.member_id;
+$$;
+
+COMMENT ON FUNCTION library.overdue_summary_by_member(timestamptz) IS
+    'Overdue items aggregated per member as of the given time.';
+
+COMMIT;
+
+-- =============================================================================
+-- Example usage
+--
+--   SELECT * FROM library.checkout_copy(42, 'B000123');
+--   SELECT * FROM library.checkout_copy(42, 'B000124', interval '7 days');
+--   SELECT * FROM library.return_copy('B000123');
+--   SELECT * FROM library.overdue_loans();
+--   SELECT * FROM library.overdue_loans('2026-12-31 23:59:59+00');
+--   SELECT * FROM library.v_overdue_loans;
+--   SELECT * FROM library.overdue_summary_by_member();
+-- =============================================================================

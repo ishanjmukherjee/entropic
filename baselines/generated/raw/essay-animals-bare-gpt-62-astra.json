@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-animals",
+ "style": "bare",
+ "prompt": "Write an essay on whether it is wrong to eat animals. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "essay-animals-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "A child who would never hurt a chicken may sit down to a chicken dinner without feeling any contradiction. That need not mean the child is confused. There is a difference between hurting an animal for amusement and killing one for food: people need to eat. But that distinction leaves a question unanswered. When people can feed themselves well without killing an animal, what justifies choosing the meal that requires its death? The strongest answer depends less on whether eating animals is natural than on what the animal stands to lose and what the person would have to give up.\n\nThe clearest reason for thinking that eating animals can be wrong is that animals suffer. A pig need not understand why she is confined to be distressed by her inability to turn around. A chicken need not anticipate slaughter to feel pain when handled roughly. Nor does concern for these experiences require believing that pigs and chickens have all the rights of human beings. We already recognize this when we condemn cruelty to a dog: our objection is not that the dog has been denied equality with its owner, but that a creature capable of suffering has been made to suffer without sufficient reason.\n\nBuying meat does not make a shopper solely responsible for the conditions in which an animal lived. Farmers make decisions under financial pressure, retailers set prices, and governments decide what practices the law will permit. Yet the shopper is not entirely outside this arrangement. A single purchase rarely determines whether another animal will be raised, but repeated purchases are precisely what a producer counts on when deciding how many animals to raise. Where a satisfying alternative is available at a comparable price, a preference for the taste of meat seems a poor justification for supporting practices one would otherwise condemn.\n\nSuppose, though, that the chicken spent her days outdoors, scratching in the soil, and was killed without fear or pain. The objection from suffering no longer settles the matter. Some would argue that nothing bad happened to her: she had a good life and never knew it was ending. Yet what makes the loss of a future bad is not always the anticipation of losing it. If someone killed a healthy family dog painlessly in its sleep, part of the wrong would surely be to the dog itself, not just to the family. It could have enjoyed another morning’s walk. A chicken’s pleasures are different, but it is hard to see why ending them requires no justification at all.\n\nThat justification can sometimes be given. For a household that depends on fishing, the alternative to killing a fish may be skipping dinner or buying expensive food shipped from far away. For someone choosing between two equally nourishing dishes in a cafeteria, the alternative may be as simple as pointing to the other tray. It would be strange to treat these decisions as morally identical because both involve fish. The animal’s interest in living matters in each case; what changes is the weight of the human interest on the other side.\n\nFood also carries meanings that a comparison of nutrients and prices can miss. Learning to make a grandmother’s lamb stew may be one of the few ways left to know something of her childhood. Telling someone that lentils contain protein does not answer the wish to preserve that connection. Still, respecting the place of a dish in a family’s life need not mean treating every serving of meat as equally important. Someone might reasonably struggle with what to cook for a holiday while finding it quite easy to change what goes into an ordinary Tuesday lunch. The difficult case need not decide the easy one.\n\nAn honest argument for eating fewer animals must also acknowledge that growing crops harms animals through habitat loss, harvesting, and pest control. Nobody can secure a diet entirely free of harm. But the impossibility of doing no harm is not a reason to disregard the harm one can avoid. Indeed, when animals are raised on crops grown for feed, eating their meat can involve both the harms of cultivation and those of confinement and slaughter. The useful comparison is between available meals and their likely costs, not between one actual meal and an imaginary innocent one.\n\nEating animals, then, is not wrong in every circumstance, but much everyday meat consumption is difficult to defend. Necessity can justify taking an animal’s life; convenience and habit generally cannot, particularly when that life has also involved considerable suffering. For people with genuine choices, the practical starting point is not to settle every dispute about hunting, farming, or family tradition before changing dinner. It is to notice the occasions when choosing something else would cost them very little and an animal a great deal.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 32,
+  "completion_tokens": 893,
+  "total_tokens": 925,
+  "cost": 0.035976,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.035976,
+   "upstream_inference_prompt_cost": 0.000256,
+   "upstream_inference_completions_cost": 0.03572
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

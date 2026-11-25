@@ -1,0 +1,579 @@
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useId,
+  useMemo,
+  useCallback,
+} from 'react';
+
+export interface ComboboxOption<T = string> {
+  value: T;
+  label: string;
+  disabled?: boolean;
+}
+
+export interface ComboboxProps<T = string> {
+  /** Array of selectable options */
+  options: ComboboxOption<T>[];
+  /** Currently selected value (controlled) */
+  value: T | null;
+  /** Callback fired when an option is selected or cleared */
+  onChange: (value: T | null, option: ComboboxOption<T> | null) => void;
+  /** Visible label for the combobox */
+  label?: string;
+  /** Accessible label when no visible label is provided */
+  ariaLabel?: string;
+  /** Placeholder text for the input */
+  placeholder?: string;
+  /** Disables the entire combobox */
+  disabled?: boolean;
+  /** Displays a loading indicator in the dropdown */
+  isLoading?: boolean;
+  /** Allows clearing the selected value */
+  clearable?: boolean;
+  /** Message displayed when no options match the filter */
+  emptyMessage?: string;
+  /** Message displayed when isLoading is true */
+  loadingMessage?: string;
+  /** Custom filter function */
+  filterOption?: (option: ComboboxOption<T>, inputValue: string) => boolean;
+  /** Custom option renderer */
+  renderOption?: (
+    option: ComboboxOption<T>,
+    state: { isSelected: boolean; isActive: boolean }
+  ) => React.ReactNode;
+  /** Callback fired when the input text changes */
+  onInputChange?: (inputValue: string) => void;
+  /** Optional ref forwarded to the underlying input element */
+  inputRef?: React.Ref<HTMLInputElement>;
+  /** Optional CSS class for the root container */
+  className?: string;
+  /** Optional ID for the input element */
+  id?: string;
+  /** Name attribute for form integration */
+  name?: string;
+  /** Marks the input as required */
+  required?: boolean;
+}
+
+function defaultFilterOption<T>(
+  option: ComboboxOption<T>,
+  inputValue: string
+): boolean {
+  return option.label.toLowerCase().includes(inputValue.trim().toLowerCase());
+}
+
+function findNextEnabledIndex<T>(
+  options: ComboboxOption<T>[],
+  startIndex: number,
+  direction: 1 | -1
+): number {
+  const length = options.length;
+  if (length === 0) return -1;
+
+  for (let i = 0; i < length; i++) {
+    const nextIndex = (startIndex + direction * (i + 1) + length) % length;
+    if (!options[nextIndex].disabled) {
+      return nextIndex;
+    }
+  }
+  return -1;
+}
+
+const srOnlyStyle: React.CSSProperties = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
+
+export function Combobox<T = string>({
+  options,
+  value,
+  onChange,
+  label,
+  ariaLabel,
+  placeholder = 'Select an option...',
+  disabled = false,
+  isLoading = false,
+  clearable = true,
+  emptyMessage = 'No results found',
+  loadingMessage = 'Loading...',
+  filterOption = defaultFilterOption,
+  renderOption,
+  onInputChange,
+  inputRef,
+  className,
+  id: providedId,
+  name,
+  required = false,
+}: ComboboxProps<T>): React.ReactElement {
+  const generatedId = useId();
+  const inputId = providedId ?? `combobox-input-${generatedId}`;
+  const listboxId = `combobox-listbox-${generatedId}`;
+  const labelId = `combobox-label-${generatedId}`;
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => Object.is(opt.value, value)) ?? null,
+    [options, value]
+  );
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(selectedOption?.label ?? '');
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const internalInputRef = useRef<HTMLInputElement>(null);
+  const optionRefs = useRef<Map<number, HTMLLIElement>>(new Map());
+
+  const mergedInputRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      internalInputRef.current = node;
+      if (typeof inputRef === 'function') {
+        inputRef(node);
+      } else if (inputRef && 'current' in inputRef) {
+        (inputRef as React.MutableRefObject<HTMLInputElement | null>).current =
+          node;
+      }
+    },
+    [inputRef]
+  );
+
+  // Sync input display value when controlled value changes externally
+  useEffect(() => {
+    setInputValue(selectedOption?.label ?? '');
+  }, [selectedOption]);
+
+  const filteredOptions = useMemo(() => {
+    // Show all options if the input matches the currently selected option's label
+    if (selectedOption && inputValue === selectedOption.label) {
+      return options;
+    }
+    return options.filter((opt) => filterOption(opt, inputValue));
+  }, [options, inputValue, selectedOption, filterOption]);
+
+  // Keep activeIndex valid when filtered options change
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveIndex(-1);
+      return;
+    }
+    if (filteredOptions.length === 0) {
+      setActiveIndex(-1);
+      return;
+    }
+    const selectedIdx = selectedOption
+      ? filteredOptions.findIndex(
+          (opt) => Object.is(opt.value, selectedOption.value) && !opt.disabled
+        )
+      : -1;
+
+    if (selectedIdx !== -1) {
+      setActiveIndex(selectedIdx);
+    } else {
+      setActiveIndex(findNextEnabledIndex(filteredOptions, -1, 1));
+    }
+  }, [isOpen, filteredOptions, selectedOption]);
+
+  // Scroll active option into view
+  useEffect(() => {
+    if (isOpen && activeIndex >= 0) {
+      const activeEl = optionRefs.current.get(activeIndex);
+      if (activeEl && typeof activeEl.scrollIntoView === 'function') {
+        activeEl.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [isOpen, activeIndex]);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setInputValue(selectedOption?.label ?? '');
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isOpen, selectedOption]);
+
+  const selectOption = useCallback(
+    (option: ComboboxOption<T>) => {
+      if (option.disabled) return;
+      onChange(option.value, option);
+      setInputValue(option.label);
+      setIsOpen(false);
+      setActiveIndex(-1);
+    },
+    [onChange]
+  );
+
+  const handleClear = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      if (disabled) return;
+      onChange(null, null);
+      setInputValue('');
+      onInputChange?.('');
+      setIsOpen(false);
+      setActiveIndex(-1);
+      internalInputRef.current?.focus();
+    },
+    [disabled, onChange, onInputChange]
+  );
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value;
+    setInputValue(nextValue);
+    onInputChange?.(nextValue);
+    if (!isOpen) {
+      setIsOpen(true);
+    }
+    if (nextValue === '' && value !== null) {
+      onChange(null, null);
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
+
+    switch (event.key) {
+      case 'ArrowDown': {
+        event.preventDefault();
+        if (!isOpen) {
+          setIsOpen(true);
+        } else {
+          setActiveIndex((prev) =>
+            findNextEnabledIndex(filteredOptions, prev, 1)
+          );
+        }
+        break;
+      }
+      case 'ArrowUp': {
+        event.preventDefault();
+        if (!isOpen) {
+          setIsOpen(true);
+        } else {
+          setActiveIndex((prev) =>
+            findNextEnabledIndex(
+              filteredOptions,
+              prev === -1 ? 0 : prev,
+              -1
+            )
+          );
+        }
+        break;
+      }
+      case 'Enter': {
+        if (isOpen && activeIndex >= 0 && filteredOptions[activeIndex]) {
+          event.preventDefault();
+          selectOption(filteredOptions[activeIndex]);
+        }
+        break;
+      }
+      case 'Escape': {
+        if (isOpen) {
+          event.preventDefault();
+          setIsOpen(false);
+          setInputValue(selectedOption?.label ?? '');
+        } else if (clearable && inputValue !== '') {
+          event.preventDefault();
+          onChange(null, null);
+          setInputValue('');
+          onInputChange?.('');
+        }
+        break;
+      }
+      case 'Tab': {
+        if (isOpen) {
+          setIsOpen(false);
+          setInputValue(selectedOption?.label ?? '');
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
+  const getOptionId = (index: number) => `${listboxId}-option-${index}`;
+
+  const activeDescendantId =
+    isOpen && activeIndex >= 0 && filteredOptions[activeIndex]
+      ? getOptionId(activeIndex)
+      : undefined;
+
+  const statusMessage = useMemo(() => {
+    if (!isOpen) return '';
+    if (isLoading) return loadingMessage;
+    if (filteredOptions.length === 0) return emptyMessage;
+    return `${filteredOptions.length} ${
+      filteredOptions.length === 1 ? 'result' : 'results'
+    } available.`;
+  }, [isOpen, isLoading, loadingMessage, filteredOptions.length, emptyMessage]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={className}
+      style={{ position: 'relative', width: '100%' }}
+    >
+      {label && (
+        <label
+          id={labelId}
+          htmlFor={inputId}
+          style={{
+            display: 'block',
+            marginBottom: '4px',
+            fontWeight: 500,
+            fontSize: '0.875rem',
+          }}
+        >
+          {label}
+          {required && (
+            <span aria-hidden="true" style={{ color: '#dc2626', marginLeft: '2px' }}>
+              *
+            </span>
+          )}
+        </label>
+      )}
+
+      <div
+        style={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        <input
+          ref={mergedInputRef}
+          id={inputId}
+          name={name}
+          type="text"
+          role="combobox"
+          autoComplete="off"
+          aria-autocomplete="list"
+          aria-expanded={isOpen}
+          aria-controls={listboxId}
+          aria-activedescendant={activeDescendantId}
+          aria-labelledby={label ? labelId : undefined}
+          aria-label={!label ? ariaLabel : undefined}
+          aria-required={required || undefined}
+          disabled={disabled}
+          required={required}
+          placeholder={placeholder}
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => {
+            if (!disabled) setIsOpen(true);
+          }}
+          style={{
+            width: '100%',
+            padding: '8px 56px 8px 12px',
+            fontSize: '0.875rem',
+            lineHeight: 1.5,
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            backgroundColor: disabled ? '#f3f4f6' : '#ffffff',
+            color: disabled ? '#6b7280' : '#111827',
+            boxSizing: 'border-box',
+          }}
+        />
+
+        <div
+          style={{
+            position: 'absolute',
+            right: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px',
+          }}
+        >
+          {clearable && !disabled && (value !== null || inputValue !== '') && (
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-label="Clear selection"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleClear}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '24px',
+                height: '24px',
+                padding: 0,
+                border: 'none',
+                background: 'transparent',
+                color: '#6b7280',
+                cursor: 'pointer',
+                borderRadius: '4px',
+              }}
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            tabIndex={-1}
+            disabled={disabled}
+            aria-label={isOpen ? 'Close options' : 'Open options'}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (disabled) return;
+              setIsOpen((prev) => !prev);
+              internalInputRef.current?.focus();
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              color: '#6b7280',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              borderRadius: '4px',
+              transform: isOpen ? 'rotate(180deg)' : undefined,
+              transition: 'transform 150ms ease',
+            }}
+          >
+            <span aria-hidden="true">&#9662;</span>
+          </button>
+        </div>
+      </div>
+
+      {isOpen && (
+        <ul
+          id={listboxId}
+          role="listbox"
+          aria-labelledby={label ? labelId : undefined}
+          aria-label={!label ? ariaLabel ?? 'Options' : undefined}
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            zIndex: 50,
+            maxHeight: '240px',
+            overflowY: 'auto',
+            margin: 0,
+            padding: '4px',
+            listStyle: 'none',
+            backgroundColor: '#ffffff',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          {isLoading ? (
+            <li
+              role="presentation"
+              style={{
+                padding: '8px 12px',
+                fontSize: '0.875rem',
+                color: '#6b7280',
+              }}
+            >
+              {loadingMessage}
+            </li>
+          ) : filteredOptions.length === 0 ? (
+            <li
+              role="presentation"
+              style={{
+                padding: '8px 12px',
+                fontSize: '0.875rem',
+                color: '#6b7280',
+              }}
+            >
+              {emptyMessage}
+            </li>
+          ) : (
+            filteredOptions.map((option, index) => {
+              const isSelected = selectedOption
+                ? Object.is(option.value, selectedOption.value)
+                : false;
+              const isActive = index === activeIndex;
+
+              return (
+                <li
+                  key={String(option.value)}
+                  ref={(el) => {
+                    if (el) {
+                      optionRefs.current.set(index, el);
+                    } else {
+                      optionRefs.current.delete(index);
+                    }
+                  }}
+                  id={getOptionId(index)}
+                  role="option"
+                  aria-selected={isSelected}
+                  aria-disabled={option.disabled || undefined}
+                  onMouseDown={(e) => {
+                    // Prevent input blur before click completes
+                    e.preventDefault();
+                  }}
+                  onMouseEnter={() => {
+                    if (!option.disabled) {
+                      setActiveIndex(index);
+                    }
+                  }}
+                  onClick={() => selectOption(option)}
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '0.875rem',
+                    borderRadius: '4px',
+                    cursor: option.disabled ? 'not-allowed' : 'pointer',
+                    backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                    color: option.disabled
+                      ? '#9ca3af'
+                      : isSelected
+                      ? '#1d4ed8'
+                      : '#111827',
+                    fontWeight: isSelected ? 600 : 400,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  {renderOption ? (
+                    renderOption(option, { isSelected, isActive })
+                  ) : (
+                    <>
+                      <span>{option.label}</span>
+                      {isSelected && <span aria-hidden="true">&#10003;</span>}
+                    </>
+                  )}
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+
+      <div role="status" aria-live="polite" aria-atomic="true" style={srOnlyStyle}>
+        {statusMessage}
+      </div>
+    </div>
+  );
+}

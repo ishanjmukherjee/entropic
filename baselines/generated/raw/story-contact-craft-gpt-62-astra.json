@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-contact",
+ "style": "craft",
+ "prompt": "Write a short story of about 800 words. Premise: first contact with an alien intelligence.\n\nWrite it as a fine literary short-story writer would. Open in the middle of a particular moment, not with scene-setting or weather. Give each character a want that is never stated. Let the important thing happen slightly off the page or in what goes unsaid, and trust the reader. Use precise, unglamorous physical detail in place of adjectives; dialogue people would actually say, oblique and at cross purposes; and at least one turn the premise does not predict. Choose names a census would contain. No sentence that explains what a moment meant, and no ending on a lesson, a reconciliation or a sunrise.\n\nOutput only the story, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "story-contact-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "Ruth had the spoon halfway out of her mouth when the man in the wall said, “Don’t put that in the sink.”\n\nShe held it by the bowl. Milk ran over her thumb.\n\n“Which sink?”\n\nThere was a pause long enough for her to hear the refrigerator cut off.\n\n“The one you have.”\n\nShe put the spoon on the draining board. On the other side of the wall, where there had once been another half of the duplex, there was a parking lot with four spaces and a machine that took quarters.\n\n“Are you from the borough?” she said.\n\n“No,” he said, with some care.\n\nAt ten past nine her son arrived with a roll of orange stickers. He put one on the piano, one on the glass-fronted cabinet and one on the sewing machine, which he could not lift even after he had taken the drawers out.\n\n“Did you have breakfast?” he said.\n\n“Somebody wants the spoon left out.”\n\nDennis looked at the spoon. “Okay.”\n\n“You could put one of those on it.”\n\n“Ma, I paid for these.”\n\nHe knelt to unplug the piano lamp. A pale strip of skin showed between his shirt and his belt. When he was small he used to put his whole hand inside her cuff while she talked to people in shops. If she moved her arm he went with it.\n\n“Not the lamp,” she said.\n\nHe left it plugged in.\n\nAt eleven the wall said, “We have finished the part with the spoon.”\n\nDennis was in the kitchen wrapping cups in the sports section. He came out with a cup still in his hand.\n\n“How many?” he said.\n\n“Of what?”\n\n“Of you.”\n\nThe wall made a noise like the last of a bath going down. “We can do that,” it said. “It takes a while.”\n\n“Don’t trouble,” Ruth said.\n\nDennis went outside. From her chair she could see him examining the brickwork, going up on his toes to look into the vent above the parking machine. He came back with mortar on the knees of his trousers.\n\n“Go ahead,” he said.\n\n“Go ahead with what?” said Ruth.\n\n“Not you.”\n\nThe numbers started just before noon. They were not consecutive. After thirty-one came thirty-one again, then eight, then a number that took so long to say that Dennis sat down. He recorded some of it on his phone. When he played it back there was only the squeak of his shoe against the floor.\n\nRuth made cheese on toast. She scraped the burnt edges into the sink.\n\n“Where are you?” Dennis said.\n\nThe numbers stopped. “We have not finished.”\n\n“Where are you doing this from?”\n\n“Your names for things run out.”\n\n“Try me.”\n\n“Yes,” said the wall. “They run out just the same.”\n\nDennis got the road atlas from under the short leg of the cabinet. Then he stood with it in his hands. A cup rolled out through the cabinet door and broke at his feet.\n\nFor lunch they ate at opposite ends of the table because there were two boxes of Christmas ornaments in the middle. The wall asked if the sound of eating was necessary. Ruth said it was if you wanted to eat.\n\n“We have not had this before,” it said.\n\n“Welsh rabbit,” said Ruth.\n\n“All of it,” said the wall.\n\nDennis called somebody and went out to the car to talk. Ruth could see his face in the rearview mirror and his hand working at a loose thread in the roof lining.\n\n“What did you do with the spoon?” she asked.\n\n“Very little. It was the first thing we got all the way around.”\n\nShe turned it over. On the back, just below the bowl, were three small dents. Her husband had used the good spoons to lever the lids off paint tins. There were six spoons left and every one had dents.\n\n“Can you get around a house?”\n\n“Not with what we have.”\n\n“What have you got?”\n\n“The spoon now.”\n\nShe washed it and put it in the drawer.\n\nBy three there were two men from the university standing in the kitchen in their socks. Dennis had made them take their shoes off, though nobody had ever taken shoes off in that house. One man kept glancing at the other before he spoke. The wall had nothing to say to either of them.\n\nRuth went upstairs. In the box marked LINEN she found the piano lamp, its cord wound around its neck. Dennis must have taken it while she was making lunch. She carried it into the little bedroom where the auction people had stacked the things they wouldn't sell.\n\nFrom below came a burst of laughter, cut short. Then her son's voice, quite level, giving the date and spelling their name.\n\nShe screwed the hot bulb out of the lamp with the hem of her skirt. Inside the shade, in pencil, her husband had written the size of the bulb, the price, and the name of a shop that had been a bank for twenty years.\n\nShe had the pencil out of her apron before she noticed there was nothing to correct.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 160,
+  "completion_tokens": 1034,
+  "total_tokens": 1194,
+  "cost": 0.04264,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.04264,
+   "upstream_inference_prompt_cost": 0.00128,
+   "upstream_inference_completions_cost": 0.04136
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

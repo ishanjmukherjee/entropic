@@ -1,0 +1,114 @@
+{-# LANGUAGE BangPatterns #-}
+
+-- | Persistent red-black trees.
+--
+-- Red-black trees are balanced binary search trees. This module implements
+-- a purely functional (persistent) variant: every update returns a new tree
+-- and leaves the original unchanged. Insert rebalances in O(log n) and
+-- membership queries are O(log n).
+--
+-- Invariants (Okasaki):
+--   * No red node has a red child.
+--   * Every path from the root to a leaf has the same number of black nodes.
+--   * The root is black.
+--
+-- Keys must be totally ordered ('Ord'). Duplicate keys are ignored on insert
+-- (the existing binding is retained).
+module Data.RBTree
+  ( RBTree
+  , Color (..)
+  , empty
+  , singleton
+  , insert
+  , member
+  , toList
+  , fromList
+  , size
+  , null
+  , height
+  ) where
+
+import Prelude hiding (null)
+import Data.List (foldl')
+
+-- | Node colour.
+data Color = R | B
+  deriving (Eq, Show)
+
+-- | A red-black tree of ordered keys.
+data RBTree a
+  = E
+  | T !Color !(RBTree a) !a !(RBTree a)
+  deriving (Eq, Show)
+
+-- | The empty tree.
+empty :: RBTree a
+empty = E
+
+-- | A tree containing a single key.
+singleton :: a -> RBTree a
+singleton x = T B E x E
+
+-- | 'True' iff the tree contains no keys.
+null :: RBTree a -> Bool
+null E = True
+null _ = False
+
+-- | Number of keys in the tree. O(n).
+size :: RBTree a -> Int
+size = go 0
+  where
+    go !n E = n
+    go n (T _ l _ r) = go (go (n + 1) l) r
+
+-- | Black-height of the tree (number of black nodes on any root-to-leaf path,
+-- not counting the implicit black leaf). Useful for testing balance. O(log n)
+-- on a valid tree; walks the left spine.
+height :: RBTree a -> Int
+height E = 0
+height (T c l _ _) = height l + (if c == B then 1 else 0)
+
+-- | Membership test. O(log n).
+member :: Ord a => a -> RBTree a -> Bool
+member x = go
+  where
+    go E = False
+    go (T _ l y r) = case compare x y of
+      LT -> go l
+      GT -> go r
+      EQ -> True
+
+-- | Insert a key. If the key is already present the tree is returned unchanged.
+-- O(log n). The result is a valid red-black tree.
+insert :: Ord a => a -> RBTree a -> RBTree a
+insert x t = blacken (ins t)
+  where
+    ins E = T R E x E
+    ins s@(T c l y r) = case compare x y of
+      LT -> balance c (ins l) y r
+      GT -> balance c l y (ins r)
+      EQ -> s
+    blacken E = E
+    blacken (T _ l y r) = T B l y r
+
+-- | Restore the red-black invariant after a single red-red violation
+-- introduced by insertion. The four rotation cases are the classic Okasaki
+-- balance function; the remaining patterns are identity.
+balance :: Color -> RBTree a -> a -> RBTree a -> RBTree a
+balance B (T R (T R a x b) y c) z d = T R (T B a x b) y (T B c z d)
+balance B (T R a x (T R b y c)) z d = T R (T B a x b) y (T B c z d)
+balance B a x (T R (T R b y c) z d) = T R (T B a x b) y (T B c z d)
+balance B a x (T R b y (T R c z d)) = T R (T B a x b) y (T B c z d)
+balance c l x r = T c l x r
+
+-- | In-order list of keys, ascending. O(n).
+toList :: RBTree a -> [a]
+toList t = go t []
+  where
+    go E acc = acc
+    go (T _ l x r) acc = go l (x : go r acc)
+
+-- | Build a tree from a list of keys. Later duplicates are ignored.
+-- O(n log n).
+fromList :: Ord a => [a] -> RBTree a
+fromList = foldl' (flip insert) empty

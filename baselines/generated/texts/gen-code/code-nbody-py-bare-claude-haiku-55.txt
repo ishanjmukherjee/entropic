@@ -1,0 +1,399 @@
+#!/usr/bin/env python3
+"""N-body gravitational simulation using a kick-drift-kick leapfrog integrator.
+
+The integrator is the second-order symplectic velocity-Verlet scheme, which
+conserves energy well over long runs. Pairwise forces use Plummer softening
+to avoid singularities during close encounters. Pairwise interactions are
+computed with O(N^2) vectorized NumPy operations.
+
+Example:
+    python nbody.py --n 200 --steps 5000 --dt 1e-3 --output run.npz
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import numpy as np
+
+LOG = logging.getLogger("nbody")
+
+
+# --------------------------------------------------------------------------- #
+# Data structures
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class PhysicsParams:
+    """Physical constants and numerical softening."""
+
+    G: float = 1.0
+    softening: float = 1e-2
+
+    def __post_init__(self) -> None:
+        if self.G <= 0:
+            raise ValueError("G must be positive")
+        if self.softening < 0:
+            raise ValueError("softening must be non-negative")
+
+
+@dataclass
+class ParticleSystem:
+    """State of an N-body system. Arrays are float64 with shapes (N,3) and (N,)."""
+
+    positions: np.ndarray
+    velocities: np.ndarray
+    masses: np.ndarray
+
+    def __post_init__(self) -> None:
+        self.positions = np.array(self.positions, dtype=np.float64)
+        self.velocities = np.array(self.velocities, dtype=np.float64)
+        self.masses = np.array(self.masses, dtype=np.float64)
+
+        n = self.masses.shape[0]
+        if self.positions.shape != (n, 3) or self.velocities.shape != (n, 3):
+            raise ValueError(
+                "positions and velocities must have shape (N, 3) matching masses (N,)"
+            )
+        if not np.all(np.isfinite(self.positions) & np.isfinite(self.velocities)):
+            raise ValueError("initial state contains non-finite values")
+        if np.any(self.masses <= 0):
+            raise ValueError("all masses must be positive")
+
+    @property
+    def n_bodies(self) -> int:
+        return self.masses.shape[0]
+
+
+@dataclass
+class SimulationHistory:
+    """Diagnostics and optional snapshots recorded during a run."""
+
+    times: list[float] = field(default_factory=list)
+    kinetic: list[float] = field(default_factory=list)
+    potential: list[float] = field(default_factory=list)
+    snapshot_times: list[float] = field(default_factory=list)
+    snapshots: list[np.ndarray] = field(default_factory=list)
+
+
+# --------------------------------------------------------------------------- #
+# Physics
+# --------------------------------------------------------------------------- #
+def _pairwise_displacements(positions: np.ndarray) -> np.ndarray:
+    """Return diff[i, j] = r_j - r_i with shape (N, N, 3)."""
+    return positions[np.newaxis, :, :] - positions[:, np.newaxis, :]
+
+
+def compute_accelerations(
+    positions: np.ndarray, masses: np.ndarray, params: PhysicsParams
+) -> np.ndarray:
+    """Compute gravitational accelerations for all bodies.
+
+    a_i = G * sum_{j != i} m_j (r_j - r_i) / (|r_j - r_i|^2 + eps^2)^{3/2}
+    """
+    diff = _pairwise_displacements(positions)
+    dist2 = np.einsum("ijk,ijk->ij", diff, diff) + params.softening**2
+    # Remove self-interaction. inf**-1.5 evaluates to exactly 0.
+    np.fill_diagonal(dist2, np.inf)
+    inv_r3 = dist2 ** -1.5
+    weights = masses[np.newaxis, :] * inv_r3
+    return params.G * np.einsum("ij,ijk->ik", weights, diff)
+
+
+def kinetic_energy(system: ParticleSystem) -> float:
+    return 0.5 * float(np.sum(system.masses * np.sum(system.velocities**2, axis=1)))
+
+
+def potential_energy(system: ParticleSystem, params: PhysicsParams) -> float:
+    """Total gravitational potential energy, summed over unique pairs."""
+    n = system.n_bodies
+    if n < 2:
+        return 0.0
+    diff = _pairwise_displacements(system.positions)
+    dist2 = np.einsum("ijk,ijk->ij", diff, diff) + params.softening**2
+    i, j = np.triu_indices(n, k=1)
+    pair_masses = system.masses[i] * system.masses[j]
+    return -params.G * float(np.sum(pair_masses / np.sqrt(dist2[i, j])))
+
+
+def total_momentum(system: ParticleSystem) -> np.ndarray:
+    return np.sum(system.masses[:, None] * system.velocities, axis=0)
+
+
+def center_of_mass(system: ParticleSystem) -> np.ndarray:
+    return np.sum(system.masses[:, None] * system.positions, axis=0) / np.sum(
+        system.masses
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Integrator
+# --------------------------------------------------------------------------- #
+def leapfrog_step(
+    system: ParticleSystem,
+    accelerations: np.ndarray,
+    dt: float,
+    params: PhysicsParams,
+) -> np.ndarray:
+    """Advance the system by one kick-drift-kick step, in place.
+
+    Takes the accelerations at the current positions and returns the
+    accelerations at the new positions, so each step costs a single force
+    evaluation.
+    """
+    # Half kick
+    system.velocities += 0.5 * dt * accelerations
+    # Full drift
+    system.positions += dt * system.velocities
+    # Recompute forces at new positions
+    new_accelerations = compute_accelerations(
+        system.positions, system.masses, params
+    )
+    # Half kick
+    system.velocities += 0.5 * dt * new_accelerations
+    return new_accelerations
+
+
+def run_simulation(
+    system: ParticleSystem,
+    params: PhysicsParams,
+    *,
+    steps: int,
+    dt: float,
+    diagnostics_every: int = 100,
+    snapshot_every: int = 0,
+) -> SimulationHistory:
+    """Integrate the system for a fixed number of steps.
+
+    Args:
+        system: Initial state; it is modified in place.
+        params: Physical parameters.
+        steps: Number of integration steps.
+        dt: Time step.
+        diagnostics_every: Record energies every this many steps (and at t=0 and the end).
+        snapshot_every: Store positions every this many steps (0 disables snapshots).
+    """
+    if steps < 0:
+        raise ValueError("steps must be non-negative")
+    if dt <= 0:
+        raise ValueError("dt must be positive")
+
+    history = SimulationHistory()
+    acc = compute_accelerations(system.positions, system.masses, params)
+    t = 0.0
+
+    def record(step: int) -> None:
+        ke = kinetic_energy(system)
+        pe = potential_energy(system, params)
+        history.times.append(t)
+        history.kinetic.append(ke)
+        history.potential.append(pe)
+        LOG.debug("step=%d t=%.6f KE=%.10e PE=%.10e", step, t, ke, pe)
+
+    def snapshot() -> None:
+        history.snapshot_times.append(t)
+        history.snapshots.append(system.positions.copy())
+
+    record(0)
+    if snapshot_every > 0:
+        snapshot()
+
+    for step in range(1, steps + 1):
+        acc = leapfrog_step(system, acc, dt, params)
+        t = step * dt
+
+        if step % diagnostics_every == 0 or step == steps:
+            record(step)
+        if snapshot_every > 0 and step % snapshot_every == 0:
+            snapshot()
+
+    return history
+
+
+# --------------------------------------------------------------------------- #
+# Initial conditions
+# --------------------------------------------------------------------------- #
+def random_sphere_system(
+    n_bodies: int,
+    *,
+    radius: float = 1.0,
+    total_mass: float = 1.0,
+    velocity_scale: float = 0.1,
+    seed: int | None = None,
+) -> ParticleSystem:
+    """Bodies uniformly distributed in a sphere with random velocities.
+
+    The centre-of-mass position and momentum are removed so the system does
+    not drift.
+    """
+    if n_bodies < 1:
+        raise ValueError("n_bodies must be at least 1")
+
+    rng = np.random.default_rng(seed)
+
+    directions = rng.normal(size=(n_bodies, 3))
+    directions /= np.linalg.norm(directions, axis=1, keepdims=True)
+    radii = radius * rng.random(n_bodies) ** (1.0 / 3.0)  # uniform in volume
+    positions = directions * radii[:, None]
+
+    velocities = velocity_scale * rng.normal(size=(n_bodies, 3))
+    masses = np.full(n_bodies, total_mass / n_bodies)
+
+    system = ParticleSystem(positions, velocities, masses)
+
+    # Remove centre-of-mass position and drift
+    system.positions -= center_of_mass(system)
+    system.velocities -= total_momentum(system) / np.sum(system.masses)
+    return system
+
+
+# --------------------------------------------------------------------------- #
+# I/O and CLI
+# --------------------------------------------------------------------------- #
+def save_results(
+    path: Path,
+    system_initial_masses: np.ndarray,
+    history: SimulationHistory,
+    params: PhysicsParams,
+    dt: float,
+) -> None:
+    """Write diagnostics and snapshots to a compressed .npz file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    snapshots = (
+        np.stack(history.snapshots)
+        if history.snapshots
+        else np.empty((0,) + system_initial_masses.shape + (3,))
+    )
+    np.savez_compressed(
+        path,
+        masses=system_initial_masses,
+        times=np.asarray(history.times),
+        kinetic=np.asarray(history.kinetic),
+        potential=np.asarray(history.potential),
+        snapshot_times=np.asarray(history.snapshot_times),
+        snapshots=snapshots,
+        G=params.G,
+        softening=params.softening,
+        dt=dt,
+    )
+    LOG.info("Wrote results to %s", path)
+
+
+def _positive_int(value: str) -> int:
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(f"must be a positive integer, got {value}")
+    return ivalue
+
+
+def _non_negative_int(value: str) -> int:
+    ivalue = int(value)
+    if ivalue < 0:
+        raise argparse.ArgumentTypeError(f"must be non-negative, got {value}")
+    return ivalue
+
+
+def _positive_float(value: str) -> float:
+    fvalue = float(value)
+    if not fvalue > 0:
+        raise argparse.ArgumentTypeError(f"must be positive, got {value}")
+    return fvalue
+
+
+def _non_negative_float(value: str) -> float:
+    fvalue = float(value)
+    if not fvalue >= 0:
+        raise argparse.ArgumentTypeError(f"must be non-negative, got {value}")
+    return fvalue
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="N-body gravitational simulation with a leapfrog integrator.",
+    )
+    parser.add_argument("--n", dest="n_bodies", type=_positive_int, default=100,
+                        help="number of bodies (default: %(default)s)")
+    parser.add_argument("--steps", type=_non_negative_int, default=1000,
+                        help="number of integration steps (default: %(default)s)")
+    parser.add_argument("--dt", type=_positive_float, default=1e-3,
+                        help="time step (default: %(default)s)")
+    parser.add_argument("--G", dest="G", type=_positive_float, default=1.0,
+                        help="gravitational constant (default: %(default)s)")
+    parser.add_argument("--softening", type=_non_negative_float, default=1e-2,
+                        help="Plummer softening length (default: %(default)s)")
+    parser.add_argument("--radius", type=_positive_float, default=1.0,
+                        help="initial sphere radius (default: %(default)s)")
+    parser.add_argument("--total-mass", type=_positive_float, default=1.0,
+                        help="total system mass (default: %(default)s)")
+    parser.add_argument("--velocity-scale", type=_non_negative_float, default=0.1,
+                        help="std of initial velocities (default: %(default)s)")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="random seed for reproducibility")
+    parser.add_argument("--report-every", type=_positive_int, default=100,
+                        help="record diagnostics every N steps (default: %(default)s)")
+    parser.add_argument("--snapshot-every", type=_non_negative_int, default=0,
+                        help="store positions every N steps, 0 disables (default: %(default)s)")
+    parser.add_argument("--output", type=Path, default=None,
+                        help="optional .npz file for saving results")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="enable debug logging")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_arg_parser().parse_args(argv)
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
+
+    try:
+        params = PhysicsParams(G=args.G, softening=args.softening)
+        system = random_sphere_system(
+            args.n_bodies,
+            radius=args.radius,
+            total_mass=args.total_mass,
+            velocity_scale=args.velocity_scale,
+            seed=args.seed,
+        )
+    except ValueError as exc:
+        LOG.error("Invalid configuration: %s", exc)
+        return 2
+
+    initial_masses = system.masses.copy()
+    e0 = kinetic_energy(system) + potential_energy(system, params)
+    LOG.info("Initial energy E0 = %.10e", e0)
+
+    history = run_simulation(
+        system,
+        params,
+        steps=args.steps,
+        dt=args.dt,
+        diagnostics_every=args.report_every,
+        snapshot_every=args.snapshot_every,
+    )
+
+    # Energy and momentum diagnostics
+    e_final = history.kinetic[-1] + history.potential[-1]
+    if abs(e0) > 0:
+        rel_drift = abs((e_final - e0) / e0)
+    else:
+        rel_drift = abs(e_final - e0)
+    p_final = np.linalg.norm(total_momentum(system))
+
+    LOG.info("Final energy E = %.10e", e_final)
+    LOG.info("Relative energy drift = %.3e", rel_drift)
+    LOG.info("Final |total momentum| = %.3e", p_final)
+
+    if args.output is not None:
+        save_results(args.output, initial_masses, history, params, args.dt)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,606 @@
+//! Tokenizer and recursive-descent parser for arithmetic expressions with variables.
+//!
+//! Grammar (lowest to highest precedence):
+//!
+//! ```text
+//! expr    := term (('+' | '-') term)*
+//! term    := unary (('*' | '/' | '%') unary)*
+//! unary   := ('-' | '+') unary | power
+//! power   := primary ('^' unary)?          // right-associative
+//! primary := NUMBER | IDENT | '(' expr ')'
+//! ```
+//!
+//! Identifiers start with an ASCII letter or `_` and may contain ASCII letters,
+//! digits, and `_`. Numbers accept decimal fractions and scientific notation
+//! (`1`, `.5`, `2.`, `1.5e-3`, `6E+2`). Whitespace separates tokens and is otherwise ignored.
+
+use std::fmt;
+
+/// Default maximum nesting depth for parenthesized and unary expressions.
+pub const DEFAULT_MAX_DEPTH: usize = 256;
+
+/// Half-open byte range `[start, end)` into the source string.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+/// Lexical token categories.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TokenKind {
+    Number(f64),
+    Ident(String),
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Caret,
+    LParen,
+    RParen,
+    Eof,
+}
+
+impl TokenKind {
+    fn describe(&self) -> String {
+        match self {
+            TokenKind::Number(n) => format!("number '{n}'"),
+            TokenKind::Ident(name) => format!("identifier '{name}'"),
+            TokenKind::Plus => "'+'".into(),
+            TokenKind::Minus => "'-'".into(),
+            TokenKind::Star => "'*'".into(),
+            TokenKind::Slash => "'/'".into(),
+            TokenKind::Percent => "'%'".into(),
+            TokenKind::Caret => "'^'".into(),
+            TokenKind::LParen => "'('".into(),
+            TokenKind::RParen => "')'".into(),
+            TokenKind::Eof => "end of input".into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: Span,
+}
+
+/// Categories of errors produced while tokenizing or parsing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ErrorKind {
+    UnexpectedChar(char),
+    InvalidNumber(String),
+    UnexpectedToken { found: String, expected: &'static str },
+    UnexpectedEof { expected: &'static str },
+    MaxDepthExceeded(usize),
+}
+
+/// An error with its location in the source.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParseError {
+    pub kind: ErrorKind,
+    pub span: Span,
+}
+
+impl ParseError {
+    fn new(kind: ErrorKind, span: Span) -> Self {
+        Self { kind, span }
+    }
+
+    fn unexpected(tok: &Token, expected: &'static str) -> Self {
+        let kind = if tok.kind == TokenKind::Eof {
+            ErrorKind::UnexpectedEof { expected }
+        } else {
+            ErrorKind::UnexpectedToken {
+                found: tok.kind.describe(),
+                expected,
+            }
+        };
+        Self::new(kind, tok.span)
+    }
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.kind {
+            ErrorKind::UnexpectedChar(c) => write!(f, "unexpected character {c:?}")?,
+            ErrorKind::InvalidNumber(s) => write!(f, "invalid number literal {s:?}")?,
+            ErrorKind::UnexpectedToken { found, expected } => {
+                write!(f, "expected {expected}, found {found}")?
+            }
+            ErrorKind::UnexpectedEof { expected } => {
+                write!(f, "expected {expected}, found end of input")?
+            }
+            ErrorKind::MaxDepthExceeded(limit) => {
+                write!(f, "expression nesting exceeds maximum depth of {limit}")?
+            }
+        }
+        write!(f, " at byte {}", self.span.start)
+    }
+}
+
+impl std::error::Error for ParseError {}
+
+/// Unary operators.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnOp {
+    Neg,
+    Plus,
+}
+
+impl UnOp {
+    fn symbol(self) -> &'static str {
+        match self {
+            UnOp::Neg => "-",
+            UnOp::Plus => "+",
+        }
+    }
+}
+
+/// Binary operators.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    Pow,
+}
+
+impl BinOp {
+    fn symbol(self) -> &'static str {
+        match self {
+            BinOp::Add => "+",
+            BinOp::Sub => "-",
+            BinOp::Mul => "*",
+            BinOp::Div => "/",
+            BinOp::Rem => "%",
+            BinOp::Pow => "^",
+        }
+    }
+}
+
+/// Abstract syntax tree for arithmetic expressions.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expr {
+    Number(f64),
+    Variable(String),
+    Unary {
+        op: UnOp,
+        operand: Box<Expr>,
+    },
+    Binary {
+        op: BinOp,
+        lhs: Box<Expr>,
+        rhs: Box<Expr>,
+    },
+}
+
+impl Expr {
+    fn binary(op: BinOp, lhs: Expr, rhs: Expr) -> Expr {
+        Expr::Binary {
+            op,
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        }
+    }
+}
+
+/// Renders the AST fully parenthesized, which makes precedence and associativity explicit.
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Expr::Number(n) => write!(f, "{n}"),
+            Expr::Variable(name) => f.write_str(name),
+            Expr::Unary { op, operand } => write!(f, "({}{operand})", op.symbol()),
+            Expr::Binary { op, lhs, rhs } => write!(f, "({lhs} {} {rhs})", op.symbol()),
+        }
+    }
+}
+
+/// Parses `input` into an [`Expr`] using [`DEFAULT_MAX_DEPTH`].
+pub fn parse(input: &str) -> Result<Expr, ParseError> {
+    parse_with_max_depth(input, DEFAULT_MAX_DEPTH)
+}
+
+/// Parses `input` into an [`Expr`], rejecting nesting deeper than `max_depth`.
+pub fn parse_with_max_depth(input: &str, max_depth: usize) -> Result<Expr, ParseError> {
+    let tokens = tokenize(input)?;
+    Parser::new(tokens, max_depth).parse()
+}
+
+/// Splits `input` into tokens. The returned vector always ends with an `Eof` token.
+pub fn tokenize(input: &str) -> Result<Vec<Token>, ParseError> {
+    let mut lexer = Lexer::new(input);
+    let mut tokens = Vec::new();
+    loop {
+        let tok = lexer.next_token()?;
+        let done = tok.kind == TokenKind::Eof;
+        tokens.push(tok);
+        if done {
+            return Ok(tokens);
+        }
+    }
+}
+
+struct Lexer<'a> {
+    src: &'a str,
+    pos: usize,
+}
+
+impl<'a> Lexer<'a> {
+    fn new(src: &'a str) -> Self {
+        Self { src, pos: 0 }
+    }
+
+    fn peek_char(&self) -> Option<char> {
+        self.src[self.pos..].chars().next()
+    }
+
+    fn peek_byte(&self) -> Option<u8> {
+        self.src.as_bytes().get(self.pos).copied()
+    }
+
+    /// Advances over ASCII bytes matching `pred`; returns how many were consumed.
+    /// Only ASCII is consumed, so `pos` always stays on a char boundary.
+    fn bump_while(&mut self, pred: impl Fn(u8) -> bool) -> usize {
+        let start = self.pos;
+        while let Some(b) = self.peek_byte() {
+            if !pred(b) {
+                break;
+            }
+            self.pos += 1;
+        }
+        self.pos - start
+    }
+
+    fn skip_whitespace(&mut self) {
+        self.bump_while(|b| b.is_ascii_whitespace());
+    }
+
+    fn next_token(&mut self) -> Result<Token, ParseError> {
+        self.skip_whitespace();
+        let start = self.pos;
+
+        let Some(c) = self.peek_char() else {
+            return Ok(Token {
+                kind: TokenKind::Eof,
+                span: Span { start, end: start },
+            });
+        };
+
+        let single = match c {
+            '+' => Some(TokenKind::Plus),
+            '-' => Some(TokenKind::Minus),
+            '*' => Some(TokenKind::Star),
+            '/' => Some(TokenKind::Slash),
+            '%' => Some(TokenKind::Percent),
+            '^' => Some(TokenKind::Caret),
+            '(' => Some(TokenKind::LParen),
+            ')' => Some(TokenKind::RParen),
+            _ => None,
+        };
+        if let Some(kind) = single {
+            self.pos += 1; // all single-character tokens are ASCII
+            return Ok(Token {
+                kind,
+                span: Span { start, end: self.pos },
+            });
+        }
+
+        match c {
+            '0'..='9' | '.' => self.number(),
+            c if c.is_ascii_alphabetic() || c == '_' => Ok(self.identifier()),
+            other => Err(ParseError::new(
+                ErrorKind::UnexpectedChar(other),
+                Span {
+                    start,
+                    end: start + other.len_utf8(),
+                },
+            )),
+        }
+    }
+
+    fn number(&mut self) -> Result<Token, ParseError> {
+        let src = self.src;
+        let start = self.pos;
+
+        let int_digits = self.bump_while(|b| b.is_ascii_digit());
+        if self.peek_byte() == Some(b'.') {
+            self.pos += 1;
+            let frac_digits = self.bump_while(|b| b.is_ascii_digit());
+            if int_digits == 0 && frac_digits == 0 {
+                return Err(ParseError::new(
+                    ErrorKind::UnexpectedChar('.'),
+                    Span {
+                        start,
+                        end: self.pos,
+                    },
+                ));
+            }
+        }
+
+        if matches!(self.peek_byte(), Some(b'e' | b'E')) {
+            self.pos += 1;
+            if matches!(self.peek_byte(), Some(b'+' | b'-')) {
+                self.pos += 1;
+            }
+            if self.bump_while(|b| b.is_ascii_digit()) == 0 {
+                return Err(ParseError::new(
+                    ErrorKind::InvalidNumber(src[start..self.pos].to_string()),
+                    Span {
+                        start,
+                        end: self.pos,
+                    },
+                ));
+            }
+        }
+
+        let span = Span {
+            start,
+            end: self.pos,
+        };
+        let text = &src[start..self.pos];
+        let value: f64 = text.parse().map_err(|_| {
+            ParseError::new(ErrorKind::InvalidNumber(text.to_string()), span)
+        })?;
+
+        Ok(Token {
+            kind: TokenKind::Number(value),
+            span,
+        })
+    }
+
+    fn identifier(&mut self) -> Token {
+        let src = self.src;
+        let start = self.pos;
+        self.bump_while(|b| b.is_ascii_alphanumeric() || b == b'_');
+        Token {
+            kind: TokenKind::Ident(src[start..self.pos].to_string()),
+            span: Span {
+                start,
+                end: self.pos,
+            },
+        }
+    }
+}
+
+/// Recursive-descent parser over a token stream.
+struct Parser {
+    tokens: Vec<Token>,
+    pos: usize,
+    depth: usize,
+    max_depth: usize,
+}
+
+impl Parser {
+    /// `tokens` must be non-empty and end with `Eof`, as produced by [`tokenize`].
+    fn new(tokens: Vec<Token>, max_depth: usize) -> Self {
+        debug_assert!(matches!(tokens.last(), Some(t) if t.kind == TokenKind::Eof));
+        Self {
+            tokens,
+            pos: 0,
+            depth: 0,
+            max_depth,
+        }
+    }
+
+    fn parse(mut self) -> Result<Expr, ParseError> {
+        let expr = self.expr()?;
+        if self.peek().kind != TokenKind::Eof {
+            return Err(ParseError::unexpected(self.peek(), "end of input"));
+        }
+        Ok(expr)
+    }
+
+    fn peek(&self) -> &Token {
+        &self.tokens[self.pos]
+    }
+
+    /// Consumes and returns the current token. `Eof` is never consumed.
+    fn advance(&mut self) -> Token {
+        let tok = self.tokens[self.pos].clone();
+        if self.pos + 1 < self.tokens.len() {
+            self.pos += 1;
+        }
+        tok
+    }
+
+    fn expect(&mut self, want: TokenKind, expected: &'static str) -> Result<(), ParseError> {
+        if self.peek().kind == want {
+            self.advance();
+            Ok(())
+        } else {
+            Err(ParseError::unexpected(self.peek(), expected))
+        }
+    }
+
+    /// Runs `f` one nesting level deeper, failing if the depth limit is exceeded.
+    fn descend<T>(
+        &mut self,
+        f: impl FnOnce(&mut Parser) -> Result<T, ParseError>,
+    ) -> Result<T, ParseError> {
+        if self.depth >= self.max_depth {
+            return Err(ParseError::new(
+                ErrorKind::MaxDepthExceeded(self.max_depth),
+                self.peek().span,
+            ));
+        }
+        self.depth += 1;
+        let result = f(self);
+        self.depth -= 1;
+        result
+    }
+
+    /// expr := term (('+' | '-') term)*
+    fn expr(&mut self) -> Result<Expr, ParseError> {
+        self.descend(|p| {
+            let mut lhs = p.term()?;
+            loop {
+                let op = match p.peek().kind {
+                    TokenKind::Plus => BinOp::Add,
+                    TokenKind::Minus => BinOp::Sub,
+                    _ => break,
+                };
+                p.advance();
+                let rhs = p.term()?;
+                lhs = Expr::binary(op, lhs, rhs);
+            }
+            Ok(lhs)
+        })
+    }
+
+    /// term := unary (('*' | '/' | '%') unary)*
+    fn term(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.unary()?;
+        loop {
+            let op = match self.peek().kind {
+                TokenKind::Star => BinOp::Mul,
+                TokenKind::Slash => BinOp::Div,
+                TokenKind::Percent => BinOp::Rem,
+                _ => break,
+            };
+            self.advance();
+            let rhs = self.unary()?;
+            lhs = Expr::binary(op, lhs, rhs);
+        }
+        Ok(lhs)
+    }
+
+    /// unary := ('-' | '+') unary | power
+    fn unary(&mut self) -> Result<Expr, ParseError> {
+        self.descend(|p| {
+            let op = match p.peek().kind {
+                TokenKind::Minus => Some(UnOp::Neg),
+                TokenKind::Plus => Some(UnOp::Plus),
+                _ => None,
+            };
+            if let Some(op) = op {
+                p.advance();
+                let operand = p.unary()?;
+                return Ok(Expr::Unary {
+                    op,
+                    operand: Box::new(operand),
+                });
+            }
+            p.power()
+        })
+    }
+
+    /// power := primary ('^' unary)?
+    ///
+    /// The exponent is parsed as a `unary`, which makes `^` right-associative
+    /// and allows forms like `2^-1`. Because unary binds looser than `^`,
+    /// `-x^2` parses as `-(x^2)`.
+    fn power(&mut self) -> Result<Expr, ParseError> {
+        let base = self.primary()?;
+        if self.peek().kind == TokenKind::Caret {
+            self.advance();
+            let exponent = self.unary()?;
+            return Ok(Expr::binary(BinOp::Pow, base, exponent));
+        }
+        Ok(base)
+    }
+
+    /// primary := NUMBER | IDENT | '(' expr ')'
+    fn primary(&mut self) -> Result<Expr, ParseError> {
+        let tok = self.advance();
+        match &tok.kind {
+            TokenKind::Number(value) => Ok(Expr::Number(*value)),
+            TokenKind::Ident(name) => Ok(Expr::Variable(name.clone())),
+            TokenKind::LParen => {
+                let inner = self.expr()?;
+                self.expect(TokenKind::RParen, "')'")?;
+                Ok(inner)
+            }
+            _ => Err(ParseError::unexpected(
+                &tok,
+                "a number, variable, or '('",
+            )),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn show(input: &str) -> String {
+        parse(input).expect("expected successful parse").to_string()
+    }
+
+    #[test]
+    fn respects_precedence_and_left_associativity() {
+        assert_eq!(show("1 + 2 * 3"), "(1 + (2 * 3))");
+        assert_eq!(show("(1 + 2) * 3"), "((1 + 2) * 3)");
+        assert_eq!(show("a - b - c"), "((a - b) - c)");
+        assert_eq!(show("a * b / c % d"), "(((a * b) / c) % d)");
+    }
+
+    #[test]
+    fn power_is_right_associative_and_binds_tighter_than_unary() {
+        assert_eq!(show("2^3^2"), "(2 ^ (3 ^ 2))");
+        assert_eq!(show("-x^2"), "(-(x ^ 2))");
+        assert_eq!(show("2^-1"), "(2 ^ (-1))");
+    }
+
+    #[test]
+    fn numbers_and_identifiers() {
+        assert_eq!(show("a_1 * .5e1"), "(a_1 * 5)");
+        assert_eq!(show("1.5E+2 / y % 3"), "((150 / y) % 3)");
+        assert_eq!(show("  x  "), "x");
+    }
+
+    #[test]
+    fn reports_unexpected_eof() {
+        let err = parse("1 +").unwrap_err();
+        assert!(matches!(err.kind, ErrorKind::UnexpectedEof { .. }));
+    }
+
+    #[test]
+    fn reports_missing_close_paren() {
+        let err = parse("(1").unwrap_err();
+        assert_eq!(
+            err.kind,
+            ErrorKind::UnexpectedEof {
+                expected: "')'"
+            }
+        );
+    }
+
+    #[test]
+    fn reports_unexpected_character_with_span() {
+        let err = parse("1 $").unwrap_err();
+        assert_eq!(err.kind, ErrorKind::UnexpectedChar('$'));
+        assert_eq!(err.span, Span { start: 2, end: 3 });
+    }
+
+    #[test]
+    fn reports_invalid_number() {
+        let err = parse("2e").unwrap_err();
+        assert_eq!(err.kind, ErrorKind::InvalidNumber("2e".to_string()));
+    }
+
+    #[test]
+    fn reports_trailing_input() {
+        let err = parse("1 2").unwrap_err();
+        assert_eq!(
+            err.kind,
+            ErrorKind::UnexpectedToken {
+                found: "number '2'".to_string(),
+                expected: "end of input",
+            }
+        );
+    }
+
+    #[test]
+    fn enforces_max_depth() {
+        assert_eq!(
+            parse_with_max_depth("((1))", 2).unwrap_err().kind,
+            ErrorKind::MaxDepthExceeded(2)
+        );
+        assert!(parse_with_max_depth("((1))", 3).is_ok());
+    }
+}

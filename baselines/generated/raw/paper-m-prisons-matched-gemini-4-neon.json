@@ -1,0 +1,39 @@
+{
+ "set": "paper",
+ "kind": "paper",
+ "prompt_id": "paper-m-prisons",
+ "style": "matched",
+ "prompt": "Write the introduction section of an academic paper titled “Closure without Resolution in European Prison Oversight”. The paper is in law. About 700 words. Output only the text of the introduction, with no heading.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1500,
+ "matched_to": "papers/ismail-prison-oversight-closure",
+ "id": "paper-m-prisons-matched-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Europe possesses the most densely institutionalized architecture of prison oversight in the world. Over the past four decades, the European Court of Human Rights (ECtHR), the Committee of Ministers of the Council of Europe, the European Committee for the Prevention of Torture (CPT), and a growing network of National Preventive Mechanisms (NPMs) have constructed a multi-layered regime dedicated to eradicating ill-treatment and degrading conditions of detention. Yet, despite this formidable legal and institutional apparatus, systemic prison crises—marked by chronic overcrowding, dilapidated infrastructure, and inadequate healthcare—remain an enduring feature of the European penal landscape. This article examines a critical, yet under-theorized, mechanism that sustains this paradox: the phenomenon of *closure without resolution*. Across European oversight bodies, formal supervisory and adjudicative processes are routinely concluded not because the underlying human rights violations have been eradicated, but because the state has satisfied procedural benchmarks, enacted formalistic reforms, or simply outlasted the institutional attention span of its monitors.\n\nIn legal terms, closure without resolution occurs when the formal termination of an oversight procedure decouples from the substantive realization of rights on the ground. This dynamic is most visible in the execution of ECtHR judgments concerning structural violations of Article 3 of the European Convention on Human Rights. When the Court identifies systemic prison deficiencies—often through the pilot or quasi-pilot judgment procedure—the task of supervising general measures falls to the Committee of Ministers. Increasingly, however, the Committee closes its supervision on the basis of governmental action reports that detail legislative amendments, newly created domestic compensatory remedies, or projected prison construction, even when empirical data from the CPT or civil society indicates that material conditions remain largely unchanged. A parallel dynamic operates within preventive oversight: CPT recommendations and NPM reports frequently generate cycles of bureaucratic dialogue in which formal governmental responses are logged and archived, allowing oversight bodies to move on to new thematic priorities while entrenched carceral dysfunction persists.\n\nExisting legal scholarship on European prison oversight has extensively documented the \"implementation gap,\" attributing persistent non-compliance to political resistance, resource constraints, and the inherent limits of international soft law. Other commentators have critiqued the ECtHR’s turn toward subsidiarity and procedural review, noting how deference to domestic remedies can dilute substantive Article 3 protections. While these accounts illuminate why states fail to comply, they rarely interrogate *closure* itself as a distinct legal and institutional practice. Closure is not merely a neutral administrative endpoint; it is a performative legal act with significant normative consequences. When a supervisory body formally closes a case or concludes a monitoring cycle, it confers a stamp of legitimacy upon the state’s efforts, lowers the political cost of inaction, and strips domestic litigants and advocacy groups of vital international leverage. In this way, premature closure does not simply leave violations unresolved—it actively entrenches them.\n\nThis article argues that European prison oversight is structurally predisposed toward closure without resolution. Driven by severe caseload pressures, institutional fatigue, and a deference-oriented conception of subsidiarity, European oversight mechanisms have gradually shifted their focus from substantive carceral outcomes to procedural proxies of compliance. By equating the existence of domestic remedies or formal policy frameworks with the remediation of systemic ill-treatment, these bodies prioritize docket management and diplomatic consensus over the lived reality of detainees. The result is an accountability architecture that excels at diagnosing structural violations and initiating reform processes, but routinely falters at the moment of verification and termination.\n\nTo substantiate this argument, the article proceeds in four parts. Part I develops a conceptual framework for understanding closure without resolution, distinguishing between legitimate procedural termination and premature, formalistic closure. Part II examines the adjudicative and supervisory nexus between the ECtHR and the Committee of Ministers, analyzing a series of closed Article 3 prison-condition cases to demonstrate how the reliance on domestic remedies and action plans facilitates premature closure. Part III turns to preventive oversight, exploring how the disconnect between judicial execution and the empirical findings of the CPT and NPMs allows states to navigate between regimes without achieving substantive reform. Finally, Part IV proposes doctrinal and institutional reforms aimed at re-anchoring closure in verifiable, empirical benchmarks. By rethinking the legal standards governing the termination of oversight, European institutions can begin to bridge the chasm between formal compliance and substantive justice behind bars.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 77,
+  "completion_tokens": 2815,
+  "total_tokens": 2892,
+  "cost": 0.042456,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.042456,
+   "upstream_inference_prompt_cost": 0.000231,
+   "upstream_inference_completions_cost": 0.042225
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1957,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

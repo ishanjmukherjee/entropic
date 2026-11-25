@@ -1,0 +1,302 @@
+/*
+ * sht3x.c - Sensirion SHT3x temperature/humidity sensor driver (I2C)
+ *
+ * Bare-metal driver with a fixed-capacity ring buffer of timestamped readings.
+ * Platform access goes through a HAL vtable, so the driver has no dependency
+ * on a particular MCU vendor. All arithmetic is integer-only (no FPU needed).
+ *
+ * Units:
+ *   temperature : milli-degrees Celsius (int32_t)   e.g. 23450 = 23.45 C
+ *   humidity    : milli-percent RH      (uint32_t) e.g. 51234 = 51.234 %RH
+ */
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+/* ------------------------------------------------------------------------- */
+/* Configuration                                                             */
+/* ------------------------------------------------------------------------- */
+
+#define SHT3X_ADDR_DEFAULT          0x44u   /* ADDR pin low  */
+#define SHT3X_ADDR_ALT              0x45u   /* ADDR pin high */
+
+#define SHT3X_CMD_MEAS_HIGH_NOSTR   0x2400u /* single shot, high repeatability, no clock stretching */
+#define SHT3X_CMD_SOFT_RESET        0x30A2u
+#define SHT3X_CMD_READ_STATUS       0xF32Du
+
+#define SHT3X_MEAS_TIME_MS          16u     /* datasheet max for high repeatability: 15.5 ms */
+#define SHT3X_RESET_TIME_MS         2u      /* datasheet max soft reset time: 1.5 ms */
+
+#define SHT3X_RING_CAPACITY         64u     /* must be a power of two */
+#define SHT3X_RING_MASK             (SHT3X_RING_CAPACITY - 1u)
+
+#define SHT3X_CRC_POLY              0x31u
+#define SHT3X_CRC_INIT              0xFFu
+
+/* Compile-time check that the ring capacity is a power of two. */
+typedef char sht3x_ring_capacity_must_be_pow2
+    [((SHT3X_RING_CAPACITY != 0u) && ((SHT3X_RING_CAPACITY & (SHT3X_RING_CAPACITY - 1u)) == 0u)) ? 1 : -1];
+
+/* ------------------------------------------------------------------------- */
+/* Types                                                                     */
+/* ------------------------------------------------------------------------- */
+
+typedef enum {
+    SHT3X_OK = 0,
+    SHT3X_ERR_PARAM,
+    SHT3X_ERR_NOT_INIT,
+    SHT3X_ERR_I2C,
+    SHT3X_ERR_CRC,
+    SHT3X_ERR_RANGE
+} sht3x_err_t;
+
+/*
+ * Platform hooks supplied by the application.
+ * All callbacks receive the opaque `ctx` pointer given at init time.
+ */
+typedef struct {
+    /* Write `len` bytes to the device at 7-bit address `addr`. Returns 0 on success. */
+    int      (*i2c_write)(void *ctx, uint8_t addr, const uint8_t *buf, size_t len);
+    /* Read `len` bytes from the device at 7-bit address `addr`. Returns 0 on success. */
+    int      (*i2c_read)(void *ctx, uint8_t addr, uint8_t *buf, size_t len);
+    /* Blocking delay in milliseconds. */
+    void     (*delay_ms)(void *ctx, uint32_t ms);
+    /* Monotonic millisecond counter (wraps are tolerated). */
+    uint32_t (*now_ms)(void *ctx);
+    /* Enter / leave a critical section protecting the ring buffer. */
+    uint32_t (*irq_save)(void *ctx);
+    void     (*irq_restore)(void *ctx, uint32_t saved);
+    void    *ctx;
+} sht3x_hal_t;
+
+typedef struct {
+    int32_t  temp_mC;       /* milli-degrees Celsius */
+    int32_t  rh_mpct;       /* milli-percent relative humidity, 0..100000 */
+    uint32_t timestamp_ms;  /* from HAL now_ms() at time of acquisition */
+} sht3x_reading_t;
+
+typedef struct {
+    sht3x_reading_t buf[SHT3X_RING_CAPACITY];
+    volatile uint32_t head;     /* total pushed (monotonic, wraps at 2^32) */
+    volatile uint32_t tail;     /* total popped (monotonic, wraps at 2^32) */
+    uint32_t          overruns; /* readings discarded because ring was full */
+} sht3x_ring_t;
+
+typedef struct {
+    const sht3x_hal_t *hal;
+    uint8_t            addr;
+    bool               initialized;
+    sht3x_ring_t       ring;
+} sht3x_dev_t;
+
+/* ------------------------------------------------------------------------- */
+/* Internal helpers                                                          */
+/* ------------------------------------------------------------------------- */
+
+static uint8_t sht3x_crc8(const uint8_t *data, size_t len)
+{
+    uint8_t crc = SHT3X_CRC_INIT;
+
+    for (size_t i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (uint8_t bit = 0; bit < 8u; bit++) {
+            crc = (crc & 0x80u) ? (uint8_t)((crc << 1) ^ SHT3X_CRC_POLY)
+                                : (uint8_t)(crc << 1);
+        }
+    }
+    return crc;
+}
+
+static sht3x_err_t sht3x_send_cmd(const sht3x_dev_t *dev, uint16_t cmd)
+{
+    uint8_t frame[2] = { (uint8_t)(cmd >> 8), (uint8_t)(cmd & 0xFFu) };
+
+    if (dev->hal->i2c_write(dev->hal->ctx, dev->addr, frame, sizeof frame) != 0) {
+        return SHT3X_ERR_I2C;
+    }
+    return SHT3X_OK;
+}
+
+/* Convert raw 16-bit words to physical units using 64-bit intermediates. */
+static sht3x_err_t sht3x_convert(uint16_t raw_t, uint16_t raw_rh,
+                                 int32_t *temp_mC, int32_t *rh_mpct)
+{
+    /* T[C] = -45 + 175 * raw / (2^16 - 1) */
+    int64_t t = -45000LL + ((int64_t)175000 * (int64_t)raw_t) / 65535LL;
+
+    /* RH[%] = 100 * raw / (2^16 - 1) */
+    int64_t rh = ((int64_t)100000 * (int64_t)raw_rh) / 65535LL;
+
+    if (rh < 0 || rh > 100000) {
+        return SHT3X_ERR_RANGE;
+    }
+
+    *temp_mC = (int32_t)t;
+    *rh_mpct = (int32_t)rh;
+    return SHT3X_OK;
+}
+
+/* Push a reading; if full, drop the oldest and count the overrun. */
+static void sht3x_ring_push(sht3x_dev_t *dev, const sht3x_reading_t *r)
+{
+    uint32_t saved = dev->hal->irq_save(dev->hal->ctx);
+    sht3x_ring_t *ring = &dev->ring;
+
+    if ((uint32_t)(ring->head - ring->tail) >= SHT3X_RING_CAPACITY) {
+        ring->tail++;           /* discard oldest */
+        ring->overruns++;
+    }
+    ring->buf[ring->head & SHT3X_RING_MASK] = *r;
+    ring->head++;
+
+    dev->hal->irq_restore(dev->hal->ctx, saved);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Public API                                                                */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Initialise the driver and verify communication with the sensor.
+ * Performs a soft reset and reads the status register with CRC validation.
+ */
+sht3x_err_t sht3x_init(sht3x_dev_t *dev, const sht3x_hal_t *hal, uint8_t addr)
+{
+    if (dev == NULL || hal == NULL || hal->i2c_write == NULL ||
+        hal->i2c_read == NULL || hal->delay_ms == NULL ||
+        hal->now_ms == NULL || hal->irq_save == NULL ||
+        hal->irq_restore == NULL) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (addr != SHT3X_ADDR_DEFAULT && addr != SHT3X_ADDR_ALT) {
+        return SHT3X_ERR_PARAM;
+    }
+
+    dev->hal         = hal;
+    dev->addr        = addr;
+    dev->initialized = false;
+    dev->ring.head   = 0u;
+    dev->ring.tail   = 0u;
+    dev->ring.overruns = 0u;
+
+    sht3x_err_t err = sht3x_send_cmd(dev, SHT3X_CMD_SOFT_RESET);
+    if (err != SHT3X_OK) {
+        return err;
+    }
+    hal->delay_ms(hal->ctx, SHT3X_RESET_TIME_MS);
+
+    err = sht3x_send_cmd(dev, SHT3X_CMD_READ_STATUS);
+    if (err != SHT3X_OK) {
+        return err;
+    }
+
+    uint8_t rx[3];
+    if (hal->i2c_read(hal->ctx, addr, rx, sizeof rx) != 0) {
+        return SHT3X_ERR_I2C;
+    }
+    if (sht3x_crc8(rx, 2u) != rx[2]) {
+        return SHT3X_ERR_CRC;
+    }
+
+    dev->initialized = true;
+    return SHT3X_OK;
+}
+
+/*
+ * Trigger a single-shot measurement, validate it, convert it, and push it
+ * into the ring buffer. If `out` is non-NULL, the reading is also copied there.
+ */
+sht3x_err_t sht3x_sample(sht3x_dev_t *dev, sht3x_reading_t *out)
+{
+    if (dev == NULL) {
+        return SHT3X_ERR_PARAM;
+    }
+    if (!dev->initialized) {
+        return SHT3X_ERR_NOT_INIT;
+    }
+
+    sht3x_err_t err = sht3x_send_cmd(dev, SHT3X_CMD_MEAS_HIGH_NOSTR);
+    if (err != SHT3X_OK) {
+        return err;
+    }
+
+    dev->hal->delay_ms(dev->hal->ctx, SHT3X_MEAS_TIME_MS);
+
+    /* Frame: T_MSB, T_LSB, T_CRC, RH_MSB, RH_LSB, RH_CRC */
+    uint8_t rx[6];
+    if (dev->hal->i2c_read(dev->hal->ctx, dev->addr, rx, sizeof rx) != 0) {
+        return SHT3X_ERR_I2C;
+    }
+
+    if (sht3x_crc8(&rx[0], 2u) != rx[2] ||
+        sht3x_crc8(&rx[3], 2u) != rx[5]) {
+        return SHT3X_ERR_CRC;
+    }
+
+    uint16_t raw_t  = (uint16_t)(((uint16_t)rx[0] << 8) | rx[1]);
+    uint16_t raw_rh = (uint16_t)(((uint16_t)rx[3] << 8) | rx[4]);
+
+    sht3x_reading_t r;
+    err = sht3x_convert(raw_t, raw_rh, &r.temp_mC, &r.rh_mpct);
+    if (err != SHT3X_OK) {
+        return err;
+    }
+    r.timestamp_ms = dev->hal->now_ms(dev->hal->ctx);
+
+    sht3x_ring_push(dev, &r);
+
+    if (out != NULL) {
+        *out = r;
+    }
+    return SHT3X_OK;
+}
+
+/*
+ * Remove the oldest reading from the ring buffer.
+ * Returns true and fills `out` if a reading was available.
+ */
+bool sht3x_ring_pop(sht3x_dev_t *dev, sht3x_reading_t *out)
+{
+    if (dev == NULL || out == NULL) {
+        return false;
+    }
+
+    uint32_t saved = dev->hal->irq_save(dev->hal->ctx);
+    bool ok = false;
+
+    if (dev->ring.head != dev->ring.tail) {
+        *out = dev->ring.buf[dev->ring.tail & SHT3X_RING_MASK];
+        dev->ring.tail++;
+        ok = true;
+    }
+
+    dev->hal->irq_restore(dev->hal->ctx, saved);
+    return ok;
+}
+
+/* Number of readings currently buffered. */
+uint32_t sht3x_ring_count(const sht3x_dev_t *dev)
+{
+    uint32_t saved = dev->hal->irq_save(dev->hal->ctx);
+    uint32_t count = dev->ring.head - dev->ring.tail;
+    dev->hal->irq_restore(dev->hal->ctx, saved);
+    return count;
+}
+
+/* Number of readings discarded due to buffer overflow since init. */
+uint32_t sht3x_ring_overruns(const sht3x_dev_t *dev)
+{
+    uint32_t saved = dev->hal->irq_save(dev->hal->ctx);
+    uint32_t n = dev->ring.overruns;
+    dev->hal->irq_restore(dev->hal->ctx, saved);
+    return n;
+}
+
+/* Discard all buffered readings. */
+void sht3x_ring_flush(sht3x_dev_t *dev)
+{
+    uint32_t saved = dev->hal->irq_save(dev->hal->ctx);
+    dev->ring.tail = dev->ring.head;
+    dev->hal->irq_restore(dev->hal->ctx, saved);
+}

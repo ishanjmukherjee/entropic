@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "craft",
+ "prompt": "Write the lyrics of a country song about leaving a small town.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 900,
+ "id": "song-town-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Five-fifteen, there’s frost on the hood of the Buick\nGot a Coleman cooler wedged behind the seat\nLeft my steel-toes sitting by the basement stairs\nStill caked with the Tuesday concrete\nPinned the rent check up with a feed-store magnet\nOn the white Westinghouse by the sink\nDidn't wake up Ray in the back bedroom\nDidn't want him asking what I think\n\nJust tell 'em I went down the road to get some air\nTurned the heater up and rolled the window down\nThere’s a quarter-tank of Phillips and a pack of Reds\nBetween the water tower and the edge of town\nYeah, the gravel spits against the wheel well\nAnd the radio's static on the AM band\nJust tell 'em I went down the road to get some air\nAnd I’ll be back when I can\n\nSlowed it down by the Sinclair on the corner of Oak\nWhere the coffee's burnt and the pot's been on since four\nSaw the porch light burning at Teresa’s place\nWith her silver Civic crooked by the door\nDidn't tap the horn, didn't touch the brake\nJust watched the yellow blinker turn to green\nPassed the grain elevator with the rusted chute\nWhere my granddad lost his thumb in seventy-three\n\nJust tell 'em I went down the road to get some air\nTurned the heater up and rolled the window down\nThere’s a quarter-tank of Phillips and a pack of Reds\nBetween the water tower and the edge of town\nYeah, the gravel spits against the wheel well\nAnd the radio's static on the AM band\nJust tell 'em I went down the road to get some air\nAnd I’ll be back when I can\n\nThe suspension groans on the iron bridge\nThen the blacktop opens wide and grey\nI can see the semi-trucks climbing the ridge\nOut where the county meets the interstate\nAnd the mirror’s full of the cedar trees\nTill they shrink to a pencil line of green\nI reach across and click the glovebox shut\nOn a map I don't need to read\n\nJust tell 'em I went down the road to get some air\nTurned the heater up and rolled the window down\nThere’s a quarter-tank of Phillips and a pack of Reds\nBetween the water tower and the edge of town\nYeah, the gravel spits against the wheel well\nAnd the radio's static on the AM band\nJust tell 'em I went down the road to get some air\nAnd I’ll be back when I can",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 172,
+  "completion_tokens": 4693,
+  "total_tokens": 4865,
+  "cost": 0.070911,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.070911,
+   "upstream_inference_prompt_cost": 0.000516,
+   "upstream_inference_completions_cost": 0.070395
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 4149,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

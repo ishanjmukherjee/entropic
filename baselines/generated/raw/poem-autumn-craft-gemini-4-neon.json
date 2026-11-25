@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: autumn. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-autumn-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "By four-fifteen the sun drops behind the ridge\nabove Superior Street and the lake turns to slate.\nA freighter idles past the lift bridge,\nits hull riding high, empty of taconite.\nOn the back porch, a blue milk crate holds\nseventeen Macintoshes split from the drop.\nWasps work the brown seams.\nInside, the radiator knocks twice, then settles into a hiss.\nDown the alley, someone pulls a chainsaw cord,\nlets it sputter, pulls again.\nA woman shouts for Buster—\nnot a dog, a man in a wool shirt\nwho steps from the garage wiping oil from his thumbs.\nThe maple by the cistern has given up\nhalf its load to the downspout.\nI unscrew the hose from the spigot before the freeze\nand loop it over a spike in the shed.\nCold water runs across my boot.\nAt the kitchen window, the kettle fogs the glass.\nOn the porch, one wasp climbs the rim of the crate,\nstops, and folds its wings.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 211,
+  "completion_tokens": 1824,
+  "total_tokens": 2035,
+  "cost": 0.027993,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.027993,
+   "upstream_inference_prompt_cost": 0.000633,
+   "upstream_inference_completions_cost": 0.02736
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1602,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

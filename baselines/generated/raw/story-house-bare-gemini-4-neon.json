@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-house",
+ "style": "bare",
+ "prompt": "Write a short story about two siblings clearing out their late mother's house. About 800 words. Output only the story, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "story-house-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "The sound of packing tape ripping through the quiet house felt violent. Claire pressed the strip over the flaps of a cardboard box and reached for the black Sharpie. *KITCHEN – DONATE*, she wrote in neat, aggressive capitals.\n\nAcross the linoleum, Sam sat on an overturned milk crate, turning a rusted garlic press over in his hands.\n\n\"We aren't keeping a broken garlic press, Sam,\" Claire said, not looking up.\n\n\"It's not broken. It's just stiff.\"\n\n\"It's from 1984. Trash.\"\n\nSam exhaled and dropped it into the black contractor bag at his feet. It landed with a dull thud against a graveyard of mismatched Tupperware lids and petrified sponges. They had been at this for three days, yet the house still felt entirely full, as if their mother’s belongings were multiplying in the closets the moment they turned their backs.\n\n\"You're moving too fast,\" Sam said, resting his elbows on his knees. \"We have until the end of the month.\"\n\n\"I have to be back in Chicago on Tuesday,\" Claire replied, pulling open the next cabinet. \"And the realtor wants the place staged by the fifteenth. If we hold a eulogy for every utensil, we’ll be here until Christmas.\"\n\nShe reached up and grabbed a heavy stoneware pitcher. It was a speckled blue, with a crescent-shaped chip missing from the spout. She remembered it filled with iced tea on humid July afternoons, condensation beading on its sides. She also remembered that it leaked if you poured too fast. Without letting herself linger, she dropped it into the trash bag.\n\nThe ceramic cracked sharply against the garlic press.\n\nSam stood up, his face flushing. \"What the hell, Claire?\"\n\n\"It was chipped. Nobody at Goodwill wants a chipped pitcher.\"\n\n\"Maybe I wanted it!\" He crossed the kitchen in two strides, reached into the bag, and pulled it out. The crack ran clean down the side now, splitting it nearly in two. He stared at it, his jaw tight. \"You didn't even ask.\"\n\n\"You live in a studio apartment with a mini-fridge, Sam. Where are you going to put it?\"\n\n\"That's not the point!\" His voice echoed off the bare walls—they had already taken down the framed botanical prints, leaving pale rectangles on the faded wallpaper. \"You're just erasing her. Box by box, bag by bag, like you can't wait to get rid of all of it.\"\n\nClaire froze, a stack of potholders clutched to her chest. \"You think I enjoy this? You think I want to decide which parts of Mom's life go to a landfill? Someone has to do it, Sam. You spent the last two hours reading old TV Guides.\"\n\nSam looked down at the broken pitcher. The anger drained out of him, leaving him looking younger and terribly tired. \"They were from the nineties,\" he muttered. \"She circled the movies she wanted to watch with us.\"\n\nClaire’s throat tightened. She couldn't look at him; if she did, the rigid structure she had built around her grief would collapse. She tossed the potholders into the donate box and walked into the narrow walk-in pantry. The air here was cooler, smelling faintly of cinnamon and old cedar. She grabbed a fresh trash bag and began sweeping expired cans of soup off the shelves.\n\n*Just keep moving,* she told herself. *Finish the job.*\n\nOn the top shelf, pushed behind a dusty crockpot, her fingers brushed glass. She stood on her tiptoes and pulled it down.\n\nIt was a small Mason jar filled with amber preserve. Stuck to the lid was a white label. Written in blue ink, in their mother’s handwriting—shaky and slanted from the arthritis that had taken her fingers in the final year—were two words: *Peach. August.*\n\nAugust had been six months ago. Their mother had barely been able to stand at the stove for ten minutes at a time, yet she had peeled peaches, boiled them with sugar, and sealed them in glass.\n\nA sudden, silent sob tore through Claire’s chest. She leaned her forehead against the cool wood of the shelf, clutching the jar with both hands, and finally let herself cry.\n\nBehind her, the floorboards creaked. Sam didn't say anything. He just stepped into the cramped space beside her and rested a hand on her shoulder. After a moment, she handed him the jar.\n\nHe read the label, his thumb brushing over the uneven letters. \"She always put too much nutmeg in it,\" he said softly.\n\nClaire let out a wet, breathless laugh. \"She really did.\"\n\n\"Come on,\" Sam said, gently tugging her sleeve. \"Let's take a break.\"\n\nThey sat down on the kitchen floor, their backs against the lower cabinets. The afternoon sun slanted low through the window, illuminating the dust motes in the air. Sam reached into the donate box, pulled out two mismatched spoons, and wiped them on his jeans.\n\nWith a quiet pop, he twisted the lid off. The warm scent of summer peaches and spice filled the empty room. He took a bite and passed the jar to his sister.\n\nClaire took a spoonful. It was too sweet, and there was definitely too much nutmeg. She closed her eyes, leaned her head back against the cabinet, and let the boxes wait.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 66,
+  "completion_tokens": 4387,
+  "total_tokens": 4453,
+  "cost": 0.066003,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.066003,
+   "upstream_inference_prompt_cost": 0.000198,
+   "upstream_inference_completions_cost": 0.065805
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 3247,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

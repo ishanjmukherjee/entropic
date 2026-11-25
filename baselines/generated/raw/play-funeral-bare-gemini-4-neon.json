@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-funeral",
+ "style": "bare",
+ "prompt": "Write a scene for a stage play in which two estranged brothers meet at their father's funeral. About 700 words. Output only the script.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1500,
+ "id": "play-funeral-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "**SCENE 1**\n\n*SETTING: A cramped, concrete smoking patio outside a suburban funeral home. Late October. A chill is in the air. A single metal ashtray overflows near a glass door. Muffled, polite chatter drifts from inside.*\n\n*AT RISE: MARCUS (40s) stands leaning against the brick wall. He wears a cheap, slightly too-tight black suit. He holds a styrofoam cup of coffee, staring at the dead leaves on the ground.*\n\n*The glass door slides open. ELI (30s) steps out. He wears a tailored charcoal overcoat. He sees Marcus, hesitates, then lets the door slide shut behind him.*\n\nELI\nI thought I’d find you out here. \n\nMARCUS\n*(Without looking up)*\nIt’s too hot in there. Smells like lilies and old people.\n\nELI\n*(Steps closer, hands in his pockets)*\nIt was a nice service.\n\nMARCUS\nIt was a lie. Father Thomas hadn’t seen Dad in twelve years. Talked about him like he was a saint. \"A pillar of the community.\" \n\nELI\nPeople don’t want the truth at a funeral, Marc. They want a story they can swallow with their ham sandwiches.\n\n*A beat. Marcus finally looks at Eli. He takes in the expensive coat.*\n\nMARCUS\nNice coat.\n\nELI\nThanks. It’s freezing out here. You want—\n\nMARCUS\nNo. \n\n*Silence stretches between them, heavy and awkward.*\n\nELI\nHow long has it been?\n\nMARCUS\nFive years. Thanksgiving. You left before dessert.\n\nELI\nHe threw a carving knife at the wall because I said I was moving to Chicago.\n\nMARCUS\nHe threw it at the floor. And he was drunk.\n\nELI\nHe was always drunk. \n\nMARCUS\nYeah. Well. He stopped drinking two years ago. Doctor told him his liver was basically a sponge soaked in battery acid. \n\nELI\n*(Quietly)*\nI didn’t know.\n\nMARCUS\nYou didn’t ask. You sent a card at Christmas. Signed it with just your name. Like a dentist.\n\nELI\n*(Defensive)*\nWhat did you want me to do, Marcus? Call every Sunday so he could tell me I was wasting my life? Tell me I was soft? I left so I could breathe.\n\nMARCUS\n*(Steps forward, voice rising)*\nAnd you left me to suffocate! \n\n*Eli recoils slightly. Marcus catches himself, glances at the glass door, and lowers his voice.*\n\nMARCUS (CONT'D)\nDo you have any idea what the last eighteen months were like? The hospice nurses? The bedsores? I had to quit the shop, Eli. I had to move back into that rotting house so he wouldn’t burn it down trying to make soup at three in the morning.\n\nELI\nI sent money.\n\nMARCUS\nI didn’t need your money! I needed my brother. \n\n*Eli looks away, jaw tight. The wind blows a few dry leaves across the concrete.*\n\nELI\nI couldn’t, Marc. Every time I got in the car to drive back here, my hands would shake so bad I couldn’t hold the wheel. I was terrified that if I walked through that front door, I’d never get back out.\n\nMARCUS\n*(Bitterly)*\nYeah. Well. You made it out. Congratulations.\n\n*Silence. Marcus takes a sip of his cold coffee, grimaces, and sets it on the brick ledge.*\n\nELI\nDid he... did he ask for me? At the end?\n\n*Marcus looks at him for a long time. He considers lying. He decides against it.*\n\nMARCUS\nNo. \n\n*Eli nods, swallowing hard. It hurts more than he expected.*\n\nMARCUS (CONT'D)\nHe forgot who I was, too, if it makes you feel any better. Last Tuesday, he thought I was Uncle Ray. Kept yelling at me about a lawnmower from 1984. \n\n*A small, broken laugh escapes Eli. Marcus almost smiles, then it fades.*\n\nELI\nGod. We really drew the short straw, didn’t we?\n\nMARCUS\nWe did.\n\n*Eli reaches into his coat pocket and pulls out a pack of cigarettes. He offers one to Marcus.*\n\nMARCUS (CONT'D)\nI quit.\n\nELI\nMe too. Bought them at the airport.\n\n*Marcus hesitates, then takes one anyway. Eli takes one. Eli flicks a lighter, cupping his hand against the wind to light Marcus’s, then his own. They both exhale, watching the smoke disappear into the gray sky.*\n\nELI (CONT'D)\nI’m staying at the Marriott by the highway. Until Sunday. If you... if you need help clearing out the house. Or just want to get a drink.\n\n*Marcus looks at the glowing tip of his cigarette. He thinks about it.*\n\nMARCUS\nThe house is a disaster. \n\nELI\nI’ve got sturdy boots in the trunk.\n\n*A beat. Marcus nods, just once.*\n\nMARCUS\nSunday’s fine. \n\n*They stand together in the cold, not quite touching, smoking in silence as the muffled chatter inside continues.*\n\n*LIGHTS FADE.*",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 66,
+  "completion_tokens": 2242,
+  "total_tokens": 2308,
+  "cost": 0.033828,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.033828,
+   "upstream_inference_prompt_cost": 0.000198,
+   "upstream_inference_completions_cost": 0.03363
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1098,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

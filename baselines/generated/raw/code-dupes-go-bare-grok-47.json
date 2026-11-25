@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-dupes-go",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Go source file that is a command-line tool that walks a directory tree and reports duplicate files by content hash. Output only the code.",
+ "model": "grok-4.7",
+ "max_tokens": 3000,
+ "domain": "tooling",
+ "language": "Go",
+ "id": "code-dupes-go-bare-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "```go\n// Command dupes walks a directory tree and reports files that share the same\n// content hash. It streams file contents through a cryptographic hash so large\n// files are not loaded entirely into memory, and it groups candidates by size\n// before hashing so unique sizes are never read.\npackage main\n\nimport (\n\t\"crypto/sha256\"\n\t\"encoding/hex\"\n\t\"flag\"\n\t\"fmt\"\n\t\"io\"\n\t\"io/fs\"\n\t\"os\"\n\t\"path/filepath\"\n\t\"sort\"\n\t\"strings\"\n)\n\nfunc main() {\n\troot := flag.String(\"root\", \".\", \"directory to scan\")\n\tfollow := flag.Bool(\"follow\", false, \"follow symbolic links to files (not directories)\")\n\tminSize := flag.Int64(\"min-size\", 1, \"ignore files smaller than this many bytes\")\n\talgoNote := flag.String(\"hash\", \"sha256\", \"hash algorithm (only sha256 is supported)\")\n\tflag.Parse()\n\n\tif *algoNote != \"sha256\" {\n\t\tfmt.Fprintf(os.Stderr, \"unsupported hash %q (only sha256)\\n\", *algoNote)\n\t\tos.Exit(2)\n\t}\n\n\tabs, err := filepath.Abs(*root)\n\tif err != nil {\n\t\tfmt.Fprintf(os.Stderr, \"root: %v\\n\", err)\n\t\tos.Exit(1)\n\t}\n\tinfo, err := os.Stat(abs)\n\tif err != nil {\n\t\tfmt.Fprintf(os.Stderr, \"root: %v\\n\", err)\n\t\tos.Exit(1)\n\t}\n\tif !info.IsDir() {\n\t\tfmt.Fprintf(os.Stderr, \"root is not a directory: %s\\n\", abs)\n\t\tos.Exit(1)\n\t}\n\n\tgroups, walkErrs, err := findDuplicates(abs, *follow, *minSize)\n\tif err != nil {\n\t\tfmt.Fprintf(os.Stderr, \"scan: %v\\n\", err)\n\t\tos.Exit(1)\n\t}\n\tfor _, e := range walkErrs {\n\t\tfmt.Fprintf(os.Stderr, \"warning: %v\\n\", e)\n\t}\n\n\tif len(groups) == 0 {\n\t\tfmt.Println(\"no duplicates\")\n\t\treturn\n\t}\n\n\tkeys := make([]string, 0, len(groups))\n\tfor h := range groups {\n\t\tkeys = append(keys, h)\n\t}\n\tsort.Slice(keys, func(i, j int) bool {\n\t\tgi, gj := groups[keys[i]], groups[keys[j]]\n\t\tif gi[0].size != gj[0].size {\n\t\t\treturn gi[0].size > gj[0].size\n\t\t}\n\t\treturn keys[i] < keys[j]\n\t})\n\n\tfor _, h := range keys {\n\t\tfiles := groups[h]\n\t\tsort.Slice(files, func(i, j int) bool { return files[i].path < files[j].path })\n\t\tfmt.Printf(\"%s  size=%d  count=%d\\n\", h, files[0].size, len(files))\n\t\tfor _, f := range files {\n\t\t\tfmt.Printf(\"  %s\\n\", f.path)\n\t\t}\n\t}\n}\n\ntype fileRec struct {\n\tpath string\n\tsize int64\n}\n\nfunc findDuplicates(root string, follow bool, minSize int64) (map[string][]fileRec, []error, error) {\n\tbySize := make(map[int64][]string)\n\tvar walkErrs []error\n\n\terr := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {\n\t\tif err != nil {\n\t\t\twalkErrs = append(walkErrs, fmt.Errorf(\"%s: %w\", path, err))\n\t\t\tif d != nil && d.IsDir() {\n\t\t\t\treturn fs.SkipDir\n\t\t\t}\n\t\t\treturn nil\n\t\t}\n\t\tif d.IsDir() {\n\t\t\treturn nil\n\t\t}\n\t\t// Never descend through directory symlinks (WalkDir does not follow them).\n\t\tinfo, err := d.Info()\n\t\tif err != nil {\n\t\t\twalkErrs = append(walkErrs, fmt.Errorf(\"%s: %w\", path, err))\n\t\t\treturn nil\n\t\t}\n\t\tmode := info.Mode()\n\t\tif mode&os.ModeSymlink != 0 {\n\t\t\tif !follow {\n\t\t\t\treturn nil\n\t\t\t}\n\t\t\tfi, err := os.Stat(path)\n\t\t\tif err != nil {\n\t\t\t\twalkErrs = append(walkErrs, fmt.Errorf(\"%s: %w\", path, err))\n\t\t\t\treturn nil\n\t\t\t}\n\t\t\tif !fi.Mode().IsRegular() {\n\t\t\t\treturn nil\n\t\t\t}\n\t\t\tinfo = fi\n\t\t} else if !mode.IsRegular() {\n\t\t\treturn nil\n\t\t}\n\t\tif info.Size() < minSize {\n\t\t\treturn nil\n\t\t}\n\t\tbySize[info.Size()] = append(bySize[info.Size()], path)\n\t\treturn nil\n\t})\n\tif err != nil {\n\t\treturn nil, walkErrs, err\n\t}\n\n\tout := make(map[string][]fileRec)\n\tfor size, paths := range bySize {\n\t\tif len(paths) < 2 {\n\t\t\tcontinue\n\t\t}\n\t\tbyHash := make(map[string][]fileRec)\n\t\tfor _, p := range paths {\n\t\t\tsum, err := hashFile(p)\n\t\t\tif err != nil {\n\t\t\t\twalkErrs = append(walkErrs, fmt.Errorf(\"%s: %w\", p, err))\n\t\t\t\tcontinue\n\t\t\t}\n\t\t\tbyHash[sum] = append(byHash[sum], fileRec{path: p, size: size})\n\t\t}\n\t\tfor h, recs := range byHash {\n\t\t\tif len(recs) > 1 {\n\t\t\t\tout[h] = recs\n\t\t\t}\n\t\t}\n\t}\n\treturn out, walkErrs, nil\n}\n\nfunc hashFile(path string) (string, error) {\n\tf, err := os.Open(path)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\tdefer f.Close()\n\n\th := sha256.New()\n\tif _, err := io.Copy(h, f); err != nil {\n\t\treturn \"\", err\n\t}\n\treturn hex.EncodeToString(h.Sum(nil)), nil\n}\n\n// silence unused import if build tags change; strings is used for future filters.\nvar _ = strings.TrimSpace\n```",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1277,
+  "completion_tokens": 1537,
+  "total_tokens": 2814,
+  "cost": 0.010048,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.010048,
+   "upstream_inference_prompt_cost": 0.000826,
+   "upstream_inference_completions_cost": 0.009222
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 115,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

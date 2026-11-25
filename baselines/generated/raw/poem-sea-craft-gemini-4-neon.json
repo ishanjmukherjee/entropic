@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: the sea. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-sea-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "At five-fifteen the causeway lamps still burn\nabove the riprap at Nahant.\nThe tide has dropped four feet since midnight, leaving\na collar of bladderwrack along the granite\nand a zinc anode wedged between two stones,\nits center pitted where the salt ate through\nto save some trawler's hull.\nI turn it in my palm. It weighs as much\nas a pear, and leaves a film of grey\nacross my thumb. Out past the bell buoy\na diesel engine coughs, catches, settles\ninto a thrum. Two men in oilskins\ncross the gravel lot, one saying *she never*\n*paid the roofer, not a cent*, the other\nspitting into the weeds.\nThe Atlantic does not look like water\nat this hour; it looks like the lid of a stove\nsomeone forgot to wipe.\nA gull drops a mussel from thirty feet\nonto the asphalt, misses the crack,\nand circles back to try again.\nI set the zinc back where I found it.\nFar out, the trawler's masthead light\nshrinks to a pinhead, then goes behind\nthe swell.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 212,
+  "completion_tokens": 2011,
+  "total_tokens": 2223,
+  "cost": 0.030801,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.030801,
+   "upstream_inference_prompt_cost": 0.000636,
+   "upstream_inference_completions_cost": 0.030165
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1763,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

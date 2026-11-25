@@ -1,0 +1,303 @@
+-- ============================================================================
+-- Library Lending System - PostgreSQL Schema & Operations
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. Custom Types
+-- ----------------------------------------------------------------------------
+
+CREATE TYPE member_status AS ENUM ('active', 'suspended', 'expired');
+CREATE TYPE copy_status AS ENUM ('available', 'loaned', 'lost', 'damaged', 'maintenance');
+
+-- ----------------------------------------------------------------------------
+-- 2. Tables
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE members (
+    member_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    first_name  TEXT NOT NULL CHECK (length(trim(first_name)) > 0),
+    last_name   TEXT NOT NULL CHECK (length(trim(last_name)) > 0),
+    email       TEXT NOT NULL UNIQUE CHECK (email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+    phone       TEXT,
+    status      member_status NOT NULL DEFAULT 'active',
+    joined_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE books (
+    book_id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    isbn             TEXT NOT NULL UNIQUE CHECK (isbn ~ '^[0-9X-]{10,17}$'),
+    title            TEXT NOT NULL CHECK (length(trim(title)) > 0),
+    author           TEXT NOT NULL CHECK (length(trim(author)) > 0),
+    publisher        TEXT,
+    publication_year INT CHECK (publication_year BETWEEN 1440 AND EXTRACT(YEAR FROM NOW())::INT + 1),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE book_copies (
+    copy_id     BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    book_id     BIGINT NOT NULL REFERENCES books(book_id) ON DELETE RESTRICT,
+    barcode     TEXT NOT NULL UNIQUE CHECK (length(trim(barcode)) > 0),
+    status      copy_status NOT NULL DEFAULT 'available',
+    acquired_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE loans (
+    loan_id     BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    copy_id     BIGINT NOT NULL REFERENCES book_copies(copy_id) ON DELETE RESTRICT,
+    member_id   BIGINT NOT NULL REFERENCES members(member_id) ON DELETE RESTRICT,
+    loaned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    due_at      TIMESTAMPTZ NOT NULL,
+    returned_at TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_loans_due_after_loaned CHECK (due_at > loaned_at),
+    CONSTRAINT chk_loans_returned_after_loaned CHECK (returned_at IS NULL OR returned_at >= loaned_at)
+);
+
+-- ----------------------------------------------------------------------------
+-- 3. Indexes
+-- ----------------------------------------------------------------------------
+
+-- Enforce at the database level that a physical copy can only have one active loan
+CREATE UNIQUE INDEX uq_loans_active_copy
+    ON loans (copy_id)
+    WHERE returned_at IS NULL;
+
+-- Optimize lookups for active loans by member
+CREATE INDEX idx_loans_active_member
+    ON loans (member_id)
+    WHERE returned_at IS NULL;
+
+-- Optimize overdue loan reporting
+CREATE INDEX idx_loans_overdue
+    ON loans (due_at)
+    WHERE returned_at IS NULL;
+
+-- Optimize foreign key joins and catalog searches
+CREATE INDEX idx_book_copies_book_id ON book_copies (book_id);
+CREATE INDEX idx_books_title ON books (title);
+CREATE INDEX idx_books_author ON books (author);
+
+-- ----------------------------------------------------------------------------
+-- 4. Triggers for Automatic Timestamp Maintenance
+-- ----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_members_updated_at
+    BEFORE UPDATE ON members
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_books_updated_at
+    BEFORE UPDATE ON books
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_book_copies_updated_at
+    BEFORE UPDATE ON book_copies
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_loans_updated_at
+    BEFORE UPDATE ON loans
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ----------------------------------------------------------------------------
+-- 5. Transactional Operations
+-- ----------------------------------------------------------------------------
+
+-- Check out a book copy to a member with concurrency control and business rules
+CREATE OR REPLACE FUNCTION checkout_book(
+    p_copy_id      BIGINT,
+    p_member_id    BIGINT,
+    p_loan_days    INT DEFAULT 14,
+    p_max_loans    INT DEFAULT 5
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_member_status member_status;
+    v_copy_status   copy_status;
+    v_active_loans  INT;
+    v_loan_id       BIGINT;
+BEGIN
+    IF p_loan_days <= 0 THEN
+        RAISE EXCEPTION 'Loan duration must be positive (got %)', p_loan_days
+            USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+
+    -- Lock member row to serialize concurrent checkouts by the same member
+    SELECT status
+      INTO v_member_status
+      FROM members
+     WHERE member_id = p_member_id
+       FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Member % does not exist', p_member_id
+            USING ERRCODE = 'no_data_found';
+    END IF;
+
+    IF v_member_status <> 'active' THEN
+        RAISE EXCEPTION 'Member % is not active (status: %)', p_member_id, v_member_status
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    -- Enforce maximum concurrent loans per member
+    SELECT COUNT(*)
+      INTO v_active_loans
+      FROM loans
+     WHERE member_id = p_member_id
+       AND returned_at IS NULL;
+
+    IF v_active_loans >= p_max_loans THEN
+        RAISE EXCEPTION 'Member % has reached the maximum active loan limit of %', p_member_id, p_max_loans
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    -- Lock copy row to prevent double-checkout race conditions
+    SELECT status
+      INTO v_copy_status
+      FROM book_copies
+     WHERE copy_id = p_copy_id
+       FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Book copy % does not exist', p_copy_id
+            USING ERRCODE = 'no_data_found';
+    END IF;
+
+    IF v_copy_status <> 'available' THEN
+        RAISE EXCEPTION 'Book copy % is not available (status: %)', p_copy_id, v_copy_status
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    -- Record the loan and update copy status
+    INSERT INTO loans (copy_id, member_id, loaned_at, due_at)
+    VALUES (p_copy_id, p_member_id, NOW(), NOW() + make_interval(days => p_loan_days))
+    RETURNING loan_id INTO v_loan_id;
+
+    UPDATE book_copies
+       SET status = 'loaned'
+     WHERE copy_id = p_copy_id;
+
+    RETURN v_loan_id;
+END;
+$$;
+
+-- Return a loaned book copy and report any overdue days
+CREATE OR REPLACE FUNCTION return_book(
+    p_copy_id       BIGINT,
+    p_return_status copy_status DEFAULT 'available'
+)
+RETURNS TABLE (
+    loan_id      BIGINT,
+    member_id    BIGINT,
+    returned_at  TIMESTAMPTZ,
+    days_overdue INT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_loan_id     BIGINT;
+    v_member_id   BIGINT;
+    v_due_at      TIMESTAMPTZ;
+    v_returned_at TIMESTAMPTZ := NOW();
+BEGIN
+    IF p_return_status = 'loaned' THEN
+        RAISE EXCEPTION 'Return status cannot be ''loaned'''
+            USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+
+    -- Lock the copy row first to maintain consistent lock ordering
+    PERFORM 1
+       FROM book_copies
+      WHERE copy_id = p_copy_id
+        FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Book copy % does not exist', p_copy_id
+            USING ERRCODE = 'no_data_found';
+    END IF;
+
+    -- Locate and lock the active loan for this copy
+    SELECT l.loan_id, l.member_id, l.due_at
+      INTO v_loan_id, v_member_id, v_due_at
+      FROM loans l
+     WHERE l.copy_id = p_copy_id
+       AND l.returned_at IS NULL
+       FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'No active loan found for book copy %', p_copy_id
+            USING ERRCODE = 'no_data_found';
+    END IF;
+
+    UPDATE loans
+       SET returned_at = v_returned_at
+     WHERE loans.loan_id = v_loan_id;
+
+    UPDATE book_copies
+       SET status = p_return_status
+     WHERE copy_id = p_copy_id;
+
+    RETURN QUERY
+    SELECT
+        v_loan_id,
+        v_member_id,
+        v_returned_at,
+        GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (v_returned_at - v_due_at)) / 86400))::INT;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- 6. Reporting Views & Queries
+-- ----------------------------------------------------------------------------
+
+-- View of all currently overdue loans
+CREATE OR REPLACE VIEW v_overdue_loans AS
+SELECT
+    l.loan_id,
+    m.member_id,
+    m.first_name || ' ' || m.last_name AS member_name,
+    m.email                            AS member_email,
+    m.phone                            AS member_phone,
+    b.book_id,
+    b.isbn,
+    b.title                            AS book_title,
+    b.author                           AS book_author,
+    bc.copy_id,
+    bc.barcode,
+    l.loaned_at,
+    l.due_at,
+    FLOOR(EXTRACT(EPOCH FROM (NOW() - l.due_at)) / 86400)::INT AS days_overdue
+FROM loans l
+JOIN book_copies bc ON bc.copy_id = l.copy_id
+JOIN books b        ON b.book_id = bc.book_id
+JOIN members m      ON m.member_id = l.member_id
+WHERE l.returned_at IS NULL
+  AND l.due_at < NOW();
+
+-- Standalone query: Report overdue loans ordered by most overdue first
+SELECT
+    loan_id,
+    member_id,
+    member_name,
+    member_email,
+    book_title,
+    barcode,
+    loaned_at,
+    due_at,
+    days_overdue
+FROM v_overdue_loans
+ORDER BY days_overdue DESC, due_at ASC;

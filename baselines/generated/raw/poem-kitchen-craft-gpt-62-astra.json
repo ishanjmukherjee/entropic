@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a kitchen. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 700,
+ "id": "poem-kitchen-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "At six in the kitchen on Atwells Avenue\nmy father sets the flour tin in the sink.\nHe works the lid off with a spoon.\nInside, a bus ticket curls around a tooth.\n\nHe puts the ticket and the tooth in a saucer\nand goes back to scraping the lid.\nWho painted this shut, he says,\nwith the green paint still on his cuff.\n\nDownstairs the baker rolls up his grate.\nA truck backs in. Someone keeps saying\na little more, a little more, whoa.\n\nI hold the tin while my father taps\nthe dent out from inside with the spoon.\nIt takes two taps. He gives it ten.\nThen he runs his thumb around the rim\nand fits the lid without pressing it down.\n\nOn the saucer the ticket has opened a little,\none blue corner propped on the tooth.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 181,
+  "completion_tokens": 176,
+  "total_tokens": 357,
+  "cost": 0.008488,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.008488,
+   "upstream_inference_prompt_cost": 0.001448,
+   "upstream_inference_completions_cost": 0.00704
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

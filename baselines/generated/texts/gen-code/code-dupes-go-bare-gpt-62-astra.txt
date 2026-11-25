@@ -1,0 +1,181 @@
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"crypto/sha256"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+)
+
+type candidate struct {
+	path string
+	info fs.FileInfo
+}
+
+type digest = [sha256.Size]byte
+
+type group struct {
+	sum   digest
+	paths []string
+}
+
+func unchanged(a, b fs.FileInfo) bool {
+	return b.Mode().IsRegular() && os.SameFile(a, b) &&
+		a.Size() == b.Size() && a.ModTime().Equal(b.ModTime())
+}
+
+func hashFile(c candidate, buf []byte) (sum digest, err error) {
+	f, err := os.Open(c.path)
+	if err != nil {
+		return sum, err
+	}
+	defer func() {
+		if closeErr := f.Close(); err == nil {
+			err = closeErr
+		}
+	}()
+
+	before, err := f.Stat()
+	if err != nil {
+		return sum, err
+	}
+	if !unchanged(c.info, before) {
+		return sum, errors.New("file changed before hashing")
+	}
+
+	h := sha256.New()
+	var n int64
+	for {
+		count, readErr := f.Read(buf)
+		if count > 0 {
+			h.Write(buf[:count])
+			n += int64(count)
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return sum, readErr
+		}
+	}
+
+	after, err := os.Lstat(c.path)
+	if err != nil {
+		return sum, err
+	}
+	if n != before.Size() || !unchanged(before, after) {
+		return sum, errors.New("file changed during hashing")
+	}
+	copy(sum[:], h.Sum(nil))
+	return sum, nil
+}
+
+func run(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("dupes", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	flags.Usage = func() {
+		fmt.Fprintln(stderr, "Usage: dupes [directory]")
+		fmt.Fprintln(stderr, "Report groups of regular files with identical SHA-256 hashes.")
+		fmt.Fprintln(stderr, "Defaults to the current directory. Symlinks are not followed.")
+		fmt.Fprintln(stderr, "Paths are Go-quoted; hard links are reported as separate paths.")
+	}
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
+		return 2
+	}
+	root := "."
+	switch flags.NArg() {
+	case 0:
+	case 1:
+		root = flags.Arg(0)
+	default:
+		flags.Usage()
+		return 2
+	}
+
+	status := 0
+	report := func(path string, err error) {
+		fmt.Fprintf(stderr, "dupes: %q: %v\n", path, err)
+		status = 1
+	}
+
+	bySize := make(map[int64][]candidate)
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			report(path, walkErr)
+			return nil
+		}
+		if path == root && !d.IsDir() {
+			return errors.New("root is not a directory")
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			report(path, err)
+		} else if info.Mode().IsRegular() {
+			bySize[info.Size()] = append(bySize[info.Size()], candidate{path, info})
+		}
+		return nil
+	})
+	if err != nil {
+		report(root, err)
+		return status
+	}
+
+	buf := make([]byte, 128*1024)
+	var groups []group
+	for _, files := range bySize {
+		if len(files) < 2 {
+			continue
+		}
+		byHash := make(map[digest][]string)
+		for _, c := range files {
+			sum, err := hashFile(c, buf)
+			if err != nil {
+				report(c.path, err)
+				continue
+			}
+			byHash[sum] = append(byHash[sum], c.path)
+		}
+		for sum, paths := range byHash {
+			if len(paths) > 1 {
+				sort.Strings(paths)
+				groups = append(groups, group{sum, paths})
+			}
+		}
+	}
+	sort.Slice(groups, func(i, j int) bool {
+		if cmp := bytes.Compare(groups[i].sum[:], groups[j].sum[:]); cmp != 0 {
+			return cmp < 0
+		}
+		return groups[i].paths[0] < groups[j].paths[0]
+	})
+
+	out := bufio.NewWriter(stdout)
+	for _, g := range groups {
+		fmt.Fprintf(out, "%x\n", g.sum)
+		for _, path := range g.paths {
+			fmt.Fprintf(out, "  %s\n", strconv.QuoteToASCII(path))
+		}
+	}
+	if err := out.Flush(); err != nil {
+		report("stdout", err)
+	}
+	return status
+}
+
+func main() {
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}

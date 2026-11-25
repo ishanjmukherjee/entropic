@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-canal",
+ "style": "bare",
+ "prompt": "Write an essay about the Erie Canal and what it changed. About 800 words. Output only the essay, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-canal-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "In the early nineteenth century, the United States was a young nation divided by geography. The Appalachian Mountains formed a formidable barrier between the bustling commercial centers of the Atlantic coast and the fertile, largely unsettled lands of the Midwest. Transporting goods overland was agonizingly slow and prohibitively expensive, leaving the interior of the country economically isolated. In 1817, New York Governor DeWitt Clinton championed a bold, seemingly impossible solution: a man-made waterway stretching across the state to connect the Hudson River to Lake Erie. Skeptics mocked the project as \"Clinton’s Ditch,\" convinced it would bankrupt the state. Yet when the Erie Canal officially opened in 1825, it did far more than just link two bodies of water; it fundamentally reshaped the American economy, accelerated westward expansion, and transformed the social and cultural landscape of the nation.\n\nSpanning 363 miles from Albany to Buffalo, the Erie Canal was an unprecedented feat of American engineering. Constructed largely by thousands of Irish immigrants and local laborers wielding picks, shovels, and black powder, the canal overcame rugged terrain through a sophisticated system of 83 locks and 18 aqueducts. Because the United States had virtually no formally trained civil engineers at the time, the project served as a practical university, training a generation of builders who would go on to construct the nation’s future infrastructure. \n\nThe most immediate and dramatic impact of the Erie Canal was economic. Prior to its completion, shipping a ton of freight from Buffalo to New York City took up to three weeks and cost around $100. Once the canal opened, the same journey took less than a week and cost roughly $10. This ninety-percent reduction in shipping costs revolutionized American commerce. Suddenly, Midwestern farmers could profitably ship grain, flour, lumber, and livestock to eastern markets and even overseas. In return, manufactured goods from the East Coast and Europe flowed cheaply into the interior. By linking the agricultural heartland to the Atlantic Ocean, the canal helped create a truly integrated national market, shifting the United States away from localized subsistence farming toward a dynamic, interconnected capitalist economy.\n\nThis surge in trade had a profound effect on American geography and urbanization. Most notably, it cemented New York City’s status as the nation’s premier commercial and financial hub. Before 1825, New York competed closely with Philadelphia, Boston, and Baltimore for maritime dominance. The Erie Canal gave New York a decisive advantage, funneling the wealth of the Great Lakes region directly into its harbor. As trade volume exploded, banks, insurance companies, and shipping firms clustered in Manhattan, laying the groundwork for Wall Street’s eventual global prominence. Simultaneously, the canal spawned a string of booming cities along its route. Sleepy frontier outposts like Buffalo, Rochester, Syracuse, and Utica rapidly transformed into thriving industrial and commercial centers, with Rochester earning the nickname \"the Flour City\" due to its massive milling output.\n\nBeyond moving freight, the Erie Canal served as a vital highway for people. Tens of thousands of settlers from New England and immigrants from Europe boarded packet boats to travel west, bypassing the arduous overland trek. This influx of population accelerated the settlement of Ohio, Michigan, Indiana, and Illinois, turning the Old Northwest into the nation’s breadbasket. However, this rapid expansion came at a devastating human cost. The canal cut directly through the ancestral homelands of the Haudenosaunee (Iroquois) Confederacy. As white settlers poured into the region and land values skyrocketed, Indigenous peoples faced relentless pressure, fraudulent treaties, and forced displacement, fundamentally altering the demographics of New York and the Great Lakes.\n\nAs goods and people moved along the canal, so too did ideas. The constant flow of travelers, newspapers, and mail turned upstate New York into a vibrant incubator of social and religious reform. The region became known as the \"Burned-Over District\" due to the intense waves of religious revivals that swept through it during the Second Great Awakening. This fertile intellectual environment gave rise to new religious movements, such as Mormonism and Seventh-day Adventism, as well as utopian communities. It also became a hotbed for progressive activism, fueling the abolitionist movement and the fight for women’s suffrage—most famously culminating in the 1848 Seneca Falls Convention, held just a few miles from the canal’s waters.\n\nAlthough the rise of railroads in the mid-nineteenth century eventually eclipsed the Erie Canal as the primary mode of long-distance transport, its legacy was already firmly established. The canal’s staggering financial success—it paid for its own construction costs within a decade—sparked a nationwide canal-building craze and proved the immense value of large-scale public infrastructure investments. By conquering the Appalachian barrier, the Erie Canal bound the East and the West together, forging economic ties that would later prove crucial in preserving the Union during the Civil War. Ultimately, \"Clinton’s Ditch\" was the catalyst that propelled the United States from a collection of coastal states into a unified, continental economic powerhouse.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 62,
+  "completion_tokens": 2242,
+  "total_tokens": 2304,
+  "cost": 0.033816,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.033816,
+   "upstream_inference_prompt_cost": 0.000186,
+   "upstream_inference_completions_cost": 0.03363
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1212,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

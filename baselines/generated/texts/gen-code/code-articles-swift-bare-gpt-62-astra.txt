@@ -1,0 +1,215 @@
+import Foundation
+import SwiftUI
+
+// API contract: GET endpoint?page=1&page_size=25
+// Response: {"articles":[{"id":"a1","title":"Title","summary":"Optional text"}],"next_page":2}
+// A null or absent next_page marks the end of the list.
+struct Article: Identifiable, Decodable, Sendable {
+    let id: String
+    let title: String
+    let summary: String?
+}
+
+struct ArticlePage: Decodable, Sendable {
+    let articles: [Article]
+    let nextPage: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case articles
+        case nextPage = "next_page"
+    }
+}
+
+protocol ArticlePageLoading: Sendable {
+    func load(page: Int) async throws -> ArticlePage
+}
+
+struct ArticleAPI: ArticlePageLoading {
+    let endpoint: URL
+    let session: URLSession
+    let pageSize: Int
+
+    init(endpoint: URL, session: URLSession = .shared, pageSize: Int = 25) {
+        self.endpoint = endpoint
+        self.session = session
+        self.pageSize = max(1, pageSize)
+    }
+
+    func load(page: Int) async throws -> ArticlePage {
+        guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: true) else {
+            throw URLError(.badURL)
+        }
+
+        var items = (components.queryItems ?? []).filter {
+            $0.name != "page" && $0.name != "page_size"
+        }
+        items.append(URLQueryItem(name: "page", value: String(page)))
+        items.append(URLQueryItem(name: "page_size", value: String(pageSize)))
+        components.queryItems = items
+
+        guard let url = components.url else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await session.data(for: request)
+
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            throw ArticleAPIError.http(http.statusCode)
+        }
+
+        let result = try JSONDecoder().decode(ArticlePage.self, from: data)
+        if let next = result.nextPage, next <= page {
+            throw ArticleAPIError.invalidPagination
+        }
+        return result
+    }
+}
+
+private enum ArticleAPIError: LocalizedError {
+    case http(Int)
+    case invalidPagination
+
+    var errorDescription: String? {
+        switch self {
+        case .http(let status):
+            return "The server returned an error (HTTP \(status))."
+        case .invalidPagination:
+            return "The server returned an invalid page number."
+        }
+    }
+}
+
+@MainActor
+final class ArticleListViewModel: ObservableObject {
+    enum Phase {
+        case idle, loading, failed(String)
+    }
+
+    @Published private(set) var articles: [Article] = []
+    @Published private(set) var phase: Phase = .idle
+    @Published private(set) var nextPage: Int? = 1
+
+    private let loader: any ArticlePageLoading
+    private var seenIDs: Set<String> = []
+    private var generation = UUID()
+    private var retryPage: Int?
+
+    init(loader: any ArticlePageLoading) {
+        self.loader = loader
+    }
+
+    func loadNext() async {
+        guard case .idle = phase, let page = nextPage else { return }
+        await fetch(page)
+    }
+
+    func refresh() async {
+        // Supersede any pending append without discarding visible content.
+        await fetch(1)
+    }
+
+    func retry() async {
+        guard case .failed = phase, let page = retryPage else { return }
+        await fetch(page)
+    }
+
+    private func fetch(_ page: Int) async {
+        let token = UUID()
+        generation = token
+        phase = .loading
+        retryPage = nil
+
+        do {
+            let result = try await loader.load(page: page)
+            try Task.checkCancellation()
+            guard generation == token else { return }
+
+            if page == 1 {
+                seenIDs.removeAll(keepingCapacity: true)
+                articles = result.articles.filter { seenIDs.insert($0.id).inserted }
+            } else {
+                let additions = result.articles.filter { seenIDs.insert($0.id).inserted }
+                articles.append(contentsOf: additions)
+            }
+            nextPage = result.nextPage
+            phase = .idle
+        } catch {
+            guard generation == token else { return }
+            if Task.isCancelled || error is CancellationError ||
+                (error as? URLError)?.code == .cancelled {
+                phase = .idle
+            } else {
+                retryPage = page
+                phase = .failed(error.localizedDescription)
+            }
+        }
+    }
+}
+
+@available(iOS 15.0, macOS 12.0, *)
+@MainActor
+struct ArticleListView: View {
+    @StateObject private var model: ArticleListViewModel
+
+    init(endpoint: URL) {
+        self.init(loader: ArticleAPI(endpoint: endpoint))
+    }
+
+    init(loader: any ArticlePageLoading) {
+        _model = StateObject(wrappedValue: ArticleListViewModel(loader: loader))
+    }
+
+    var body: some View {
+        List {
+            ForEach(model.articles) { article in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(article.title)
+                        .font(.headline)
+                    if let summary = article.summary, !summary.isEmpty {
+                        Text(summary)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+                .accessibilityElement(children: .combine)
+            }
+
+            switch model.phase {
+            case .loading:
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel("Loading articles")
+
+            case .failed(let message):
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(message)
+                    Button("Try Again") {
+                        Task { await model.retry() }
+                    }
+                }
+
+            case .idle:
+                if model.nextPage != nil {
+                    Button("Load More Articles") {
+                        Task { await model.loadNext() }
+                    }
+                } else if model.articles.isEmpty {
+                    Text("No articles available.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .navigationTitle("Articles")
+        .task {
+            if model.nextPage == 1 {
+                await model.loadNext()
+            }
+        }
+        .refreshable {
+            await model.refresh()
+        }
+    }
+}

@@ -1,0 +1,300 @@
+-- library_lending.sql
+-- PostgreSQL schema and operations for a library lending system.
+
+BEGIN;
+
+CREATE EXTENSION IF NOT EXISTS citext;
+
+CREATE SCHEMA IF NOT EXISTS library;
+SET search_path TO library, public;
+
+-- ---------------------------------------------------------------------------
+-- Reference / catalog
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE patrons (
+    patron_id       bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    card_number     text NOT NULL,
+    full_name       text NOT NULL,
+    email           citext NOT NULL,
+    phone           text,
+    status          text NOT NULL DEFAULT 'active'
+                        CHECK (status IN ('active', 'suspended', 'closed')),
+    max_loans       integer NOT NULL DEFAULT 10 CHECK (max_loans > 0),
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at      timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT patrons_card_number_uk UNIQUE (card_number),
+    CONSTRAINT patrons_email_uk UNIQUE (email)
+);
+
+CREATE TABLE titles (
+    title_id        bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    isbn            text,
+    title           text NOT NULL,
+    authors         text NOT NULL,
+    publisher       text,
+    published_year  integer CHECK (published_year IS NULL OR published_year BETWEEN 1000 AND 2100),
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT titles_isbn_uk UNIQUE (isbn)
+);
+
+CREATE TABLE copies (
+    copy_id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title_id        bigint NOT NULL REFERENCES titles (title_id),
+    barcode         text NOT NULL,
+    location        text,
+    condition       text NOT NULL DEFAULT 'good'
+                        CHECK (condition IN ('new', 'good', 'fair', 'poor', 'withdrawn')),
+    status          text NOT NULL DEFAULT 'available'
+                        CHECK (status IN ('available', 'on_loan', 'reserved', 'lost', 'withdrawn')),
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at      timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT copies_barcode_uk UNIQUE (barcode)
+);
+
+CREATE INDEX copies_title_id_idx ON copies (title_id);
+CREATE INDEX copies_status_idx ON copies (status) WHERE status = 'available';
+
+-- ---------------------------------------------------------------------------
+-- Loans
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE loans (
+    loan_id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    copy_id         bigint NOT NULL REFERENCES copies (copy_id),
+    patron_id       bigint NOT NULL REFERENCES patrons (patron_id),
+    checked_out_at  timestamptz NOT NULL DEFAULT now(),
+    due_at          timestamptz NOT NULL,
+    returned_at     timestamptz,
+    renewed_count   integer NOT NULL DEFAULT 0 CHECK (renewed_count >= 0),
+    notes           text,
+    CONSTRAINT loans_due_after_checkout CHECK (due_at > checked_out_at),
+    CONSTRAINT loans_return_after_checkout CHECK (
+        returned_at IS NULL OR returned_at >= checked_out_at
+    )
+);
+
+-- At most one open loan per physical copy.
+CREATE UNIQUE INDEX loans_one_open_per_copy
+    ON loans (copy_id)
+    WHERE returned_at IS NULL;
+
+CREATE INDEX loans_patron_open_idx
+    ON loans (patron_id)
+    WHERE returned_at IS NULL;
+
+CREATE INDEX loans_overdue_idx
+    ON loans (due_at)
+    WHERE returned_at IS NULL;
+
+CREATE TABLE loan_events (
+    event_id        bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    loan_id         bigint NOT NULL REFERENCES loans (loan_id),
+    event_type      text NOT NULL
+                        CHECK (event_type IN ('checkout', 'renew', 'return', 'mark_lost')),
+    occurred_at     timestamptz NOT NULL DEFAULT now(),
+    actor           text,
+    detail          jsonb NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX loan_events_loan_id_idx ON loan_events (loan_id, occurred_at);
+
+-- ---------------------------------------------------------------------------
+-- Touch updated_at
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.updated_at := now();
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER patrons_set_updated_at
+    BEFORE UPDATE ON patrons
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER copies_set_updated_at
+    BEFORE UPDATE ON copies
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- Checkout
+-- p_loan_days: lending period in days (default 21).
+-- Returns the new loan_id.
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION checkout(
+    p_patron_id  bigint,
+    p_barcode    text,
+    p_loan_days  integer DEFAULT 21,
+    p_actor      text DEFAULT NULL
+)
+RETURNS bigint
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_patron patrons%ROWTYPE;
+    v_copy   copies%ROWTYPE;
+    v_open   integer;
+    v_loan_id bigint;
+BEGIN
+    IF p_loan_days IS NULL OR p_loan_days < 1 OR p_loan_days > 90 THEN
+        RAISE EXCEPTION 'loan period must be between 1 and 90 days'
+            USING ERRCODE = '22023';
+    END IF;
+
+    SELECT * INTO v_patron
+    FROM patrons
+    WHERE patron_id = p_patron_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'patron % not found', p_patron_id
+            USING ERRCODE = 'P0002';
+    END IF;
+
+    IF v_patron.status <> 'active' THEN
+        RAISE EXCEPTION 'patron % is not active (status=%)', p_patron_id, v_patron.status
+            USING ERRCODE = '23514';
+    END IF;
+
+    SELECT * INTO v_copy
+    FROM copies
+    WHERE barcode = p_barcode
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'copy barcode % not found', p_barcode
+            USING ERRCODE = 'P0002';
+    END IF;
+
+    IF v_copy.status <> 'available' OR v_copy.condition = 'withdrawn' THEN
+        RAISE EXCEPTION 'copy % is not available (status=%, condition=%)',
+            p_barcode, v_copy.status, v_copy.condition
+            USING ERRCODE = '23514';
+    END IF;
+
+    SELECT count(*)::integer INTO v_open
+    FROM loans
+    WHERE patron_id = p_patron_id
+      AND returned_at IS NULL;
+
+    IF v_open >= v_patron.max_loans THEN
+        RAISE EXCEPTION 'patron % has reached the loan limit (%)',
+            p_patron_id, v_patron.max_loans
+            USING ERRCODE = '23514';
+    END IF;
+
+    INSERT INTO loans (copy_id, patron_id, due_at)
+    VALUES (v_copy.copy_id, p_patron_id, now() + make_interval(days => p_loan_days))
+    RETURNING loan_id INTO v_loan_id;
+
+    UPDATE copies
+    SET status = 'on_loan'
+    WHERE copy_id = v_copy.copy_id;
+
+    INSERT INTO loan_events (loan_id, event_type, actor, detail)
+    VALUES (
+        v_loan_id,
+        'checkout',
+        p_actor,
+        jsonb_build_object('barcode', p_barcode, 'loan_days', p_loan_days)
+    );
+
+    RETURN v_loan_id;
+END;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Return
+-- Returns the loan_id that was closed.
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION return_copy(
+    p_barcode text,
+    p_actor   text DEFAULT NULL
+)
+RETURNS bigint
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_copy    copies%ROWTYPE;
+    v_loan_id bigint;
+BEGIN
+    SELECT * INTO v_copy
+    FROM copies
+    WHERE barcode = p_barcode
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'copy barcode % not found', p_barcode
+            USING ERRCODE = 'P0002';
+    END IF;
+
+    SELECT loan_id INTO v_loan_id
+    FROM loans
+    WHERE copy_id = v_copy.copy_id
+      AND returned_at IS NULL
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'copy % has no open loan', p_barcode
+            USING ERRCODE = 'P0002';
+    END IF;
+
+    UPDATE loans
+    SET returned_at = now()
+    WHERE loan_id = v_loan_id;
+
+    UPDATE copies
+    SET status = CASE
+        WHEN condition = 'withdrawn' THEN 'withdrawn'
+        ELSE 'available'
+    END
+    WHERE copy_id = v_copy.copy_id;
+
+    INSERT INTO loan_events (loan_id, event_type, actor, detail)
+    VALUES (
+        v_loan_id,
+        'return',
+        p_actor,
+        jsonb_build_object('barcode', p_barcode)
+    );
+
+    RETURN v_loan_id;
+END;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Reporting: overdue open loans
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW overdue_loans AS
+SELECT
+    l.loan_id,
+    l.patron_id,
+    p.card_number,
+    p.full_name          AS patron_name,
+    p.email              AS patron_email,
+    c.barcode,
+    t.title,
+    t.authors,
+    l.checked_out_at,
+    l.due_at,
+    (now() - l.due_at)   AS overdue_by,
+    EXTRACT(DAY FROM (now() - l.due_at))::integer AS days_overdue
+FROM loans l
+JOIN patrons p ON p.patron_id = l.patron_id
+JOIN copies  c ON c.copy_id = l.copy_id
+JOIN titles  t ON t.title_id = c.title_id
+WHERE l.returned_at IS NULL
+  AND l.due_at < now();
+
+COMMENT ON VIEW overdue_loans IS
+    'Open loans past due_at. Filter further in the application if needed.';
+
+COMMIT;

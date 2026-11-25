@@ -1,0 +1,749 @@
+#!/usr/bin/env python3
+"""
+N-body gravitational simulation using a kick-drift-kick leapfrog integrator.
+
+Features
+--------
+* Fully vectorized NumPy force evaluation with Plummer softening.
+* Memory-bounded, chunked pairwise interactions (O(N * chunk) memory).
+* Symplectic, time-reversible second-order leapfrog (KDK) integration.
+* Energy, momentum, and angular-momentum diagnostics.
+* Built-in initial conditions: Plummer sphere, uniform cold sphere, and a
+  circular two-body orbit.
+* Optional snapshot output to a compressed ``.npz`` file.
+
+Units
+-----
+All quantities are in arbitrary consistent units. By default G = 1.
+
+Example
+-------
+    python nbody.py --ic plummer -n 1000 --dt 0.005 --t-end 10 \
+        --softening 0.01 --output run.npz --snapshot-every 20
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import math
+import sys
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable, Dict, List, Optional, Sequence
+
+import numpy as np
+from numpy.typing import NDArray
+
+__all__ = [
+    "SimulationState",
+    "SimulationConfig",
+    "Diagnostics",
+    "compute_accelerations",
+    "potential_energy",
+    "kinetic_energy",
+    "leapfrog_step",
+    "run_simulation",
+    "plummer_sphere",
+    "uniform_sphere",
+    "two_body_circular",
+    "main",
+]
+
+logger = logging.getLogger("nbody")
+
+FloatArray = NDArray[np.float64]
+
+DEFAULT_CHUNK_SIZE = 512
+
+
+# --------------------------------------------------------------------------- #
+# Data structures
+# --------------------------------------------------------------------------- #
+@dataclass
+class SimulationState:
+    """Phase-space state of an N-body system."""
+
+    positions: FloatArray  # shape (N, 3)
+    velocities: FloatArray  # shape (N, 3)
+    masses: FloatArray  # shape (N,)
+    time: float = 0.0
+
+    def __post_init__(self) -> None:
+        self.positions = np.ascontiguousarray(self.positions, dtype=np.float64)
+        self.velocities = np.ascontiguousarray(self.velocities, dtype=np.float64)
+        self.masses = np.ascontiguousarray(self.masses, dtype=np.float64)
+        self.validate()
+
+    @property
+    def n_bodies(self) -> int:
+        return int(self.masses.shape[0])
+
+    def validate(self) -> None:
+        n = self.masses.shape[0]
+        if self.masses.ndim != 1:
+            raise ValueError(f"masses must be 1-D, got shape {self.masses.shape}")
+        if n < 1:
+            raise ValueError("at least one body is required")
+        if self.positions.shape != (n, 3):
+            raise ValueError(f"positions must have shape ({n}, 3), got {self.positions.shape}")
+        if self.velocities.shape != (n, 3):
+            raise ValueError(f"velocities must have shape ({n}, 3), got {self.velocities.shape}")
+        if np.any(self.masses <= 0.0):
+            raise ValueError("all masses must be strictly positive")
+        for name, arr in (
+            ("positions", self.positions),
+            ("velocities", self.velocities),
+            ("masses", self.masses),
+        ):
+            if not np.all(np.isfinite(arr)):
+                raise ValueError(f"{name} contains non-finite values")
+
+    def copy(self) -> "SimulationState":
+        return SimulationState(
+            positions=self.positions.copy(),
+            velocities=self.velocities.copy(),
+            masses=self.masses.copy(),
+            time=self.time,
+        )
+
+    def to_center_of_mass_frame(self) -> None:
+        """Shift positions and velocities so that the COM is at rest at the origin."""
+        m = self.masses[:, None]
+        total = self.masses.sum()
+        self.positions -= (m * self.positions).sum(axis=0) / total
+        self.velocities -= (m * self.velocities).sum(axis=0) / total
+
+
+@dataclass(frozen=True)
+class SimulationConfig:
+    """Parameters controlling the integration."""
+
+    dt: float
+    t_end: float
+    G: float = 1.0
+    softening: float = 1e-3
+    chunk_size: int = DEFAULT_CHUNK_SIZE
+    snapshot_every: int = 0  # 0 disables snapshot recording
+    log_every: int = 100  # 0 disables periodic logging
+
+    def __post_init__(self) -> None:
+        if not (self.dt > 0.0 and math.isfinite(self.dt)):
+            raise ValueError("dt must be a positive finite number")
+        if not (self.t_end >= 0.0 and math.isfinite(self.t_end)):
+            raise ValueError("t_end must be a non-negative finite number")
+        if not (self.G > 0.0 and math.isfinite(self.G)):
+            raise ValueError("G must be a positive finite number")
+        if not (self.softening >= 0.0 and math.isfinite(self.softening)):
+            raise ValueError("softening must be a non-negative finite number")
+        if self.chunk_size < 1:
+            raise ValueError("chunk_size must be >= 1")
+        if self.snapshot_every < 0:
+            raise ValueError("snapshot_every must be >= 0")
+        if self.log_every < 0:
+            raise ValueError("log_every must be >= 0")
+
+    @property
+    def n_steps(self) -> int:
+        # Round to avoid floating-point artifacts such as 10/0.1 -> 99.999...
+        return int(round(self.t_end / self.dt))
+
+
+@dataclass
+class Diagnostics:
+    """Time series of conserved quantities."""
+
+    times: List[float] = field(default_factory=list)
+    kinetic: List[float] = field(default_factory=list)
+    potential: List[float] = field(default_factory=list)
+    momentum: List[FloatArray] = field(default_factory=list)
+    angular_momentum: List[FloatArray] = field(default_factory=list)
+
+    @property
+    def total_energy(self) -> FloatArray:
+        return np.asarray(self.kinetic) + np.asarray(self.potential)
+
+    def record(self, state: SimulationState, config: SimulationConfig) -> None:
+        self.times.append(state.time)
+        self.kinetic.append(kinetic_energy(state.velocities, state.masses))
+        self.potential.append(
+            potential_energy(
+                state.positions,
+                state.masses,
+                G=config.G,
+                softening=config.softening,
+                chunk_size=config.chunk_size,
+            )
+        )
+        self.momentum.append(linear_momentum(state.velocities, state.masses))
+        self.angular_momentum.append(
+            angular_momentum(state.positions, state.velocities, state.masses)
+        )
+
+    def relative_energy_error(self) -> float:
+        energy = self.total_energy
+        if energy.size == 0:
+            return 0.0
+        e0 = energy[0]
+        scale = abs(e0) if e0 != 0.0 else 1.0
+        return float(abs(energy[-1] - e0) / scale)
+
+
+# --------------------------------------------------------------------------- #
+# Physics
+# --------------------------------------------------------------------------- #
+def compute_accelerations(
+    positions: FloatArray,
+    masses: FloatArray,
+    G: float = 1.0,
+    softening: float = 0.0,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    out: Optional[FloatArray] = None,
+) -> FloatArray:
+    """
+    Compute gravitational accelerations via direct summation.
+
+    a_i = G * sum_{j != i} m_j (x_j - x_i) / (|x_j - x_i|^2 + eps^2)^{3/2}
+
+    The computation is performed over row chunks to keep memory usage at
+    O(chunk_size * N) instead of O(N^2).
+    """
+    n = positions.shape[0]
+    acc = np.zeros((n, 3), dtype=np.float64) if out is None else out
+    if out is not None:
+        acc.fill(0.0)
+    if n < 2:
+        return acc
+
+    eps2 = softening * softening
+
+    for start in range(0, n, chunk_size):
+        stop = min(start + chunk_size, n)
+        # dx[i, j, :] = x_j - x_i for i in the chunk
+        dx = positions[None, :, :] - positions[start:stop, None, :]
+        r2 = np.einsum("ijk,ijk->ij", dx, dx)
+        r2 += eps2
+
+        # Exclude self-interaction.
+        rows = np.arange(stop - start)
+        cols = np.arange(start, stop)
+        r2[rows, cols] = np.inf
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            inv_r3 = r2 ** -1.5
+        # Guard against coincident particles with zero softening.
+        inv_r3[~np.isfinite(inv_r3)] = 0.0
+
+        inv_r3 *= masses[None, :]
+        acc[start:stop] = np.einsum("ij,ijk->ik", inv_r3, dx)
+
+    acc *= G
+    return acc
+
+
+def potential_energy(
+    positions: FloatArray,
+    masses: FloatArray,
+    G: float = 1.0,
+    softening: float = 0.0,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+) -> float:
+    """Total (softened) gravitational potential energy, summed over unique pairs."""
+    n = positions.shape[0]
+    if n < 2:
+        return 0.0
+
+    eps2 = softening * softening
+    total = 0.0
+    for start in range(0, n, chunk_size):
+        stop = min(start + chunk_size, n)
+        dx = positions[None, :, :] - positions[start:stop, None, :]
+        r2 = np.einsum("ijk,ijk->ij", dx, dx) + eps2
+
+        # Only count pairs with j > i to avoid double counting.
+        i_idx = np.arange(start, stop)[:, None]
+        j_idx = np.arange(n)[None, :]
+        mask = j_idx > i_idx
+
+        with np.errstate(divide="ignore"):
+            inv_r = np.where(mask, 1.0 / np.sqrt(np.where(mask, r2, 1.0)), 0.0)
+        inv_r[~np.isfinite(inv_r)] = 0.0
+
+        total += float(masses[start:stop] @ (inv_r @ masses))
+
+    return -G * total
+
+
+def kinetic_energy(velocities: FloatArray, masses: FloatArray) -> float:
+    return float(0.5 * np.sum(masses * np.einsum("ij,ij->i", velocities, velocities)))
+
+
+def linear_momentum(velocities: FloatArray, masses: FloatArray) -> FloatArray:
+    return (masses[:, None] * velocities).sum(axis=0)
+
+
+def angular_momentum(
+    positions: FloatArray, velocities: FloatArray, masses: FloatArray
+) -> FloatArray:
+    return np.cross(positions, masses[:, None] * velocities).sum(axis=0)
+
+
+# --------------------------------------------------------------------------- #
+# Integrator
+# --------------------------------------------------------------------------- #
+def leapfrog_step(
+    state: SimulationState,
+    accelerations: FloatArray,
+    dt: float,
+    accel_fn: Callable[[FloatArray], FloatArray],
+) -> FloatArray:
+    """
+    Advance ``state`` in place by one kick-drift-kick leapfrog step.
+
+    Parameters
+    ----------
+    state:
+        Simulation state, modified in place.
+    accelerations:
+        Accelerations evaluated at the current positions.
+    dt:
+        Time step.
+    accel_fn:
+        Function mapping positions to accelerations.
+
+    Returns
+    -------
+    Accelerations at the new positions (to be reused on the next step).
+    """
+    half_dt = 0.5 * dt
+    state.velocities += half_dt * accelerations  # kick
+    state.positions += dt * state.velocities  # drift
+    new_acc = accel_fn(state.positions)
+    state.velocities += half_dt * new_acc  # kick
+    state.time += dt
+    return new_acc
+
+
+@dataclass
+class SimulationResult:
+    final_state: SimulationState
+    diagnostics: Diagnostics
+    snapshot_times: FloatArray
+    snapshot_positions: FloatArray  # shape (S, N, 3)
+    snapshot_velocities: FloatArray  # shape (S, N, 3)
+    wall_time: float
+
+    def save(self, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            path,
+            masses=self.final_state.masses,
+            snapshot_times=self.snapshot_times,
+            snapshot_positions=self.snapshot_positions,
+            snapshot_velocities=self.snapshot_velocities,
+            diag_times=np.asarray(self.diagnostics.times),
+            diag_kinetic=np.asarray(self.diagnostics.kinetic),
+            diag_potential=np.asarray(self.diagnostics.potential),
+            diag_momentum=np.asarray(self.diagnostics.momentum),
+            diag_angular_momentum=np.asarray(self.diagnostics.angular_momentum),
+            final_positions=self.final_state.positions,
+            final_velocities=self.final_state.velocities,
+            final_time=np.float64(self.final_state.time),
+        )
+
+
+def run_simulation(
+    initial_state: SimulationState,
+    config: SimulationConfig,
+) -> SimulationResult:
+    """Integrate the system from ``initial_state`` according to ``config``."""
+    state = initial_state.copy()
+    n_steps = config.n_steps
+
+    def accel_fn(pos: FloatArray, _buf: FloatArray = np.empty_like(state.positions)) -> FloatArray:
+        # Reuse a buffer, but return a copy-safe array (leapfrog keeps the
+        # previous acceleration only until the next call).
+        return compute_accelerations(
+            pos,
+            state.masses,
+            G=config.G,
+            softening=config.softening,
+            chunk_size=config.chunk_size,
+            out=_buf,
+        )
+
+    diagnostics = Diagnostics()
+    diagnostics.record(state, config)
+    e0 = diagnostics.kinetic[0] + diagnostics.potential[0]
+
+    snap_t: List[float] = []
+    snap_x: List[FloatArray] = []
+    snap_v: List[FloatArray] = []
+
+    def take_snapshot() -> None:
+        snap_t.append(state.time)
+        snap_x.append(state.positions.copy())
+        snap_v.append(state.velocities.copy())
+
+    if config.snapshot_every > 0:
+        take_snapshot()
+
+    logger.info(
+        "Starting simulation: N=%d, steps=%d, dt=%.3e, softening=%.3e, E0=%.10e",
+        state.n_bodies,
+        n_steps,
+        config.dt,
+        config.softening,
+        e0,
+    )
+
+    acc = accel_fn(state.positions)
+    t_start = time.perf_counter()
+
+    for step in range(1, n_steps + 1):
+        acc = leapfrog_step(state, acc, config.dt, accel_fn)
+
+        if not np.all(np.isfinite(state.positions)):
+            raise FloatingPointError(
+                f"Non-finite positions encountered at step {step} (t={state.time:.6g}). "
+                "Consider decreasing dt or increasing softening."
+            )
+
+        if config.snapshot_every > 0 and step % config.snapshot_every == 0:
+            take_snapshot()
+
+        is_log_step = config.log_every > 0 and step % config.log_every == 0
+        if is_log_step or step == n_steps:
+            diagnostics.record(state, config)
+            if is_log_step:
+                e = diagnostics.kinetic[-1] + diagnostics.potential[-1]
+                rel = abs((e - e0) / e0) if e0 != 0.0 else abs(e - e0)
+                logger.info(
+                    "step %d/%d  t=%.4f  E=%.10e  |dE/E0|=%.3e",
+                    step,
+                    n_steps,
+                    state.time,
+                    e,
+                    rel,
+                )
+
+    # Ensure the final step is captured in snapshots.
+    if config.snapshot_every > 0 and (not snap_t or snap_t[-1] != state.time):
+        take_snapshot()
+
+    wall = time.perf_counter() - t_start
+    logger.info(
+        "Finished in %.2f s (%.3e s/step). Relative energy error: %.3e",
+        wall,
+        wall / max(n_steps, 1),
+        diagnostics.relative_energy_error(),
+    )
+
+    n = state.n_bodies
+    return SimulationResult(
+        final_state=state,
+        diagnostics=diagnostics,
+        snapshot_times=np.asarray(snap_t, dtype=np.float64),
+        snapshot_positions=(np.stack(snap_x) if snap_x else np.empty((0, n, 3))),
+        snapshot_velocities=(np.stack(snap_v) if snap_v else np.empty((0, n, 3))),
+        wall_time=wall,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Initial conditions
+# --------------------------------------------------------------------------- #
+def _random_unit_vectors(n: int, rng: np.random.Generator) -> FloatArray:
+    cos_theta = rng.uniform(-1.0, 1.0, n)
+    phi = rng.uniform(0.0, 2.0 * np.pi, n)
+    sin_theta = np.sqrt(1.0 - cos_theta**2)
+    return np.column_stack(
+        (sin_theta * np.cos(phi), sin_theta * np.sin(phi), cos_theta)
+    )
+
+
+def plummer_sphere(
+    n: int,
+    total_mass: float = 1.0,
+    scale_radius: Optional[float] = None,
+    G: float = 1.0,
+    max_radius_factor: float = 20.0,
+    rng: Optional[np.random.Generator] = None,
+) -> SimulationState:
+    """
+    Generate an equilibrium Plummer sphere (Aarseth, Henon & Wielen 1974).
+
+    If ``scale_radius`` is None, standard Henon units are used
+    (a = 3*pi/16, so that E = -1/4 for G = M = 1).
+    """
+    if n < 1:
+        raise ValueError("n must be >= 1")
+    rng = np.random.default_rng() if rng is None else rng
+    a = 3.0 * np.pi / 16.0 if scale_radius is None else float(scale_radius)
+    r_max = max_radius_factor * a
+
+    # Radii via inverse transform of the cumulative mass profile, truncated.
+    radii = np.empty(n)
+    filled = 0
+    while filled < n:
+        x = rng.uniform(1e-10, 1.0, n - filled)
+        r = a / np.sqrt(x ** (-2.0 / 3.0) - 1.0)
+        r = r[r <= r_max]
+        take = min(r.size, n - filled)
+        radii[filled : filled + take] = r[:take]
+        filled += take
+    positions = radii[:, None] * _random_unit_vectors(n, rng)
+
+    # Speeds via von Neumann rejection on g(q) = q^2 (1 - q^2)^{7/2}.
+    q = np.empty(n)
+    filled = 0
+    while filled < n:
+        m = 2 * (n - filled) + 16
+        q_try = rng.uniform(0.0, 1.0, m)
+        y = rng.uniform(0.0, 0.1, m)
+        accepted = q_try[y < q_try**2 * (1.0 - q_try**2) ** 3.5]
+        take = min(accepted.size, n - filled)
+        q[filled : filled + take] = accepted[:take]
+        filled += take
+
+    v_esc = np.sqrt(2.0 * G * total_mass) * (radii**2 + a**2) ** -0.25
+    velocities = (q * v_esc)[:, None] * _random_unit_vectors(n, rng)
+
+    masses = np.full(n, total_mass / n)
+    state = SimulationState(positions, velocities, masses)
+    state.to_center_of_mass_frame()
+    return state
+
+
+def uniform_sphere(
+    n: int,
+    total_mass: float = 1.0,
+    radius: float = 1.0,
+    virial_ratio: float = 0.0,
+    G: float = 1.0,
+    rng: Optional[np.random.Generator] = None,
+) -> SimulationState:
+    """
+    Uniform-density sphere with isotropic Gaussian velocities scaled to the
+    requested virial ratio Q = T / |W| (Q = 0 gives a cold collapse).
+    """
+    if n < 1:
+        raise ValueError("n must be >= 1")
+    if virial_ratio < 0.0:
+        raise ValueError("virial_ratio must be >= 0")
+    rng = np.random.default_rng() if rng is None else rng
+
+    radii = radius * rng.uniform(0.0, 1.0, n) ** (1.0 / 3.0)
+    positions = radii[:, None] * _random_unit_vectors(n, rng)
+    masses = np.full(n, total_mass / n)
+
+    velocities = np.zeros((n, 3))
+    if virial_ratio > 0.0 and n > 1:
+        velocities = rng.normal(size=(n, 3))
+        state = SimulationState(positions, velocities, masses)
+        state.to_center_of_mass_frame()
+        w = potential_energy(state.positions, masses, G=G)
+        t = kinetic_energy(state.velocities, masses)
+        if t > 0.0:
+            state.velocities *= np.sqrt(virial_ratio * abs(w) / t)
+        return state
+
+    state = SimulationState(positions, velocities, masses)
+    state.to_center_of_mass_frame()
+    return state
+
+
+def two_body_circular(
+    m1: float = 1.0,
+    m2: float = 1e-3,
+    separation: float = 1.0,
+    G: float = 1.0,
+) -> SimulationState:
+    """Two bodies on a circular orbit in the x-y plane, COM at rest."""
+    if separation <= 0.0:
+        raise ValueError("separation must be positive")
+    total = m1 + m2
+    r1 = separation * m2 / total
+    r2 = separation * m1 / total
+    v_rel = math.sqrt(G * total / separation)
+    v1 = v_rel * m2 / total
+    v2 = v_rel * m1 / total
+
+    positions = np.array([[-r1, 0.0, 0.0], [r2, 0.0, 0.0]])
+    velocities = np.array([[0.0, -v1, 0.0], [0.0, v2, 0.0]])
+    masses = np.array([m1, m2])
+    return SimulationState(positions, velocities, masses)
+
+
+INITIAL_CONDITIONS: Dict[str, str] = {
+    "plummer": "Equilibrium Plummer sphere",
+    "uniform": "Uniform-density sphere (cold or warm)",
+    "twobody": "Circular two-body orbit",
+}
+
+
+def build_initial_state(args: argparse.Namespace) -> SimulationState:
+    rng = np.random.default_rng(args.seed)
+    if args.ic == "plummer":
+        return plummer_sphere(args.n, total_mass=args.mass, G=args.G, rng=rng)
+    if args.ic == "uniform":
+        return uniform_sphere(
+            args.n,
+            total_mass=args.mass,
+            radius=args.radius,
+            virial_ratio=args.virial_ratio,
+            G=args.G,
+            rng=rng,
+        )
+    if args.ic == "twobody":
+        return two_body_circular(G=args.G)
+    raise ValueError(f"Unknown initial condition: {args.ic}")
+
+
+# --------------------------------------------------------------------------- #
+# CLI
+# --------------------------------------------------------------------------- #
+def _positive_int(value: str) -> int:
+    iv = int(value)
+    if iv < 1:
+        raise argparse.ArgumentTypeError(f"expected a positive integer, got {value}")
+    return iv
+
+
+def _non_negative_int(value: str) -> int:
+    iv = int(value)
+    if iv < 0:
+        raise argparse.ArgumentTypeError(f"expected a non-negative integer, got {value}")
+    return iv
+
+
+def _positive_float(value: str) -> float:
+    fv = float(value)
+    if not (fv > 0.0 and math.isfinite(fv)):
+        raise argparse.ArgumentTypeError(f"expected a positive number, got {value}")
+    return fv
+
+
+def _non_negative_float(value: str) -> float:
+    fv = float(value)
+    if not (fv >= 0.0 and math.isfinite(fv)):
+        raise argparse.ArgumentTypeError(f"expected a non-negative number, got {value}")
+    return fv
+
+
+def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Direct-summation N-body simulation with a leapfrog (KDK) integrator.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--ic",
+        choices=sorted(INITIAL_CONDITIONS),
+        default="plummer",
+        help="Initial condition generator.",
+    )
+    parser.add_argument("-n", "--n", type=_positive_int, default=256, help="Number of bodies.")
+    parser.add_argument("--mass", type=_positive_float, default=1.0, help="Total system mass.")
+    parser.add_argument("--radius", type=_positive_float, default=1.0, help="Radius (uniform IC).")
+    parser.add_argument(
+        "--virial-ratio",
+        type=_non_negative_float,
+        default=0.0,
+        help="Virial ratio T/|W| for the uniform IC.",
+    )
+    parser.add_argument("--G", type=_positive_float, default=1.0, help="Gravitational constant.")
+    parser.add_argument("--dt", type=_positive_float, default=1e-3, help="Time step.")
+    parser.add_argument("--t-end", type=_non_negative_float, default=1.0, help="End time.")
+    parser.add_argument(
+        "--softening", type=_non_negative_float, default=1e-2, help="Plummer softening length."
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=_positive_int,
+        default=DEFAULT_CHUNK_SIZE,
+        help="Rows per chunk in force evaluation (memory/speed trade-off).",
+    )
+    parser.add_argument(
+        "--snapshot-every",
+        type=_non_negative_int,
+        default=0,
+        help="Record a snapshot every K steps (0 disables).",
+    )
+    parser.add_argument(
+        "--log-every",
+        type=_non_negative_int,
+        default=100,
+        help="Log diagnostics every K steps (0 disables periodic logging).",
+    )
+    parser.add_argument("--seed", type=int, default=None, help="Random seed.")
+    parser.add_argument(
+        "-o", "--output", type=Path, default=None, help="Output .npz file for results."
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="count", default=0, help="Increase logging verbosity."
+    )
+    parser.add_argument("-q", "--quiet", action="store_true", help="Only log warnings and errors.")
+    return parser.parse_args(argv)
+
+
+def configure_logging(verbose: int, quiet: bool) -> None:
+    if quiet:
+        level = logging.WARNING
+    elif verbose >= 1:
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    args = parse_args(argv)
+    configure_logging(args.verbose, args.quiet)
+
+    try:
+        config = SimulationConfig(
+            dt=args.dt,
+            t_end=args.t_end,
+            G=args.G,
+            softening=args.softening,
+            chunk_size=args.chunk_size,
+            snapshot_every=args.snapshot_every,
+            log_every=args.log_every,
+        )
+        state = build_initial_state(args)
+        result = run_simulation(state, config)
+    except (ValueError, FloatingPointError) as exc:
+        logger.error("%s", exc)
+        return 1
+    except KeyboardInterrupt:
+        logger.warning("Interrupted by user.")
+        return 130
+
+    if args.output is not None:
+        try:
+            result.save(args.output)
+        except OSError as exc:
+            logger.error("Failed to write output to %s: %s", args.output, exc)
+            return 1
+        logger.info("Results written to %s", args.output)
+
+    diag = result.diagnostics
+    p_drift = np.linalg.norm(diag.momentum[-1] - diag.momentum[0])
+    l_drift = np.linalg.norm(diag.angular_momentum[-1] - diag.angular_momentum[0])
+    logger.info(
+        "Summary: t=%.4f  |dE/E0|=%.3e  |dP|=%.3e  |dL|=%.3e",
+        result.final_state.time,
+        diag.relative_energy_error(),
+        p_drift,
+        l_drift,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

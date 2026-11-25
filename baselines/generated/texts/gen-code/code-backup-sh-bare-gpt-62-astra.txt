@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Requires Bash 4+, PostgreSQL client tools, AWS CLI v2, flock, and GNU date.
+# Configure PostgreSQL via libpq (PGDATABASE, PGHOST, PGSERVICE, PGPASSFILE,
+# etc.) and AWS via the normal AWS CLI credential/region provider chain.
+# Required: S3_BUCKET, S3_PREFIX (a dedicated, nonempty prefix per database).
+# Optional: RETENTION_DAYS (default 30), TMPDIR, LOCK_FILE (private directory).
+# Retention is based on S3 LastModified, not the host-generated filename.
+# On versioned buckets, configure lifecycle expiration for noncurrent versions.
+set -Eeuo pipefail
+umask 077
+export LC_ALL=C AWS_PAGER='' AWS_CLI_AUTO_PROMPT=off
+
+log() { printf '%s %s\n' "$(date -u +'%FT%TZ')" "$*" >&2; }
+die() { log "ERROR: $*"; exit 1; }
+trap 'log "ERROR: command failed at line $LINENO (status $?)"' ERR
+
+: "${S3_BUCKET:?Set S3_BUCKET}"
+: "${S3_PREFIX:?Set S3_PREFIX to a dedicated backup prefix}"
+retention=${RETENTION_DAYS:-30}
+[[ $retention =~ ^[1-9][0-9]{0,4}$ ]] || die 'RETENTION_DAYS must be 1..99999'
+[[ $S3_BUCKET =~ ^[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]] || die 'Invalid bucket name'
+prefix=${S3_PREFIX%/}
+[[ $prefix =~ ^[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)*$ ]] || die 'Invalid prefix'
+[[ /$prefix/ != */../* && /$prefix/ != */./* ]] || die 'Invalid prefix component'
+
+for cmd in pg_dump pg_restore aws flock date mktemp stat sha256sum python3; do
+    command -v "$cmd" >/dev/null || die "Missing dependency: $cmd"
+done
+
+if [[ -n ${LOCK_FILE:-} ]]; then
+    exec 9>>"$LOCK_FILE"
+else
+    # A private persistent directory avoids lock-file replacement races.
+    lockdir=${XDG_STATE_HOME:-${HOME:?}/.local/state}/pg-s3-backup
+    mkdir -p -- "$lockdir"
+    lockid=$(printf '%s/%s' "$S3_BUCKET" "$prefix" | sha256sum)
+    exec 9>>"$lockdir/${lockid%% *}.lock"
+fi
+flock -n 9 || die 'Could not acquire backup lock'
+
+work=$(mktemp -d -- "${TMPDIR:-/tmp}/pg-s3.XXXXXXXXXX")
+cleanup() {
+    local rc=$?
+    trap - EXIT
+    rm -rf -- "$work" || rc=1
+    exit "$rc"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+stamp=$(date -u +'%Y%m%dT%H%M%SZ')
+nonce=$(python3 -c 'import uuid; print(uuid.uuid4().hex)')
+key="$prefix/pgbackup-$stamp-$nonce.dump"
+uri="s3://$S3_BUCKET/$key"
+archive="$work/backup.dump"
+
+log 'Creating PostgreSQL custom-format archive'
+pg_dump --no-password --format=custom --file="$archive"
+pg_restore --list "$archive" >/dev/null
+size=$(stat -c %s -- "$archive")
+(( size > 0 )) || die 'Empty archive'
+
+log "Uploading $uri"
+aws s3 cp "$archive" "$uri" --only-show-errors --no-progress \
+    --checksum-algorithm SHA256
+remote_size=$(aws s3api head-object --bucket "$S3_BUCKET" --key "$key" \
+    --query ContentLength --output text)
+[[ $remote_size == "$size" ]] || die 'Uploaded object size mismatch; skipping rotation'
+
+# AWS CLI automatically paginates. Finish listing and validating the entire
+# deletion plan before deleting anything; never parse arbitrary keys in shell.
+aws s3api list-objects-v2 --bucket "$S3_BUCKET" --prefix "$prefix/pgbackup-" \
+    --query 'Contents[].{key:Key,modified:LastModified}' --output json >"$work/list"
+
+python3 - "$work/list" "$prefix" "$key" "$retention" >"$work/expired" <<'PY'
+import datetime as dt
+import json
+import re
+import sys
+
+path, prefix, current, days = sys.argv[1:]
+pattern = re.compile(re.escape(prefix) + r"/pgbackup-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{32}\.dump")
+cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=int(days))
+with open(path, encoding="utf-8") as stream:
+    objects = json.load(stream)
+if not isinstance(objects, list) or not any(o["key"] == current for o in objects):
+    sys.exit("Uploaded backup missing from listing; refusing rotation")
+for obj in objects:
+    key = obj["key"]
+    if key != current and pattern.fullmatch(key):
+        when = dt.datetime.fromisoformat(obj["modified"].replace("Z", "+00:00"))
+        if when < cutoff:
+            print(key)
+PY
+
+removed=0
+while IFS= read -r expired; do
+    aws s3api delete-object --bucket "$S3_BUCKET" --key "$expired" >/dev/null
+    removed=$((removed + 1))
+done <"$work/expired"
+log "Backup complete: $uri ($size bytes); expired $removed backup(s)"

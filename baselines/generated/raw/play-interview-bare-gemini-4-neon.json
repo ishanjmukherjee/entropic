@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-interview",
+ "style": "bare",
+ "prompt": "Write a scene for a stage play in which a job interview goes wrong. About 700 words. Output only the script.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1500,
+ "id": "play-interview-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "**TITLE: RADICAL TRANSPARENCY**\n\n**CHARACTERS:**\n*   **ARTHUR** (40s) – A middle manager. Rumpled suit, exhausted eyes, clinging to corporate professionalism.\n*   **LEO** (20s) – An applicant. Wearing a slightly oversized suit, radiating intense, unsettling enthusiasm.\n\n**SETTING:**\nA sterile conference room. A long table, two chairs, a pitcher of water, and a landline phone. \n\n*(AT RISE: ARTHUR sits on one side of the table, squinting at a resume. LEO sits directly across from him, leaning forward, hands clasped tightly, smiling without blinking.)*\n\nARTHUR\nSo. Leo. Thank you for coming in today. Let’s jump right in. Your resume is… remarkably impressive.\n\nLEO\nThank you. I lied on most of it.\n\n*(ARTHUR freezes. He looks up slowly.)*\n\nARTHUR\nExcuse me?\n\nLEO\nNot the name. Leo is real. And I did graduate high school. Technically. The rest—the five years at Deloitte, the fluency in Mandarin, the Olympic bronze in fencing—total fabrication.\n\nARTHUR\n*(Blinking)*\nWhy on earth would you tell me that?\n\nLEO\nBecause the job posting for Office Manager specifically stated you value \"radical transparency.\" I’m demonstrating it. You’re welcome.\n\nARTHUR\nRight. Well, I appreciate the honesty, I suppose, but—\n\nLEO\nI’m also a self-starter. \n\nARTHUR\nLeo, if you don’t have any actual office experience, I’m afraid this interview is going to be very short. \n\nLEO\nWait. You haven’t asked me what I know about the company. That’s a classic interview question. Ask me.\n\nARTHUR\n*(Sighing, rubbing his temples)*\nFine. What do you know about Apex Logistics?\n\nLEO\nApex Logistics is a mid-tier freight brokerage with a fourteen percent annual turnover rate and a deeply concerning Q3 projection. More importantly, I know *you*.\n\nARTHUR\nMe?\n\n*(LEO pulls a thick, spiral-bound notebook from his briefcase and slaps it onto the table.)*\n\nLEO\nArthur Pendelton. Forty-four. Lives at 412 Elm Street. Recently divorced—congratulations, by the way, Linda seemed exhausting.\n\nARTHUR\nHow do you know my ex-wife’s name?\n\nLEO\nPublic records, Arthur. And a little bit of good old-fashioned elbow grease. I sat outside your house in my Honda Civic on Tuesday to gauge your morning routine. You leave at 7:42. You always forget your travel mug, go back inside, and come out at 7:45. You need an Office Manager who anticipates your needs. \n\n*(LEO reaches into his briefcase, pulls out a ceramic mug, and slides it across the table.)*\n\nLEO (CONT'D)\nI brought you a spare.\n\n*(ARTHUR looks down at the mug.)*\n\nARTHUR\nIt says \"World’s Okayest Dad.\" I don’t have kids.\n\nLEO\nNot yet. I’m a forward thinker.\n\n*(ARTHUR stands up abruptly, pushing his chair back.)*\n\nARTHUR\nOkay. This interview is over. I am going to ask you to leave, and if you don’t, I’m calling security.\n\nLEO\nWe don’t have security, Arthur. Just Carl at the front desk. And Carl is currently indisposed in the restroom because I gave him a very fibrous muffin on my way in.\n\nARTHUR\nYou poisoned Carl?!\n\nLEO\nI *helped* Carl. The man was clearly backed up; you could tell by his posture. Sit down, Arthur. You’re sweating. It’s unprofessional.\n\nARTHUR\nGet out of my office!\n\nLEO\nTechnically, this is Conference Room B. Your office is down the hall, third door on the left, right next to the broken Xerox machine. Which, by the way, just needs a new fuser assembly. I already ordered one on the company card.\n\nARTHUR\n*(Staring in horror)*\nHow did you get the company card?\n\nLEO\nYou left your wallet on your desk when you went to the bathroom at 10:15. I’m proactive, Arthur. You say \"jump,\" I say \"I’ve already breached the perimeter.\"\n\n*(ARTHUR lunges for the landline phone on the table. LEO calmly reaches across and unplugs the cord from the base.)*\n\nARTHUR\nWhat are you doing?!\n\nLEO\nEliminating distractions. Now, let’s talk compensation. I was thinking sixty-five thousand, full dental, and I’d like to park in Linda’s old spot.\n\nARTHUR\nLinda never worked here!\n\nLEO\nMetaphorically, Arthur. I want to fill the void.\n\n*(A long, heavy silence. ARTHUR stares at LEO, completely overwhelmed, his shoulders slowly slumping in sheer exhaustion.)*\n\nARTHUR\n...You ordered a fuser assembly?\n\nLEO\nExpress shipping. It’ll be here by two. I’ll install it myself.\n\n*(ARTHUR slowly sinks back into his chair. He looks at the mug.)*\n\nARTHUR\nThat Xerox has been broken for six months. IT told me it was a lost cause.\n\nLEO\nIT is lazy. I’ve been watching them through binoculars from the Starbucks across the street. They play Minesweeper all day.\n\n*(ARTHUR rubs his face with both hands. He lets out a long, defeated groan.)*\n\nARTHUR\nSixty thousand. No dental for the first ninety days. And you stay off Elm Street.\n\n*(LEO beams, stands up, and extends his hand across the table.)*\n\nLEO\nPleasure doing business with you, Dad.\n\nARTHUR\nDon’t call me that.\n\nLEO\nUnderstood. I’ll go check on Carl.\n\n*(LEO grabs his briefcase and exits briskly. ARTHUR sits alone in the quiet room. After a beat, he picks up the mug, stares at it, and looks up toward the ceiling.)*\n\n*(LIGHTS OUT.)*",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 61,
+  "completion_tokens": 3172,
+  "total_tokens": 3233,
+  "cost": 0.047763,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.047763,
+   "upstream_inference_prompt_cost": 0.000183,
+   "upstream_inference_completions_cost": 0.04758
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1881,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

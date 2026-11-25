@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-canal",
+ "style": "bare",
+ "prompt": "Write an essay about the Erie Canal and what it changed. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "id": "essay-canal-bare-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "When the Erie Canal opened in 1825, New York governor DeWitt Clinton traveled from Buffalo to New York City carrying a keg of Lake Erie water. At the end of the journey, he poured the water into the Atlantic Ocean in a ceremony called the “Wedding of the Waters.” The gesture celebrated an engineering achievement, but it also announced a shift in the country’s economic geography. A farmer near Lake Erie could now sell grain to buyers on the Atlantic coast without relying on an expensive overland journey. Within a generation, that change would help make New York City the nation’s leading port, turn small settlements into industrial cities, and accelerate the movement of people into the interior.\n\nBefore the canal, moving goods across land was so costly that distance often determined what farmers could afford to grow. A crop might fetch a good price in an eastern city, yet still yield little profit once it had been hauled there by wagon. New York had a geographical advantage: the Hudson River offered a navigable route north from the Atlantic, and the Mohawk Valley provided a relatively low passage west. The canal extended that route across the state. Built between 1817 and 1825, it ran roughly 363 miles from Albany to Buffalo. Locks raised and lowered boats as the terrain changed, while horses and mules walking along towpaths supplied the power to move their heavy cargoes.\n\nThe canal made shipping cheaper and more predictable. Flour, wheat, lumber, and other products flowed east from the Great Lakes region, while manufactured goods traveled west. Farmers who once depended heavily on nearby buyers could produce for distant markets, and inland consumers gained access to a wider range of goods. New York City benefited because cargo arriving by canal could continue down the Hudson to its harbor, where merchants could send it to other American ports or overseas. The city already had a thriving commercial economy, but the canal gave it an inland trading network that rivals such as Boston and Philadelphia struggled to match.\n\nThe canal also changed the places along its banks. Buffalo became a transfer point between Great Lakes vessels and canal boats. Rochester became a major flour-milling center, combining access to western grain with waterpower from the Genesee River. Syracuse gained a wider market for its salt. Such growth created work for millers, warehousemen, boat crews, and merchants, even as canal traffic brought business to smaller towns. These communities did not all prosper in the same way. Their fortunes depended on what they could produce, process, or transfer more efficiently once they had access to a common shipping route.\n\nPeople moved along that route as well. Immigrants arriving at New York Harbor could travel inland more affordably, and families from the Northeast could move west in search of land and work. The result was not simply an expansion into empty territory. The canal crossed the homelands of the Haudenosaunee, whose communities had already endured warfare, dispossession, and coercive land agreements. By making western New York and the Great Lakes region more accessible to settlers, the canal intensified pressure on Indigenous lands. The same infrastructure that widened economic opportunities for some Americans helped narrow the choices available to others.\n\nThe canal’s influence extended beyond commerce and settlement. Growing towns along the route supported newspapers, meeting halls, churches, and voluntary associations. Traveling speakers and printed material reached audiences in communities that were increasingly connected to one another. During the nineteenth century, western and central New York became centers of religious revival and reform, including abolitionism and the movement for women’s rights. The canal did not create these movements, but it helped sustain the towns and networks through which their ideas circulated.\n\nThe project also changed what governments believed they could build. New York State financed the canal, and toll revenues vindicated a public investment that critics had once ridiculed. Other states pursued canals of their own, though not all could reproduce New York’s combination of favorable geography, heavy traffic, and access to an ocean port. Railroads eventually captured much of the passenger business and offered faster freight service. The canal nevertheless continued to carry bulky goods, and New York enlarged and modernized its waterway system rather than abandoning it.\n\nClinton’s ceremony had suggested that the canal’s great achievement was to join two bodies of water. Its more lasting achievement was to change which places could do business with one another, and on what terms. A lower freight bill could determine where a farmer sold a harvest, where a merchant built a warehouse, or where a family decided to settle. Repeated across thousands of journeys and transactions, those decisions shifted wealth and population, strengthened some cities at the expense of their rivals, and hastened the loss of Indigenous land. The Erie Canal’s history shows how profoundly a change in the cost of moving ordinary goods can alter who prospers and who bears the cost of growth.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 32,
+  "completion_tokens": 971,
+  "total_tokens": 1003,
+  "cost": 0.009774,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009774,
+   "upstream_inference_prompt_cost": 6.4e-05,
+   "upstream_inference_completions_cost": 0.00971
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

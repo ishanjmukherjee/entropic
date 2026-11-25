@@ -1,0 +1,423 @@
+#!/usr/bin/env python3
+"""Production-quality JSON HTTP API for a to-do list using only the Python standard library."""
+
+from __future__ import annotations
+
+import datetime
+import http.server
+import json
+import logging
+import os
+import re
+import signal
+import sqlite3
+import sys
+import threading
+import urllib.parse
+from dataclasses import dataclass
+from http import HTTPStatus
+from typing import Any
+
+LOGGER = logging.getLogger("todo_api")
+
+TODO_ITEM_RE = re.compile(r"^/todos/(\d+)$")
+MAX_TITLE_LENGTH = 255
+DEFAULT_MAX_BODY_BYTES = 64 * 1024
+
+
+class APIError(Exception):
+    """Structured HTTP error."""
+
+    def __init__(self, status: HTTPStatus, message: str) -> None:
+        super().__init__(message)
+        self.status = status
+        self.message = message
+
+
+@dataclass(frozen=True)
+class Todo:
+    id: int
+    title: str
+    completed: bool
+    created_at: str
+    updated_at: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "completed": self.completed,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+
+def utc_now_iso() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+class TodoStore:
+    """Thread-safe SQLite-backed persistence layer for to-do items."""
+
+    def __init__(self, db_path: str) -> None:
+        self._lock = threading.Lock()
+        self._conn = sqlite3.connect(db_path, check_same_thread=False, timeout=5.0)
+        self._conn.row_factory = sqlite3.Row
+        self._init_schema()
+
+    def _init_schema(self) -> None:
+        with self._lock, self._conn:
+            self._conn.execute("PRAGMA journal_mode=WAL;")
+            self._conn.execute("PRAGMA foreign_keys=ON;")
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS todos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    completed INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+
+    @staticmethod
+    def _row_to_todo(row: sqlite3.Row) -> Todo:
+        return Todo(
+            id=int(row["id"]),
+            title=str(row["title"]),
+            completed=bool(row["completed"]),
+            created_at=str(row["created_at"]),
+            updated_at=str(row["updated_at"]),
+        )
+
+    def list_todos(self, completed: bool | None = None) -> list[Todo]:
+        with self._lock:
+            if completed is None:
+                rows = self._conn.execute(
+                    "SELECT id, title, completed, created_at, updated_at FROM todos ORDER BY id ASC"
+                ).fetchall()
+            else:
+                rows = self._conn.execute(
+                    "SELECT id, title, completed, created_at, updated_at FROM todos WHERE completed = ? ORDER BY id ASC",
+                    (1 if completed else 0,),
+                ).fetchall()
+        return [self._row_to_todo(row) for row in rows]
+
+    def get_todo(self, todo_id: int) -> Todo | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT id, title, completed, created_at, updated_at FROM todos WHERE id = ?",
+                (todo_id,),
+            ).fetchone()
+        return self._row_to_todo(row) if row is not None else None
+
+    def create_todo(self, title: str, completed: bool = False) -> Todo:
+        now = utc_now_iso()
+        with self._lock, self._conn:
+            cursor = self._conn.execute(
+                "INSERT INTO todos (title, completed, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                (title, 1 if completed else 0, now, now),
+            )
+            todo_id = int(cursor.lastrowid)
+        return Todo(
+            id=todo_id,
+            title=title,
+            completed=completed,
+            created_at=now,
+            updated_at=now,
+        )
+
+    def update_todo(
+        self,
+        todo_id: int,
+        *,
+        title: str | None = None,
+        completed: bool | None = None,
+    ) -> Todo | None:
+        with self._lock, self._conn:
+            row = self._conn.execute(
+                "SELECT id, title, completed, created_at, updated_at FROM todos WHERE id = ?",
+                (todo_id,),
+            ).fetchone()
+            if row is None:
+                return None
+
+            new_title = str(row["title"]) if title is None else title
+            new_completed = bool(row["completed"]) if completed is None else completed
+            now = utc_now_iso()
+
+            self._conn.execute(
+                "UPDATE todos SET title = ?, completed = ?, updated_at = ? WHERE id = ?",
+                (new_title, 1 if new_completed else 0, now, todo_id),
+            )
+            return Todo(
+                id=int(row["id"]),
+                title=new_title,
+                completed=new_completed,
+                created_at=str(row["created_at"]),
+                updated_at=now,
+            )
+
+    def delete_todo(self, todo_id: int) -> bool:
+        with self._lock, self._conn:
+            cursor = self._conn.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+            return cursor.rowcount > 0
+
+    def close(self) -> None:
+        with self._lock:
+            self._conn.close()
+
+
+class TodoHTTPServer(http.server.ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+    def __init__(
+        self,
+        server_address: tuple[str, int],
+        store: TodoStore,
+        max_body_bytes: int = DEFAULT_MAX_BODY_BYTES,
+    ) -> None:
+        self.store = store
+        self.max_body_bytes = max_body_bytes
+        super().__init__(server_address, TodoRequestHandler)
+
+
+class TodoRequestHandler(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    server: TodoHTTPServer
+
+    def version_string(self) -> str:
+        return "todo-api"
+
+    def log_message(self, format: str, *args: Any) -> None:
+        LOGGER.info("%s - %s", self.address_string(), format % args)
+
+    def do_GET(self) -> None:
+        self._dispatch()
+
+    def do_POST(self) -> None:
+        self._dispatch()
+
+    def do_PUT(self) -> None:
+        self._dispatch()
+
+    def do_PATCH(self) -> None:
+        self._dispatch()
+
+    def do_DELETE(self) -> None:
+        self._dispatch()
+
+    def _dispatch(self) -> None:
+        try:
+            parsed = urllib.parse.urlsplit(self.path)
+            path = parsed.path.rstrip("/") or "/"
+            query = urllib.parse.parse_qs(parsed.query, strict_parsing=False)
+
+            if path == "/health":
+                if self.command != "GET":
+                    raise APIError(HTTPStatus.METHOD_NOT_ALLOWED, "Method not allowed.")
+                self._send_json(HTTPStatus.OK, {"status": "ok"})
+                return
+
+            if path == "/todos":
+                if self.command == "GET":
+                    self._handle_list_todos(query)
+                elif self.command == "POST":
+                    self._handle_create_todo()
+                else:
+                    raise APIError(HTTPStatus.METHOD_NOT_ALLOWED, "Method not allowed.")
+                return
+
+            match = TODO_ITEM_RE.match(path)
+            if match:
+                todo_id = int(match.group(1))
+                if self.command == "GET":
+                    self._handle_get_todo(todo_id)
+                elif self.command == "PUT":
+                    self._handle_replace_todo(todo_id)
+                elif self.command == "PATCH":
+                    self._handle_patch_todo(todo_id)
+                elif self.command == "DELETE":
+                    self._handle_delete_todo(todo_id)
+                else:
+                    raise APIError(HTTPStatus.METHOD_NOT_ALLOWED, "Method not allowed.")
+                return
+
+            raise APIError(HTTPStatus.NOT_FOUND, "Resource not found.")
+        except APIError as exc:
+            self._send_json(exc.status, {"error": exc.message})
+        except Exception:
+            LOGGER.exception("Unhandled exception while processing %s %s", self.command, self.path)
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "Internal server error."})
+
+    def _handle_list_todos(self, query: dict[str, list[str]]) -> None:
+        completed_filter: bool | None = None
+        if "completed" in query:
+            raw = query["completed"][-1].strip().lower()
+            if raw == "true":
+                completed_filter = True
+            elif raw == "false":
+                completed_filter = False
+            else:
+                raise APIError(HTTPStatus.BAD_REQUEST, "Query parameter 'completed' must be 'true' or 'false'.")
+
+        todos = self.server.store.list_todos(completed=completed_filter)
+        self._send_json(HTTPStatus.OK, {"todos": [todo.to_dict() for todo in todos]})
+
+    def _handle_get_todo(self, todo_id: int) -> None:
+        todo = self.server.store.get_todo(todo_id)
+        if todo is None:
+            raise APIError(HTTPStatus.NOT_FOUND, "To-do item not found.")
+        self._send_json(HTTPStatus.OK, {"todo": todo.to_dict()})
+
+    def _handle_create_todo(self) -> None:
+        body = self._read_json_object()
+        title = self._validate_title(body.get("title"), required=True)
+        completed = self._validate_completed(body.get("completed"), required=False)
+        assert title is not None
+        todo = self.server.store.create_todo(title=title, completed=bool(completed))
+        self._send_json(HTTPStatus.CREATED, {"todo": todo.to_dict()})
+
+    def _handle_replace_todo(self, todo_id: int) -> None:
+        body = self._read_json_object()
+        title = self._validate_title(body.get("title"), required=True)
+        completed = self._validate_completed(body.get("completed"), required=True)
+        todo = self.server.store.update_todo(todo_id, title=title, completed=completed)
+        if todo is None:
+            raise APIError(HTTPStatus.NOT_FOUND, "To-do item not found.")
+        self._send_json(HTTPStatus.OK, {"todo": todo.to_dict()})
+
+    def _handle_patch_todo(self, todo_id: int) -> None:
+        body = self._read_json_object()
+        if "title" not in body and "completed" not in body:
+            raise APIError(HTTPStatus.BAD_REQUEST, "At least one of 'title' or 'completed' must be provided.")
+        title = self._validate_title(body.get("title"), required=False) if "title" in body else None
+        completed = self._validate_completed(body.get("completed"), required=False) if "completed" in body else None
+        todo = self.server.store.update_todo(todo_id, title=title, completed=completed)
+        if todo is None:
+            raise APIError(HTTPStatus.NOT_FOUND, "To-do item not found.")
+        self._send_json(HTTPStatus.OK, {"todo": todo.to_dict()})
+
+    def _handle_delete_todo(self, todo_id: int) -> None:
+        deleted = self.server.store.delete_todo(todo_id)
+        if not deleted:
+            raise APIError(HTTPStatus.NOT_FOUND, "To-do item not found.")
+        self._send_no_content()
+
+    def _read_json_object(self) -> dict[str, Any]:
+        content_type = self.headers.get("Content-Type", "")
+        media_type = content_type.split(";", 1)[0].strip().lower()
+        if media_type != "application/json":
+            raise APIError(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, "Content-Type must be 'application/json'.")
+
+        raw_length = self.headers.get("Content-Length")
+        if raw_length is None:
+            raise APIError(HTTPStatus.LENGTH_REQUIRED, "Content-Length header is required.")
+        try:
+            length = int(raw_length)
+        except ValueError as exc:
+            raise APIError(HTTPStatus.BAD_REQUEST, "Invalid Content-Length header.") from exc
+
+        if length < 0:
+            raise APIError(HTTPStatus.BAD_REQUEST, "Invalid Content-Length header.")
+        if length > self.server.max_body_bytes:
+            raise APIError(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "Request body is too large.")
+
+        raw_body = self.rfile.read(length)
+        try:
+            data = json.loads(raw_body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise APIError(HTTPStatus.BAD_REQUEST, "Request body must be valid UTF-8 JSON.") from exc
+
+        if not isinstance(data, dict):
+            raise APIError(HTTPStatus.BAD_REQUEST, "JSON body must be an object.")
+        return data
+
+    @staticmethod
+    def _validate_title(value: Any, *, required: bool) -> str | None:
+        if value is None:
+            if required:
+                raise APIError(HTTPStatus.BAD_REQUEST, "Field 'title' is required.")
+            return None
+        if not isinstance(value, str):
+            raise APIError(HTTPStatus.BAD_REQUEST, "Field 'title' must be a string.")
+        cleaned = value.strip()
+        if not cleaned:
+            raise APIError(HTTPStatus.BAD_REQUEST, "Field 'title' cannot be empty.")
+        if len(cleaned) > MAX_TITLE_LENGTH:
+            raise APIError(
+                HTTPStatus.BAD_REQUEST,
+                f"Field 'title' must be at most {MAX_TITLE_LENGTH} characters.",
+            )
+        return cleaned
+
+    @staticmethod
+    def _validate_completed(value: Any, *, required: bool) -> bool | None:
+        if value is None:
+            if required:
+                raise APIError(HTTPStatus.BAD_REQUEST, "Field 'completed' is required.")
+            return None
+        if not isinstance(value, bool):
+            raise APIError(HTTPStatus.BAD_REQUEST, "Field 'completed' must be a boolean.")
+        return value
+
+    def _send_common_headers(self) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Cache-Control", "no-store")
+
+    def _send_json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
+        body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        self.send_response(status.value, status.phrase)
+        self._send_common_headers()
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_no_content(self) -> None:
+        self.send_response(HTTPStatus.NO_CONTENT.value, HTTPStatus.NO_CONTENT.phrase)
+        self._send_common_headers()
+        self.end_headers()
+
+
+def configure_logging() -> None:
+    level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        stream=sys.stdout,
+    )
+
+
+def main() -> int:
+    configure_logging()
+
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "8000"))
+    db_path = os.environ.get("DB_PATH", "todos.db")
+
+    store = TodoStore(db_path)
+    server = TodoHTTPServer((host, port), store)
+
+    def handle_signal(signum: int, _frame: Any) -> None:
+        LOGGER.info("Received signal %s; shutting down.", signum)
+        threading.Thread(target=server.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    LOGGER.info("Listening on http://%s:%d (db=%s)", host, port, db_path)
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
+        store.close()
+        LOGGER.info("Server stopped.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

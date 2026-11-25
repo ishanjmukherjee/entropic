@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-azide",
+ "style": "matched",
+ "prompt": "Write an essay titled “Detonating A Huge Pile of Lead Azide. Really.”. It is a chemist's question-and-answer commentary on the US Army's plan to detonate a large quantity of the primary explosive lead azide near Burlington, Iowa. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "matched_to": "blogs-tech/lowe-detonating-huge-pile-lead-azide-really",
+ "id": "essay-m-azide-matched-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "Q: The US Army plans to detonate a large quantity of lead azide near Burlington, Iowa. Is “a huge pile” a fair description?\n\nA: As a description of how much material the Army has to dispose of, perhaps. As a description of what anybody intends to do with it, no. A large inventory is not necessarily one pile, and a disposal plan is not necessarily one event. That distinction matters to the neighbors. If I lived near the Iowa Army Ammunition Plant, I would want to know whether to expect one alarming afternoon or a succession of interruptions over many months.\n\nQ: What is lead azide, and why would the Army have so much of it?\n\nA: It is a salt, Pb(N₃)₂, used as a primary explosive. “Primary” describes its place in a sequence, not its rank in a contest for the biggest bang. Its job in a detonator is to respond reliably to a small initiating event and set off a less sensitive explosive. It normally does its work in small quantities. An industrial inventory therefore presents a rather different problem from the ones for which the substance was selected. A property valuable in a finished device becomes a liability in a storeroom.\n\nQ: Why not leave it in the storeroom?\n\nA: For how long? “Leave it alone” sounds like the one option that requires no decisions, but somebody has to inspect the building, maintain it and eventually enter it. A decision to wait transfers those obligations to another shift, another contractor or another generation. That does not make immediate detonation the right answer. It does mean that the risks of disposal have to be compared with the risks of actual alternatives, not with an imaginary afternoon on which the stuff has ceased to exist.\n\nQ: Surely a chemist could think of something quieter.\n\nA: A chemist can generally think of a reaction on paper. The paper is wonderfully forgiving about how the material gets from its present container into the proposed process. In an actual plant, the handling required by a nominally gentle treatment can account for much of the danger to workers. Conversely, a method that limits worker exposure may impose costs beyond the fence. The Army owes the public a comparison that puts both sets of people in the picture. “Quieter” is a real advantage; it just isn't a complete safety assessment.\n\nQ: What happens to the lead when the azide detonates?\n\nA: Now we have come to the least negotiable part of the discussion. Nitrogen can depart as nitrogen gas. Lead remains lead. From the formula alone, you can work out that lead accounts for roughly 71 percent of the compound’s mass. That is not a prediction that 71 percent of the inventory will go airborne. It is a reminder that destroying the explosive and accounting for the lead are two distinct jobs. A successful detonation can finish the first without telling you much about the second.\n\nQ: Does that mean Burlington residents should expect lead in their yards?\n\nA: The formula cannot tell us that, either. Exposure depends on what residue forms, where it settles and whether people come into contact with it. The useful questions are local ones. What do soil and air measurements show before work begins? Where will samples be taken, and can the instruments detect an increase small enough to matter? If the Army reports “no lead detected,” residents should be able to find the detection limit alongside that statement. A number with units is considerably more informative than an adjective like “negligible.”\n\nQ: What about the noise? Is that just a public-relations problem?\n\nA: No. A window rattling unexpectedly is information of a sort, but it is poor information: the householder cannot tell from the rattle whether everything went according to plan. Advance notice lets people make arrangements for livestock, pets or a family member who finds sudden noise distressing. Prompt confirmation afterward tells them what they heard. Neither requires disclosing sensitive technical details. A schedule people can find and a telephone number answered by someone who knows what happened would be a good start.\n\nQ: So, on balance, should the Army proceed?\n\nA: I would not vote on a site-specific disposal plan from the periodic table. There is a sound reason to eliminate an unnecessary stock of a sensitive explosive. There is an equally sound reason for people near Burlington to ask for evidence that the chosen method is the least harmful practicable one. Before work begins, they should know who has authority to pause it and what findings would trigger a pause. Afterward, they should be able to see what was measured and what cleanup remains. The report of an explosion will establish one fact rather convincingly. It will not establish that the work is done.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 74,
+  "completion_tokens": 957,
+  "total_tokens": 1031,
+  "cost": 0.038872,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.038872,
+   "upstream_inference_prompt_cost": 0.000592,
+   "upstream_inference_completions_cost": 0.03828
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "craft",
+ "prompt": "Write the lyrics of a pop song about a breakup.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 900,
+ "id": "song-breakup-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "Your brother's Tacoma on Damen with the hazards on,\nyou took the KitchenAid, I kept the dog,\nwe split the records cross-legged on the floor,\nyou let me have Rumours, said you'd heard it enough.\nThen I opened the cabinet after you'd gone:\nevery jar in your label-maker font,\nCUMIN, PAPRIKA, SAFFRON (DON'T),\nlike a note to whoever cooks here now.\n\nI could open the app, I could press remove,\nit's two little taps, it's a thing people do\n\nBut I keep you on the family plan,\ntwenty bucks on the first of the month,\nand at two in the morning there's a little green light\nby your name, and a song going round:\nit's Rumours again, side one, track two,\nthe one that you said you were through with,\nso I lie there and watch it play out to the end,\nand I pay for the family plan.\n\nRan into Priya by the limes at the Jewel,\nshe said Dani's great, she's been bouldering a lot,\nshe's got chalk on her jeans and a guy named Theo\nwho drives up from Pilsen in a dented Subaru.\nAnd the dog still gets up at ten after six,\ngoes and lies by the radiator, chin on the door,\n'cause that's when your train used to pull into Damen.\nNobody taught him, and nobody can tell him.\n\nI could open the app, I could press remove,\nI've had my thumb right there, it'd be easy to do\n\nBut I keep you on the family plan,\ntwenty bucks on the first of the month,\nand at two in the morning there's a little green light\nby your name, and a band I don't know:\nit's Pavement, it's Silver Jews, it's Built to Spill,\nit's a whole other guy's record shelf,\nand I'm paying for every song Theo puts on,\nI still pay for the family plan.\n\nMade risotto Tuesday with the saffron anyway,\nthe tin your mother sent from Valencia last May,\npeeled the label off the jar with the edge of a knife\nand stuck it on the fridge, and it's still up there tonight.\n\nThen a Thursday in March at a quarter to three\nI put on side one and I left it alone,\nand before it was over your little light changed\n\n'Cause you're still on the family plan,\nand it turns out it works both ways,\nso at three in the morning when I'm playing Dreams\nyou can see it from Theo's place.\nAnd you put it on after, same side, same song,\nand neither one of us types a thing,\nand the first of the month comes around again,\nand I pay for the family plan.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

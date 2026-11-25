@@ -1,0 +1,540 @@
+/*
+ * i2c_th_sensor.c — bare-metal ARM driver for an SHT3x-class I2C
+ * temperature/humidity sensor with a fixed-size reading ring buffer.
+ *
+ * Assumes a memory-mapped I2C master with the register layout below
+ * (common on Cortex-M parts). Replace I2C_BASE / timing constants for
+ * the target silicon. SysTick or a free-running timer must call
+ * th_tick_ms() once per millisecond.
+ *
+ * Public API:
+ *   th_init, th_start_single, th_poll, th_read_latest,
+ *   th_ring_pop, th_ring_count, th_tick_ms
+ */
+
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+
+/* -------------------------------------------------------------------------- */
+/* Target hooks                                                               */
+/* -------------------------------------------------------------------------- */
+
+#ifndef I2C_BASE
+#define I2C_BASE            0x40005400u
+#endif
+
+#define I2C_CR1             (*(volatile uint32_t *)(I2C_BASE + 0x00u))
+#define I2C_CR2             (*(volatile uint32_t *)(I2C_BASE + 0x04u))
+#define I2C_TIMINGR         (*(volatile uint32_t *)(I2C_BASE + 0x10u))
+#define I2C_ISR             (*(volatile uint32_t *)(I2C_BASE + 0x18u))
+#define I2C_ICR             (*(volatile uint32_t *)(I2C_BASE + 0x1Cu))
+#define I2C_RXDR            (*(volatile uint32_t *)(I2C_BASE + 0x24u))
+#define I2C_TXDR            (*(volatile uint32_t *)(I2C_BASE + 0x28u))
+
+#define I2C_CR1_PE          (1u << 0)
+#define I2C_CR1_TXIE        (1u << 1)
+#define I2C_CR1_RXIE        (1u << 2)
+#define I2C_CR1_NACKIE      (1u << 4)
+#define I2C_CR1_ERRIE       (1u << 7)
+#define I2C_CR2_RD_WRN      (1u << 10)
+#define I2C_CR2_ADD10       (1u << 11)
+#define I2C_CR2_START       (1u << 13)
+#define I2C_CR2_STOP        (1u << 14)
+#define I2C_CR2_NACK        (1u << 15)
+#define I2C_CR2_NBYTES_SHIFT 16
+#define I2C_CR2_AUTOEND     (1u << 25)
+#define I2C_ISR_TXIS        (1u << 1)
+#define I2C_ISR_RXNE        (1u << 2)
+#define I2C_ISR_NACKF       (1u << 4)
+#define I2C_ISR_STOPF       (1u << 5)
+#define I2C_ISR_TC          (1u << 6)
+#define I2C_ISR_BERR        (1u << 8)
+#define I2C_ISR_ARLO        (1u << 9)
+#define I2C_ISR_BUSY        (1u << 15)
+#define I2C_ICR_NACKCF      (1u << 4)
+#define I2C_ICR_STOPCF      (1u << 5)
+#define I2C_ICR_BERRCF      (1u << 8)
+#define I2C_ICR_ARLOCF      (1u << 9)
+
+/* 100 kHz @ 8 MHz I2C kernel clock. Recalculate for the real clock. */
+#ifndef I2C_TIMING_100K
+#define I2C_TIMING_100K     0x00303D5Bu
+#endif
+
+#ifndef TH_I2C_ADDR_7BIT
+#define TH_I2C_ADDR_7BIT    0x44u
+#endif
+
+#ifndef TH_RING_CAP
+#define TH_RING_CAP         32u
+#endif
+
+#define TH_CMD_SINGLE_HPM   0x2400u   /* single shot, high repeatability */
+#define TH_CMD_SOFT_RESET   0x30A2u
+#define TH_MEAS_DELAY_MS    20u
+#define TH_XFER_TIMEOUT_MS  20u
+#define TH_BUS_TIMEOUT_MS   50u
+
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
+
+typedef enum {
+    TH_OK = 0,
+    TH_ERR_PARAM,
+    TH_ERR_BUS,
+    TH_ERR_NACK,
+    TH_ERR_TIMEOUT,
+    TH_ERR_CRC,
+    TH_ERR_BUSY,
+    TH_ERR_EMPTY,
+    TH_ERR_NOT_READY
+} th_status_t;
+
+typedef struct {
+    int16_t  temp_c_x100;     /* degrees C * 100 */
+    uint16_t rh_x100;         /* %RH * 100 */
+    uint32_t timestamp_ms;
+    uint8_t  valid;
+} th_sample_t;
+
+typedef struct {
+    th_sample_t slot[TH_RING_CAP];
+    volatile uint16_t head;   /* next write */
+    volatile uint16_t tail;   /* next read  */
+    volatile uint16_t count;
+    volatile uint32_t dropped;
+} th_ring_t;
+
+typedef enum {
+    TH_ST_IDLE = 0,
+    TH_ST_WAIT_MEAS,
+    TH_ST_ERROR
+} th_state_t;
+
+/* -------------------------------------------------------------------------- */
+/* Module state                                                               */
+/* -------------------------------------------------------------------------- */
+
+static volatile uint32_t g_ms;
+static th_ring_t         g_ring;
+static th_state_t        g_state;
+static uint32_t          g_meas_due_ms;
+static th_status_t       g_last_err;
+static uint8_t           g_inited;
+
+/* -------------------------------------------------------------------------- */
+/* Critical section: mask IRQs that touch the ring. Override if needed.      */
+/* -------------------------------------------------------------------------- */
+
+static inline uint32_t th_irq_save(void)
+{
+    uint32_t primask;
+    __asm volatile ("mrs %0, primask" : "=r"(primask));
+    __asm volatile ("cpsid i" ::: "memory");
+    return primask;
+}
+
+static inline void th_irq_restore(uint32_t primask)
+{
+    __asm volatile ("msr primask, %0" :: "r"(primask) : "memory");
+}
+
+void th_tick_ms(void)
+{
+    g_ms++;
+}
+
+static uint32_t th_now(void)
+{
+    return g_ms;
+}
+
+static bool th_elapsed(uint32_t start, uint32_t span)
+{
+    return (uint32_t)(th_now() - start) >= span;
+}
+
+/* -------------------------------------------------------------------------- */
+/* CRC-8 (poly 0x31, init 0xFF) — SHT3x                                                                      */
+/* -------------------------------------------------------------------------- */
+
+static uint8_t th_crc8(const uint8_t *data, size_t len)
+{
+    uint8_t crc = 0xFFu;
+    size_t i;
+    int b;
+
+    for (i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (b = 0; b < 8; b++) {
+            if (crc & 0x80u) {
+                crc = (uint8_t)((crc << 1) ^ 0x31u);
+            } else {
+                crc = (uint8_t)(crc << 1);
+            }
+        }
+    }
+    return crc;
+}
+
+/* -------------------------------------------------------------------------- */
+/* I2C master primitives                                                      */
+/* -------------------------------------------------------------------------- */
+
+static void i2c_clear_flags(void)
+{
+    I2C_ICR = I2C_ICR_NACKCF | I2C_ICR_STOPCF | I2C_ICR_BERRCF | I2C_ICR_ARLOCF;
+}
+
+static th_status_t i2c_wait_flag(uint32_t mask, uint32_t timeout_ms)
+{
+    uint32_t t0 = th_now();
+
+    while ((I2C_ISR & mask) == 0u) {
+        if (I2C_ISR & (I2C_ISR_NACKF | I2C_ISR_BERR | I2C_ISR_ARLO)) {
+            if (I2C_ISR & I2C_ISR_NACKF) {
+                i2c_clear_flags();
+                return TH_ERR_NACK;
+            }
+            i2c_clear_flags();
+            return TH_ERR_BUS;
+        }
+        if (th_elapsed(t0, timeout_ms)) {
+            return TH_ERR_TIMEOUT;
+        }
+    }
+    return TH_OK;
+}
+
+static th_status_t i2c_wait_bus_idle(void)
+{
+    uint32_t t0 = th_now();
+
+    while (I2C_ISR & I2C_ISR_BUSY) {
+        if (th_elapsed(t0, TH_BUS_TIMEOUT_MS)) {
+            return TH_ERR_TIMEOUT;
+        }
+    }
+    return TH_OK;
+}
+
+static th_status_t i2c_write(uint8_t addr7, const uint8_t *buf, uint8_t len)
+{
+    th_status_t st;
+    uint8_t i;
+
+    if (buf == NULL || len == 0u) {
+        return TH_ERR_PARAM;
+    }
+
+    st = i2c_wait_bus_idle();
+    if (st != TH_OK) {
+        return st;
+    }
+
+    i2c_clear_flags();
+    I2C_CR2 = ((uint32_t)addr7 << 1)
+            | ((uint32_t)len << I2C_CR2_NBYTES_SHIFT)
+            | I2C_CR2_START
+            | I2C_CR2_AUTOEND;
+
+    for (i = 0; i < len; i++) {
+        st = i2c_wait_flag(I2C_ISR_TXIS, TH_XFER_TIMEOUT_MS);
+        if (st != TH_OK) {
+            I2C_CR2 |= I2C_CR2_STOP;
+            return st;
+        }
+        I2C_TXDR = buf[i];
+    }
+
+    st = i2c_wait_flag(I2C_ISR_STOPF, TH_XFER_TIMEOUT_MS);
+    i2c_clear_flags();
+    return st;
+}
+
+static th_status_t i2c_read(uint8_t addr7, uint8_t *buf, uint8_t len)
+{
+    th_status_t st;
+    uint8_t i;
+
+    if (buf == NULL || len == 0u) {
+        return TH_ERR_PARAM;
+    }
+
+    st = i2c_wait_bus_idle();
+    if (st != TH_OK) {
+        return st;
+    }
+
+    i2c_clear_flags();
+    I2C_CR2 = ((uint32_t)addr7 << 1)
+            | I2C_CR2_RD_WRN
+            | ((uint32_t)len << I2C_CR2_NBYTES_SHIFT)
+            | I2C_CR2_START
+            | I2C_CR2_AUTOEND;
+
+    for (i = 0; i < len; i++) {
+        st = i2c_wait_flag(I2C_ISR_RXNE, TH_XFER_TIMEOUT_MS);
+        if (st != TH_OK) {
+            I2C_CR2 |= I2C_CR2_STOP;
+            return st;
+        }
+        buf[i] = (uint8_t)(I2C_RXDR & 0xFFu);
+    }
+
+    st = i2c_wait_flag(I2C_ISR_STOPF, TH_XFER_TIMEOUT_MS);
+    i2c_clear_flags();
+    return st;
+}
+
+static th_status_t th_send_cmd(uint16_t cmd)
+{
+    uint8_t b[2];
+
+    b[0] = (uint8_t)(cmd >> 8);
+    b[1] = (uint8_t)(cmd & 0xFFu);
+    return i2c_write(TH_I2C_ADDR_7BIT, b, 2u);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Conversion                                                                 */
+/* -------------------------------------------------------------------------- */
+
+static int16_t th_raw_to_temp_x100(uint16_t raw)
+{
+    /* T = -45 + 175 * raw / 65535, scaled by 100 with rounding. */
+    int32_t t = -4500 + (int32_t)(((int64_t)17500 * (int64_t)raw + 32767) / 65535);
+    if (t > 32767) {
+        t = 32767;
+    }
+    if (t < -32768) {
+        t = -32768;
+    }
+    return (int16_t)t;
+}
+
+static uint16_t th_raw_to_rh_x100(uint16_t raw)
+{
+    /* RH = 100 * raw / 65535, scaled by 100. */
+    uint32_t rh = (uint32_t)(((uint64_t)10000u * (uint64_t)raw + 32767u) / 65535u);
+    if (rh > 10000u) {
+        rh = 10000u;
+    }
+    return (uint16_t)rh;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ring buffer                                                                */
+/* -------------------------------------------------------------------------- */
+
+static void th_ring_reset(th_ring_t *r)
+{
+    uint32_t ps = th_irq_save();
+    r->head = 0u;
+    r->tail = 0u;
+    r->count = 0u;
+    r->dropped = 0u;
+    th_irq_restore(ps);
+}
+
+static void th_ring_push(const th_sample_t *s)
+{
+    uint32_t ps = th_irq_save();
+    uint16_t h = g_ring.head;
+
+    g_ring.slot[h] = *s;
+    g_ring.head = (uint16_t)((h + 1u) % TH_RING_CAP);
+    if (g_ring.count == TH_RING_CAP) {
+        g_ring.tail = (uint16_t)((g_ring.tail + 1u) % TH_RING_CAP);
+        g_ring.dropped++;
+    } else {
+        g_ring.count++;
+    }
+    th_irq_restore(ps);
+}
+
+th_status_t th_ring_pop(th_sample_t *out)
+{
+    uint32_t ps;
+    uint16_t t;
+
+    if (out == NULL) {
+        return TH_ERR_PARAM;
+    }
+
+    ps = th_irq_save();
+    if (g_ring.count == 0u) {
+        th_irq_restore(ps);
+        return TH_ERR_EMPTY;
+    }
+    t = g_ring.tail;
+    *out = g_ring.slot[t];
+    g_ring.tail = (uint16_t)((t + 1u) % TH_RING_CAP);
+    g_ring.count--;
+    th_irq_restore(ps);
+    return TH_OK;
+}
+
+uint16_t th_ring_count(void)
+{
+    uint32_t ps = th_irq_save();
+    uint16_t c = g_ring.count;
+    th_irq_restore(ps);
+    return c;
+}
+
+uint32_t th_ring_dropped(void)
+{
+    uint32_t ps = th_irq_save();
+    uint32_t d = g_ring.dropped;
+    th_irq_restore(ps);
+    return d;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sensor                                                                     */
+/* -------------------------------------------------------------------------- */
+
+static th_status_t th_fetch_sample(th_sample_t *out)
+{
+    uint8_t raw[6];
+    uint16_t t_raw;
+    uint16_t h_raw;
+    th_status_t st;
+
+    st = i2c_read(TH_I2C_ADDR_7BIT, raw, 6u);
+    if (st != TH_OK) {
+        return st;
+    }
+    if (th_crc8(&raw[0], 2u) != raw[2] || th_crc8(&raw[3], 2u) != raw[5]) {
+        return TH_ERR_CRC;
+    }
+
+    t_raw = (uint16_t)(((uint16_t)raw[0] << 8) | raw[1]);
+    h_raw = (uint16_t)(((uint16_t)raw[3] << 8) | raw[4]);
+
+    out->temp_c_x100 = th_raw_to_temp_x100(t_raw);
+    out->rh_x100 = th_raw_to_rh_x100(h_raw);
+    out->timestamp_ms = th_now();
+    out->valid = 1u;
+    return TH_OK;
+}
+
+th_status_t th_init(void)
+{
+    th_status_t st;
+
+    I2C_CR1 &= ~I2C_CR1_PE;
+    I2C_TIMINGR = I2C_TIMING_100K;
+    I2C_CR1 |= I2C_CR1_PE;
+    i2c_clear_flags();
+
+    th_ring_reset(&g_ring);
+    g_state = TH_ST_IDLE;
+    g_last_err = TH_OK;
+    g_inited = 1u;
+
+    st = th_send_cmd(TH_CMD_SOFT_RESET);
+    if (st != TH_OK) {
+        g_last_err = st;
+        g_state = TH_ST_ERROR;
+        return st;
+    }
+    /* Datasheet: soft-reset completes within 1.5 ms. Caller must tick. */
+    g_meas_due_ms = th_now() + 2u;
+    return TH_OK;
+}
+
+th_status_t th_start_single(void)
+{
+    th_status_t st;
+
+    if (!g_inited) {
+        return TH_ERR_NOT_READY;
+    }
+    if (g_state == TH_ST_WAIT_MEAS) {
+        return TH_ERR_BUSY;
+    }
+    if (g_state == TH_ST_IDLE && !th_elapsed(g_meas_due_ms - 2u, 2u) &&
+        (int32_t)(g_meas_due_ms - th_now()) > 0) {
+        /* still inside post-reset guard */
+        return TH_ERR_BUSY;
+    }
+
+    st = th_send_cmd(TH_CMD_SINGLE_HPM);
+    if (st != TH_OK) {
+        g_last_err = st;
+        g_state = TH_ST_ERROR;
+        return st;
+    }
+    g_meas_due_ms = th_now() + TH_MEAS_DELAY_MS;
+    g_state = TH_ST_WAIT_MEAS;
+    g_last_err = TH_OK;
+    return TH_OK;
+}
+
+th_status_t th_poll(th_sample_t *latest_opt)
+{
+    th_sample_t s;
+    th_status_t st;
+
+    if (!g_inited) {
+        return TH_ERR_NOT_READY;
+    }
+    if (g_state != TH_ST_WAIT_MEAS) {
+        return (g_state == TH_ST_ERROR) ? g_last_err : TH_ERR_NOT_READY;
+    }
+    if ((int32_t)(th_now() - g_meas_due_ms) < 0) {
+        return TH_ERR_BUSY;
+    }
+
+    st = th_fetch_sample(&s);
+    if (st != TH_OK) {
+        g_last_err = st;
+        g_state = TH_ST_ERROR;
+        return st;
+    }
+
+    th_ring_push(&s);
+    if (latest_opt != NULL) {
+        *latest_opt = s;
+    }
+    g_state = TH_ST_IDLE;
+    g_last_err = TH_OK;
+    return TH_OK;
+}
+
+th_status_t th_read_latest(th_sample_t *out)
+{
+    uint32_t ps;
+    uint16_t idx;
+
+    if (out == NULL) {
+        return TH_ERR_PARAM;
+    }
+
+    ps = th_irq_save();
+    if (g_ring.count == 0u) {
+        th_irq_restore(ps);
+        return TH_ERR_EMPTY;
+    }
+    idx = (uint16_t)((g_ring.head + TH_RING_CAP - 1u) % TH_RING_CAP);
+    *out = g_ring.slot[idx];
+    th_irq_restore(ps);
+    return TH_OK;
+}
+
+th_status_t th_last_error(void)
+{
+    return g_last_err;
+}
+
+void th_clear_error(void)
+{
+    if (g_state == TH_ST_ERROR) {
+        g_state = TH_ST_IDLE;
+    }
+    g_last_err = TH_OK;
+}

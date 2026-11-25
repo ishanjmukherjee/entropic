@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-canal",
+ "style": "styled",
+ "prompt": "Write an essay of about 800 words on the subject below.\n\nWrite it the way an excellent, idiosyncratic human essayist would: someone with real expertise and strong opinions, writing in the first person for their own blog. Commit to a specific thesis that a thoughtful reader might disagree with. Use concrete particulars (names, numbers, incidents, things only someone who had done the work would know) in place of general statements. Vary sentence length. No headings, no bullet points, no summary paragraph at the end, and none of the stock phrases of AI writing.\n\nOutput only the essay, with no title.\n\nSubject: an essay about the Erie Canal and what it changed",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-canal-styled-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "If you hike through the woods of Vermont or western Massachusetts, you will eventually trip over a stone wall. Miles of them, mossy and half-swallowed by sugar maples, running straight through forests that look primeval. They aren't. Those woods were sheep pastures and wheat fields in 1815. What killed them wasn't blight, or bad soil, or the famously brutal \"Year Without a Summer.\" It was a four-foot-deep trench dug across upstate New York.\n\nHistorians love the Erie Canal. They treat it as the ultimate proof of American grit, the moment a scrappy young republic stopped hugging the Atlantic coast and claimed a continent. I think that’s half-right and mostly sentimental. The Erie Canal didn't just connect the East to the Midwest; it was the moment America decided to stop living in a place and start living in a market. It abolished distance, yes, but it also invented the particular kind of rootless, extractive capitalism that still runs the country.\n\nTo be fair, the thing was a miracle of sheer nerve. In 1817, when the first shovelful of dirt was turned near Rome, New York, there wasn't a single trained civil engineer in the United States. The chief engineer, Benjamin Wright, was a county judge and surveyor who had never seen a major canal in his life. His deputy, Canvass White, sailed to England, walked two thousand miles along British towpaths sketching locks, and came home to discover a vein of limestone in Madison County that made waterproof hydraulic cement. Together, they figured out how to haul water over rivers on stone aqueducts and lift barges sixty feet up the Niagara Escarpment at Lockport using a double staircase of locks called the Flight of Five. They dug 363 miles through old-growth forest and the malarial soup of the Montezuma Marshes, where Irish laborers dropped by the hundreds from \"canal fever.\" It cost seven million dollars—an insane, state-bankrupting sum—and paid for itself in tolls in less than a decade.\n\nThe numbers it produced were terrifying. Before 1825, hauling a ton of freight from Buffalo to New York City took twenty days and cost about a hundred dollars. Once the barges started moving behind teams of mules, it took six days and cost less than ten. Overnight, the entire economic gravity of the continent tilted. New York City, which had been neck-and-neck with Philadelphia and Boston, became an imperial metropolis. It didn't get rich by making things; it got rich by sitting at the mouth of the pipe and taking a cut. Timber, pork, potash, and endless mountains of Genesee Valley wheat poured east, while manufactured goods and immigrants poured west. Meanwhile, the hill farmers of New England looked at the price of Ohio grain landing on the Boston docks, realized they were ruined, and walked away from their stone walls.\n\nYou can't rewire a continent's plumbing without short-circuiting the people who live on it. Look at what happened to the strip of upstate New York right along the towpath. Within a decade of the opening, it became the \"Burned-Over District,\" so named because religious revivals swept through it so fiercely there was no spiritual fuel left to burn. Joseph Smith dug up his golden plates in Palmyra, a canal town. The Fox sisters invented modern Spiritualism in Hydesville. The Millerites sold their farms and sat on hilltops waiting for the Second Coming in 1844; the Oneida Community tried to abolish private property and monogamy. We usually chalk this up to frontier eccentricity, but it wasn't the frontier anymore. It was a superhighway. When you dump that much cash, whiskey, and transient labor into quiet farming towns overnight, people lose their bearings. They look for a new god because the old world just vanished under four feet of muddy water.\n\nWe still celebrate the canal because we are still addicted to what it sold us: the idea that friction is evil, that local limits are just engineering problems waiting to be blasted away with black powder. On October 26, 1825, Governor DeWitt Clinton boarded the packet boat *Seneca Chief* in Buffalo and rode it all the way to New York Harbor, his departure announced by a relay of cannons fired in sequence down the entire length of the state—a sonic boom that reached Manhattan in eighty minutes. When Clinton finally reached the Atlantic, he took a green-painted keg of Lake Erie water and poured it into the sea. They called it the \"Wedding of the Waters.\" I’ve always thought that was a polite name for it. A wedding implies two equals joining together. What Clinton actually poured into the harbor was the first draft of a national ledger, where every forest, river, and farm in the interior was finally reduced to a price per ton.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 172,
+  "completion_tokens": 3767,
+  "total_tokens": 3939,
+  "cost": 0.057021,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.057021,
+   "upstream_inference_prompt_cost": 0.000516,
+   "upstream_inference_completions_cost": 0.056505
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2756,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

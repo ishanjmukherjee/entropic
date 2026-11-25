@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "bare",
+ "prompt": "Write the lyrics of a folk song about a river being dammed. Output only the lyrics.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 900,
+ "id": "song-river-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "My father kept a ferry\nWhere the river bent like a knee.\nHe charged a penny going to town\nAnd brought you home for free.\nHe said, “A man might spend his last\nOn flour and a little tea,\nBut that’s no cause to leave him there\nOn the bank across from me.”\n\nOh, pull away, my darling,\nPull the oar and let her run.\nThere’s a light in the ferry window\nLong after the setting sun.\n\nMy brother worked the early shift\nWhen they built the dam at Lee.\nHe bought my mother a reading lamp\nWith the first of his weekly fee.\nShe sat and read by a steady light\nWhere the wick once smoked the wall,\nAnd I lay listening half the night\nFor the shoals below the mill.\n\nOh, pull away, my darling,\nPull the oar and let her run.\nThere’s a light in the ferry window\nLong after the setting sun.\n\nThe day they closed the iron gates,\nDad brought the ferry in.\nHe hung the oars above the door\nOn two old pegs of tin.\nBy June the water reached the sill,\nBy fall the chimney stone,\nAnd the ferry bell on our new front step\nWas all we could bring home.\n\nMy daughter likes to row the lake.\nShe takes me out at dawn.\n“Where did you live when you were small?”\nI tell her, “Row straight on.”\nAnd when we reach the middle,\nWhere the swallows dip and skim,\nI ring that bell above the blue\nAs if to call for him.\n\nOh, pull away, my darling,\nPull the oar and let her run.\nThere’s a light on the ferry water\nWhere the morning meets the sun.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 25,
+  "completion_tokens": 355,
+  "total_tokens": 380,
+  "cost": 0.0144,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.0144,
+   "upstream_inference_prompt_cost": 0.0002,
+   "upstream_inference_completions_cost": 0.0142
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

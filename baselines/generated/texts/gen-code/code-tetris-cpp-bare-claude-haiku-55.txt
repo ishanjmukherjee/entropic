@@ -1,0 +1,407 @@
+// tetris_core.hpp / tetris_core.cpp (single translation unit)
+//
+// Headless Tetris core logic:
+//   - 10x20 playfield with cell occupancy
+//   - the seven tetrominoes, with 4 rotation states each
+//   - SRS-style rotation with wall kicks
+//   - collision detection
+//   - line clearing, scoring, levels, and gravity timing
+//   - 7-bag randomizer
+//
+// No rendering, input, or I/O dependencies. Requires C++17.
+
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <random>
+
+namespace tetris {
+
+enum class PieceType : std::uint8_t { I, O, T, S, Z, J, L };
+inline constexpr int kPieceTypeCount = 7;
+
+enum class Rotation : std::uint8_t { R0 = 0, R90 = 1, R180 = 2, R270 = 3 };
+
+struct Point {
+    int x;
+    int y;
+};
+
+// A piece in play. (x, y) is the top-left corner of its bounding box on the board.
+// Rows above the visible field have negative y and are never considered occupied.
+struct ActivePiece {
+    PieceType type = PieceType::T;
+    Rotation rotation = Rotation::R0;
+    int x = 0;
+    int y = 0;
+};
+
+namespace detail {
+
+struct Shape {
+    int boxSize;
+    std::array<Point, 4> cells;
+};
+
+// Spawn-orientation cell layout inside a square bounding box.
+constexpr Shape baseShape(PieceType t) {
+    switch (t) {
+        case PieceType::I: return {4, {{{0, 1}, {1, 1}, {2, 1}, {3, 1}}}};
+        case PieceType::O: return {4, {{{1, 0}, {2, 0}, {1, 1}, {2, 1}}}};
+        case PieceType::T: return {3, {{{1, 0}, {0, 1}, {1, 1}, {2, 1}}}};
+        case PieceType::S: return {3, {{{1, 0}, {2, 0}, {0, 1}, {1, 1}}}};
+        case PieceType::Z: return {3, {{{0, 0}, {1, 0}, {1, 1}, {2, 1}}}};
+        case PieceType::J: return {3, {{{0, 0}, {0, 1}, {1, 1}, {2, 1}}}};
+        case PieceType::L: return {3, {{{2, 0}, {0, 1}, {1, 1}, {2, 1}}}};
+    }
+    return {3, {}};
+}
+
+// Returns the cells of a piece relative to its bounding-box origin for a given rotation.
+// Each clockwise step maps (x, y) -> (n - 1 - y, x) within an n x n box.
+inline std::array<Point, 4> rotatedCells(PieceType t, Rotation r) {
+    const Shape s = baseShape(t);
+    if (t == PieceType::O) {
+        return s.cells;  // The O piece is rotationally symmetric.
+    }
+    std::array<Point, 4> cells = s.cells;
+    const int steps = static_cast<int>(r);
+    for (int i = 0; i < steps; ++i) {
+        for (Point& p : cells) {
+            p = Point{s.boxSize - 1 - p.y, p.x};
+        }
+    }
+    return cells;
+}
+
+using KickList = std::array<Point, 5>;
+
+// SRS wall-kick offsets (y-up convention; applied to the board as y -= dy).
+// Index: fromRotation * 2 + (clockwise ? 0 : 1)
+//   0: 0->R  1: 0->L  2: R->2  3: R->0  4: 2->L  5: 2->R  6: L->0  7: L->2
+constexpr std::array<KickList, 8> kJLSTZKicks = {{
+    {{{0, 0}, {-1, 0}, {-1, 1}, {0, -2}, {-1, -2}}},
+    {{{0, 0}, {1, 0}, {1, 1}, {0, -2}, {1, -2}}},
+    {{{0, 0}, {1, 0}, {1, -1}, {0, 2}, {1, 2}}},
+    {{{0, 0}, {1, 0}, {1, -1}, {0, 2}, {1, 2}}},
+    {{{0, 0}, {1, 0}, {1, 1}, {0, -2}, {1, -2}}},
+    {{{0, 0}, {-1, 0}, {-1, 1}, {0, -2}, {-1, -2}}},
+    {{{0, 0}, {-1, 0}, {-1, -1}, {0, 2}, {-1, 2}}},
+    {{{0, 0}, {-1, 0}, {-1, -1}, {0, 2}, {-1, 2}}},
+}};
+
+constexpr std::array<KickList, 8> kIKicks = {{
+    {{{0, 0}, {-2, 0}, {1, 0}, {-2, -1}, {1, 2}}},
+    {{{0, 0}, {-1, 0}, {2, 0}, {-1, 2}, {2, -1}}},
+    {{{0, 0}, {-1, 0}, {2, 0}, {-1, 2}, {2, -1}}},
+    {{{0, 0}, {2, 0}, {-1, 0}, {2, 1}, {-1, -2}}},
+    {{{0, 0}, {2, 0}, {-1, 0}, {2, 1}, {-1, -2}}},
+    {{{0, 0}, {1, 0}, {-2, 0}, {1, -2}, {-2, 1}}},
+    {{{0, 0}, {1, 0}, {-2, 0}, {1, -2}, {-2, 1}}},
+    {{{0, 0}, {-2, 0}, {1, 0}, {-2, -1}, {1, 2}}},
+}};
+
+}  // namespace detail
+
+// The playfield. Cell values: 0 = empty, otherwise (PieceType + 1).
+class Board {
+public:
+    static constexpr int kWidth = 10;
+    static constexpr int kHeight = 20;
+
+    void clear() noexcept {
+        for (auto& row : rows_) {
+            row.fill(0);
+        }
+    }
+
+    [[nodiscard]] static bool inside(int x, int y) noexcept {
+        return x >= 0 && x < kWidth && y >= 0 && y < kHeight;
+    }
+
+    // Walls and floor block movement. Space above the field (y < 0) is free.
+    [[nodiscard]] bool isBlocked(int x, int y) const noexcept {
+        if (x < 0 || x >= kWidth || y >= kHeight) {
+            return true;
+        }
+        if (y < 0) {
+            return false;
+        }
+        return rows_[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] != 0;
+    }
+
+    [[nodiscard]] std::uint8_t at(int x, int y) const noexcept {
+        if (!inside(x, y)) {
+            return 0;
+        }
+        return rows_[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)];
+    }
+
+    void set(int x, int y, std::uint8_t value) noexcept {
+        if (inside(x, y)) {
+            rows_[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = value;
+        }
+    }
+
+    [[nodiscard]] bool isRowFull(int y) const noexcept {
+        const auto& row = rows_[static_cast<std::size_t>(y)];
+        return std::all_of(row.begin(), row.end(), [](std::uint8_t c) { return c != 0; });
+    }
+
+    // Removes all full rows, shifts the rest down, and returns the number removed.
+    int clearFullRows() noexcept {
+        int write = kHeight - 1;
+        int cleared = 0;
+        for (int read = kHeight - 1; read >= 0; --read) {
+            if (isRowFull(read)) {
+                ++cleared;
+                continue;
+            }
+            if (write != read) {
+                rows_[static_cast<std::size_t>(write)] = rows_[static_cast<std::size_t>(read)];
+            }
+            --write;
+        }
+        for (int y = write; y >= 0; --y) {
+            rows_[static_cast<std::size_t>(y)].fill(0);
+        }
+        return cleared;
+    }
+
+private:
+    using Row = std::array<std::uint8_t, kWidth>;
+    std::array<Row, kHeight> rows_{};
+};
+
+// Absolute board coordinates occupied by a piece.
+[[nodiscard]] inline std::array<Point, 4> absoluteCells(const ActivePiece& p) noexcept {
+    std::array<Point, 4> cells = detail::rotatedCells(p.type, p.rotation);
+    for (Point& c : cells) {
+        c.x += p.x;
+        c.y += p.y;
+    }
+    return cells;
+}
+
+// True if the piece does not overlap walls, the floor, or locked cells.
+[[nodiscard]] inline bool fits(const Board& board, const ActivePiece& p) noexcept {
+    for (const Point& c : absoluteCells(p)) {
+        if (board.isBlocked(c.x, c.y)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+struct LockResult {
+    bool locked = false;      // True if the active piece was placed on the board.
+    int linesCleared = 0;     // Rows removed by this lock.
+    bool topOut = false;      // Piece locked partly above the field; the game is over.
+};
+
+class Game {
+public:
+    static constexpr int kSpawnX = 3;
+    static constexpr int kSpawnY = 0;
+
+    explicit Game(std::uint32_t seed = std::random_device{}()) : rng_(seed) {
+        reset();
+    }
+
+    void reset() {
+        board_.clear();
+        score_ = 0;
+        lines_ = 0;
+        gameOver_ = false;
+        bagPos_ = bag_.size();
+        next_ = drawFromBag();
+        spawn();
+    }
+
+    // Horizontal movement. Returns true if the piece moved.
+    bool moveLeft() noexcept { return tryShift(-1); }
+    bool moveRight() noexcept { return tryShift(1); }
+
+    // Rotation with wall kicks. Returns true if a rotation was applied.
+    bool rotateClockwise() noexcept { return tryRotate(true); }
+    bool rotateCounterClockwise() noexcept { return tryRotate(false); }
+
+    // Soft drop: moves down one row for 1 point, or locks the piece if it cannot move.
+    LockResult softDrop() {
+        if (gameOver_) {
+            return {};
+        }
+        if (canStepDown()) {
+            ++cur_.y;
+            ++score_;
+            return {};
+        }
+        return lockPiece();
+    }
+
+    // Gravity step: moves down one row without awarding points, or locks the piece.
+    LockResult gravityTick() {
+        if (gameOver_) {
+            return {};
+        }
+        if (canStepDown()) {
+            ++cur_.y;
+            return {};
+        }
+        return lockPiece();
+    }
+
+    // Drops the piece to the lowest valid row, awards 2 points per row, and locks it.
+    LockResult hardDrop() {
+        if (gameOver_) {
+            return {};
+        }
+        int distance = 0;
+        while (canStepDown()) {
+            ++cur_.y;
+            ++distance;
+        }
+        score_ += 2 * distance;
+        return lockPiece();
+    }
+
+    // Where the active piece would land if hard-dropped. Useful for ghost rendering.
+    [[nodiscard]] ActivePiece ghostPiece() const noexcept {
+        ActivePiece ghost = cur_;
+        for (;;) {
+            ActivePiece next = ghost;
+            ++next.y;
+            if (!fits(board_, next)) {
+                break;
+            }
+            ghost = next;
+        }
+        return ghost;
+    }
+
+    [[nodiscard]] const Board& board() const noexcept { return board_; }
+    [[nodiscard]] const ActivePiece& activePiece() const noexcept { return cur_; }
+    [[nodiscard]] PieceType nextPieceType() const noexcept { return next_; }
+    [[nodiscard]] int score() const noexcept { return score_; }
+    [[nodiscard]] int linesCleared() const noexcept { return lines_; }
+    [[nodiscard]] int level() const noexcept { return lines_ / 10 + 1; }
+    [[nodiscard]] bool isGameOver() const noexcept { return gameOver_; }
+
+    // Gravity interval in milliseconds for the current level. Clamped to a minimum of 50 ms.
+    [[nodiscard]] int gravityIntervalMs() const noexcept {
+        return std::max(50, 1000 - (level() - 1) * 50);
+    }
+
+private:
+    static constexpr std::array<int, 5> kLineScores{0, 100, 300, 500, 800};
+
+    bool canStepDown() const noexcept {
+        ActivePiece next = cur_;
+        ++next.y;
+        return fits(board_, next);
+    }
+
+    bool tryShift(int dx) noexcept {
+        if (gameOver_) {
+            return false;
+        }
+        ActivePiece candidate = cur_;
+        candidate.x += dx;
+        if (!fits(board_, candidate)) {
+            return false;
+        }
+        cur_ = candidate;
+        return true;
+    }
+
+    bool tryRotate(bool clockwise) noexcept {
+        if (gameOver_) {
+            return false;
+        }
+        const int fromIdx = static_cast<int>(cur_.rotation);
+        const int toIdx = clockwise ? (fromIdx + 1) % 4 : (fromIdx + 3) % 4;
+        const auto to = static_cast<Rotation>(toIdx);
+
+        const auto& kickTable =
+            (cur_.type == PieceType::I) ? detail::kIKicks : detail::kJLSTZKicks;
+        const KickList& kicks =
+            kickTable[static_cast<std::size_t>(fromIdx * 2 + (clockwise ? 0 : 1))];
+
+        for (const Point& k : kicks) {
+            ActivePiece candidate = cur_;
+            candidate.rotation = to;
+            candidate.x += k.x;
+            candidate.y -= k.y;  // Kick tables are y-up; the board is y-down.
+            if (fits(board_, candidate)) {
+                cur_ = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    LockResult lockPiece() {
+        LockResult result;
+        result.locked = true;
+
+        const int levelAtLock = level();
+        const auto value = static_cast<std::uint8_t>(static_cast<int>(cur_.type) + 1);
+
+        bool aboveField = false;
+        for (const Point& c : absoluteCells(cur_)) {
+            if (c.y < 0) {
+                aboveField = true;
+            } else {
+                board_.set(c.x, c.y, value);
+            }
+        }
+
+        if (aboveField) {
+            gameOver_ = true;
+            result.topOut = true;
+            return result;
+        }
+
+        const int cleared = board_.clearFullRows();
+        const int index = std::min(cleared, static_cast<int>(kLineScores.size()) - 1);
+        score_ += kLineScores[static_cast<std::size_t>(index)] * levelAtLock;
+        lines_ += cleared;
+        result.linesCleared = cleared;
+
+        spawn();
+        return result;
+    }
+
+    void spawn() {
+        cur_ = ActivePiece{next_, Rotation::R0, kSpawnX, kSpawnY};
+        next_ = drawFromBag();
+        if (!fits(board_, cur_)) {
+            gameOver_ = true;
+        }
+    }
+
+    // 7-bag randomizer: each set of seven piece types appears once, in shuffled order.
+    PieceType drawFromBag() {
+        if (bagPos_ >= bag_.size()) {
+            for (std::size_t i = 0; i < bag_.size(); ++i) {
+                bag_[i] = static_cast<PieceType>(i);
+            }
+            std::shuffle(bag_.begin(), bag_.end(), rng_);
+            bagPos_ = 0;
+        }
+        return bag_[bagPos_++];
+    }
+
+    Board board_{};
+    ActivePiece cur_{};
+    PieceType next_ = PieceType::I;
+    std::array<PieceType, kPieceTypeCount> bag_{};
+    std::size_t bagPos_ = 0;
+    std::mt19937 rng_;
+    int score_ = 0;
+    int lines_ = 0;
+    bool gameOver_ = false;
+};
+
+}  // namespace tetris

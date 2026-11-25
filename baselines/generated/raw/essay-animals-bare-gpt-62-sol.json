@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-animals",
+ "style": "bare",
+ "prompt": "Write an essay on whether it is wrong to eat animals. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "id": "essay-animals-bare-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "Most people would agree that it is wrong to make an animal suffer for no good reason. Yet many of those same people eat animals whose lives they would find disturbing to watch. The tension is not necessarily hypocrisy. It is easy to inherit a way of eating long before we learn how food is produced, and difficult to question practices bound up with family, identity, and pleasure. Still, familiarity does not settle the moral question. Eating animals is not always wrong, but when it causes serious, avoidable harm for the sake of a preference, it is hard to justify.\n\nThe strongest argument against eating animals begins with their capacity to suffer. A pig does not need to understand what a slaughterhouse is for fear to matter, just as a hen does not need a concept of freedom for confinement to frustrate her. If pain matters when humans experience it, there must be some reason beyond species membership for dismissing it in other creatures. Recognizing that animals have morally significant interests does not mean treating them exactly like people. It means that their suffering counts, and that a benefit as modest as enjoying a familiar meal may not outweigh it. This argument is especially forceful against intensive farming, where the conditions that make meat cheap can also make animals’ lives miserable.\n\nBut suppose an animal lives well and is killed without fear or pain. Is eating it still wrong? One answer is that death harms the animal by depriving it of the good experiences it would otherwise have had. A cow need not imagine next summer to benefit from living through it. Another answer is that killing an animal is morally different from killing a person, partly because people typically have plans and commitments that death cuts short. That distinction seems important, but it does not show that the animal loses nothing. Indeed, the better its life, the clearer it is what continued life could offer. Humane treatment makes a real moral difference without making the question of killing disappear.\n\nDefenders of animal farming sometimes point out that many farmed animals would never have existed if people did not raise them for food. If those animals lead good lives, perhaps the practice adds something valuable to the world. This is a stronger defense of a genuinely good life than of mere survival in confinement. Yet bringing a creature into existence does not obviously give us the right to end its life on our own terms. There is a difference between asking whether a world with well-cared-for farm animals is better than one without them and asking what we owe a particular animal once it is alive.\n\nNecessity changes the balance. A person who depends on fishing or herding in a place with few alternatives is not making the same choice as someone deciding between two affordable lunches. Cost, disability, and access to suitable food also shape what people can reasonably do. Culture matters too: a dish can carry memories of migration, celebration, or care that are not captured by calling it a taste preference. But honoring a tradition does not have to mean preserving every ingredient or eating the dish as often as before. The moral question is not whether everyone can make the same change. It is what changes are possible for a particular person, and what they would cost.\n\nNor is the choice simply between a harmful diet and a harmless one. Growing crops can destroy habitats and kill wild animals. That fact rules out an easy claim to innocence, but it does not make all diets equivalent. Many farmed animals eat crops themselves, so eating those animals can involve both the harms of growing feed and the harms of raising and slaughtering them. Other cases, such as animals raised on land unsuitable for crops, complicate the comparison. The relevant question is which available choices cause less harm, not whether any choice leaves the world untouched.\n\nThere is also a limit to what individual meals can accomplish. A shopper cannot always verify how an animal was raised, and a household cannot buy alternatives that local stores do not stock. Better welfare standards and affordable alternatives can make it easier for people to act on concerns they already have. Still, the need for institutional change does not erase the choices individuals can make. Eating fewer animal products, starting with those produced under the worst conditions, can be a meaningful response even if someone is not ready or able to give them up entirely.\n\nEating animals, then, is not wrong under every circumstance. But where adequate alternatives are readily available, the burden of justification falls on the choice that causes more harm. An animal’s life is not necessarily worth the same as a human life for its loss to matter more than the convenience of ordering what we usually order. Taking that distinction seriously changes the question at the table: not whether we are entitled to enjoy our food, but whether that particular enjoyment is worth what it costs.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 32,
+  "completion_tokens": 946,
+  "total_tokens": 978,
+  "cost": 0.009524,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009524,
+   "upstream_inference_prompt_cost": 6.4e-05,
+   "upstream_inference_completions_cost": 0.00946
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

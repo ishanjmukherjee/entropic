@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-interview",
+ "style": "bare",
+ "prompt": "Write a scene for a stage play in which a job interview goes wrong. About 700 words. Output only the script.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1500,
+ "id": "play-interview-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "THE OTHER SIDE OF THE DESK\n\n[A municipal building. An interview room overlooking a bus depot. Two chairs, a desk, a jug of water. MS. VALE sits behind the desk. ELI stands beside the other chair, holding a paper cup.]\n\nVALE: Please, sit.\n\nELI: I did. The chair went down.\n\nVALE: It adjusts.\n\nELI: Not back up, apparently.\n\n[He sits. His chin is level with the desk. VALE considers this, then lowers her own chair to match.]\n\nVALE: There. Now neither of us can reach the water.\n\nELI: I brought some.\n\nVALE: Good. Resourceful.\n\n[She makes a note.]\n\nELI: Was that part of it?\n\nVALE: No. The chair is genuinely broken.\n\n[She lifts a folder off the desk and sets it on her knees.]\n\nVALE: Why do you want to work in Passenger Complaints?\n\nELI: My mother drove the number six for twenty-eight years. When she retired, people came to our house with cakes. Six cakes. You don’t think of a bus driver as someone who might need a cake, but six separate people did.\n\nVALE: And that made you want to work in complaints?\n\nELI: Well, nobody comes to your house if you work in complaints. That part appeals to me.\n\n[She laughs. He relaxes.]\n\nVALE: We’ll do a practical exercise. I’m a passenger. You’re on the desk. Ready?\n\nELI: Yes.\n\nVALE: Yesterday the four-fifteen drove straight past my stop. I was standing there with my arm out. What are you going to do about it?\n\nELI: I’m sorry. Which stop was that?\n\nVALE: Mercer Street, outside the baths.\n\nELI: The four-fifteen doesn’t stop there anymore.\n\nVALE: There’s a sign.\n\nELI: There is. They haven’t taken it down.\n\nVALE: Then how was I supposed to know?\n\nELI: You weren’t. That’s our fault.\n\n[VALE looks at the folder.]\n\nVALE: You’re meant to offer me a complaint form.\n\nELI: Would you like a complaint form?\n\nVALE: No, I’d like to get to work.\n\nELI: If you walk through the baths car park, there’s a gate onto Bell Lane. The bus stops just there.\n\nVALE: They lock that gate at three.\n\nELI: Do they?\n\nVALE: Yes. I had to climb it.\n\n[A pause.]\n\nELI: Was this yesterday?\n\nVALE: We’re doing the exercise.\n\nELI: Only, you’ve got green paint on your cuff.\n\n[She turns her cuff under.]\n\nVALE: I missed the beginning of my daughter’s concert. She plays the bassoon. There’s very little bassoon in the second half.\n\nELI: I’m sorry.\n\nVALE: Thank you. Now. Suppose the passenger becomes abusive.\n\nELI: Did you?\n\nVALE: I beg your pardon?\n\nELI: Become abusive.\n\nVALE: I described the sign in terms I wouldn’t ordinarily use.\n\nELI: To whom?\n\nVALE: The man on the telephone.\n\nELI: My brother.\n\nVALE: What?\n\nELI: Yesterday? After four? That’s our Kevin. Did he say, “I appreciate your journey”?\n\nVALE: Repeatedly.\n\nELI: He wrote that himself. They put it in the handbook.\n\n[Outside, a bus releases its brakes.]\n\nVALE: Is everyone in your family employed by the depot?\n\nELI: Not me. How abusive?\n\nVALE: I asked whether he’d ever actually been on a bus.\n\nELI: Kevin can’t go on buses. He gets sick.\n\nVALE: I didn’t know that.\n\nELI: Why would you? You rang about a sign.\n\n[VALE closes the folder.]\n\nVALE: I think we should stop.\n\nELI: I’d rather finish. I took the morning off.\n\nVALE: I don’t think I can score this fairly.\n\nELI: Then let me have another passenger.\n\nVALE: I haven’t got another passenger.\n\nELI: Be one of the cake people. Something’s happened to your cake.\n\n[Despite herself, she thinks.]\n\nVALE: The driver braked suddenly. My sponge slid off my lap.\n\nELI: Was anybody hurt?\n\nVALE: No.\n\nELI: Good. Was it for an occasion?\n\nVALE: My daughter’s birthday.\n\nELI: Is she little enough that sticking the candles in the new top will work?\n\nVALE: She’s thirty-one.\n\nELI: Then she’s old enough to do it herself.\n\n[VALE opens the folder. She makes a note.]\n\nELI: What did you put?\n\nVALE: “Does not offer form.”\n\n[She tears the complaint form from the back of the folder and turns it over.]\n\nVALE: What’s Kevin’s surname?\n\nELI: Same as mine.\n\nVALE: Right. Of course.\n\n[She begins to write.]\n\nELI: He likes “Dear Kevin.” “Dear Sir” generally means he’s about to have a bad afternoon.\n\n[She crosses something out. ELI waits. Without looking up, she holds out her hand. After a moment he understands and gives her his water.]\n\n[Blackout.]",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 31,
+  "completion_tokens": 1118,
+  "total_tokens": 1149,
+  "cost": 0.044968,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.044968,
+   "upstream_inference_prompt_cost": 0.000248,
+   "upstream_inference_completions_cost": 0.04472
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

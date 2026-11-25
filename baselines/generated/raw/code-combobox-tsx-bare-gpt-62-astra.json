@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-combobox-tsx",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality TypeScript (React) source file that implements an accessible autocomplete combobox component. Output only the code.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 3000,
+ "domain": "web-frontend",
+ "language": "TypeScript (React)",
+ "id": "code-combobox-tsx-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "import * as React from \"react\";\n\nexport interface AutocompleteOption {\n  /** Must be unique and stable across renders. */\n  id: string;\n  label: string;\n  disabled?: boolean;\n}\n\nexport interface AutocompleteProps {\n  label: string;\n  options: readonly AutocompleteOption[];\n  /** Controlled editor text, not an option ID. */\n  value?: string;\n  defaultValue?: string;\n  onValueChange?: (value: string) => void;\n  onOptionSelect?: (option: AutocompleteOption) => void;\n  filterOption?: (option: AutocompleteOption, query: string) => boolean;\n  noResultsText?: string;\n  id?: string;\n  name?: string;\n  placeholder?: string;\n  disabled?: boolean;\n  required?: boolean;\n  className?: string;\n  \"aria-describedby\"?: string;\n  \"aria-invalid\"?: React.AriaAttributes[\"aria-invalid\"];\n}\n\nfunction defaultFilter(option: AutocompleteOption, query: string): boolean {\n  return option.label.toLowerCase().includes(query.trim().toLowerCase());\n}\n\n/** Editable, single-select combobox. Free text is allowed. */\nexport default function Autocomplete({\n  label,\n  options,\n  value,\n  defaultValue = \"\",\n  onValueChange,\n  onOptionSelect,\n  filterOption = defaultFilter,\n  noResultsText = \"No matches found.\",\n  id,\n  name,\n  placeholder,\n  disabled = false,\n  required = false,\n  className,\n  \"aria-describedby\": describedBy,\n  \"aria-invalid\": invalid,\n}: AutocompleteProps): React.ReactElement {\n  const generatedId = React.useId();\n  const inputId = id ?? `${generatedId}-input`;\n  const listId = `${generatedId}-list`;\n  const labelId = `${generatedId}-label`;\n  const inputRef = React.useRef<HTMLInputElement>(null);\n  const activeRef = React.useRef<HTMLLIElement>(null);\n  const [draft, setDraft] = React.useState(defaultValue);\n  const [open, setOpen] = React.useState(false);\n  const [activeId, setActiveId] = React.useState<string | null>(null);\n  const text = value ?? draft;\n  const expanded = open && !disabled;\n  const matches = React.useMemo(\n    () => options.filter((option) => filterOption(option, text)),\n    [options, filterOption, text],\n  );\n  const activeIndex = expanded\n    ? matches.findIndex((option) => !option.disabled && option.id === activeId)\n    : -1;\n\n  React.useEffect(() => {\n    if (disabled) {\n      setOpen(false);\n      setActiveId(null);\n    }\n  }, [disabled]);\n\n  React.useEffect(() => {\n    activeRef.current?.scrollIntoView?.({ block: \"nearest\" });\n  }, [activeIndex, activeId]);\n\n  function close(): void {\n    setOpen(false);\n    setActiveId(null);\n  }\n\n  function update(next: string): void {\n    if (value === undefined) setDraft(next);\n    if (next !== text) onValueChange?.(next);\n  }\n\n  function select(option: AutocompleteOption): void {\n    if (disabled || option.disabled) return;\n    inputRef.current?.focus({ preventScroll: true });\n    close();\n    update(option.label);\n    onOptionSelect?.(option);\n  }\n\n  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {\n    if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;\n    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;\n\n    switch (event.key) {\n      case \"ArrowDown\":\n      case \"ArrowUp\": {\n        event.preventDefault();\n        setOpen(true);\n        const step = event.key === \"ArrowDown\" ? 1 : -1;\n        const start = activeIndex >= 0 ? activeIndex : step > 0 ? -1 : 0;\n        for (let offset = 1; offset <= matches.length; offset++) {\n          const index = (start + offset * step + matches.length) % matches.length;\n          const option = matches[index];\n          if (option && !option.disabled) {\n            setActiveId(option.id);\n            break;\n          }\n        }\n        break;\n      }\n      case \"Enter\": {\n        const option = matches[activeIndex];\n        if (option) {\n          event.preventDefault();\n          select(option);\n        } else {\n          close();\n        }\n        break;\n      }\n      case \"Escape\":\n        if (expanded) {\n          event.preventDefault();\n          event.stopPropagation();\n          close();\n        }\n        break;\n      default:\n        break;\n    }\n  }\n\n  return (\n    <div className={className}>\n      <label id={labelId} htmlFor={inputId}>\n        {label}\n      </label>\n      <input\n        ref={inputRef}\n        id={inputId}\n        type=\"text\"\n        role=\"combobox\"\n        aria-autocomplete=\"list\"\n        aria-expanded={expanded}\n        aria-controls={listId}\n        aria-activedescendant={\n          activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined\n        }\n        aria-describedby={describedBy}\n        aria-invalid={invalid}\n        autoComplete=\"off\"\n        name={name}\n        placeholder={placeholder}\n        disabled={disabled}\n        required={required}\n        value={text}\n        onFocus={() => setOpen(true)}\n        onClick={() => setOpen(true)}\n        onBlur={close}\n        onKeyDown={handleKeyDown}\n        onChange={(event) => {\n          setOpen(true);\n          setActiveId(null);\n          update(event.currentTarget.value);\n        }}\n      />\n      <ul id={listId} role=\"listbox\" aria-labelledby={labelId} hidden={!expanded}>\n        {expanded &&\n          matches.map((option, index) => {\n            const active = index === activeIndex;\n            return (\n              <li\n                key={option.id}\n                id={`${listId}-${index}`}\n                ref={active ? activeRef : undefined}\n                role=\"option\"\n                aria-selected={active}\n                aria-disabled={option.disabled || undefined}\n                style={{\n                  backgroundColor: active ? \"Highlight\" : undefined,\n                  color: active ? \"HighlightText\" : option.disabled ? \"GrayText\" : undefined,\n                }}\n                onMouseDown={(event) => event.preventDefault()}\n                onClick={() => select(option)}\n              >\n                {option.label}\n              </li>\n            );\n          })}\n      </ul>\n      <div role=\"status\">\n        {expanded && matches.length === 0 ? noResultsText : null}\n      </div>\n    </div>\n  );\n}",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 33,
+  "completion_tokens": 1410,
+  "total_tokens": 1443,
+  "cost": 0.056664,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.056664,
+   "upstream_inference_prompt_cost": 0.000264,
+   "upstream_inference_completions_cost": 0.0564
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

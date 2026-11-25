@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-azide",
+ "style": "matched",
+ "prompt": "Write an essay titled “Detonating A Huge Pile of Lead Azide. Really.”. It is a chemist's question-and-answer commentary on the US Army's plan to detonate a large quantity of the primary explosive lead azide near Burlington, Iowa. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "matched_to": "blogs-tech/lowe-detonating-huge-pile-lead-azide-really",
+ "id": "essay-m-azide-matched-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "**Q: The Army plans to detonate a huge pile of lead azide near Burlington, Iowa. Really?**\n\nA: The word “pile” is doing a lot of work there. It makes me picture someone with a shovel, which is not an image I want anywhere near a discussion of lead azide. A large inventory is not necessarily one heap, and a plan to destroy an inventory by detonation is not necessarily a plan to destroy it all at once. Those are distinctions the Army ought to make plain. But the basic proposition—that the safest way to dispose of an explosive might be to let it explode under controlled conditions—is less absurd than it sounds.\n\n**Q: What is lead azide, and why does the Army have it?**\n\nA: It’s a compound of lead and azide, and its job is to be touchy. Chemists call it a *primary explosive*. “Primary” does not mean it supplies most of the energy in a munition. It means it comes first: a small amount can start the reaction in another explosive that is harder to set off. That sensitivity is a virtue when the material is doing the job it was made for. It is considerably less charming when the material is old, unwanted, and still sitting in storage.\n\n**Q: If it’s that sensitive, why do anything to it at all?**\n\nA: Because leaving it alone is also a decision. Storage requires people to monitor the material, maintain the facility, and eventually deal with whatever condition the inventory is in. Moving it transfers some of the risk to the people doing the moving and, depending on the route, to people who never agreed to live near an explosives site. None of that proves detonation is the best choice near Burlington. It does explain why “just leave it where it is” and “take it somewhere else” aren’t the easy answers they sound like from the kitchen table.\n\n**Q: When it explodes, doesn’t the lead azide go away?**\n\nA: The *lead azide* goes away. The *lead* doesn’t. This is the part of the story where a chemist starts underlining nouns. An explosion changes what the atoms are joined to and where they end up. It does not repeal the existence of lead. Some of it may remain in residue at the site; some may be carried in particles. How much goes where is a question for evidence, not an inference you can draw from the word “detonation.” And while a bang is over in a moment, lead left in soil can remain a concern long afterward.\n\n**Q: Are you saying Burlington is going to get a cloud of lead?**\n\nA: No. The fact that a material contains lead does not tell you what dose anybody outside the site might receive. For that, you need to know how much can become airborne, what happens to the particles, and where they might settle. You also need measurements that can test those estimates. It matters where the Army samples, when it samples, and what its instruments can detect. “We found no increase” is reassuring if the monitoring could have detected an increase worth worrying about. Otherwise, it can mean rather less than it appears to.\n\n**Q: Could the Army use some other disposal method?**\n\nA: That is exactly what I would ask, and I would want the answer in terms more specific than “this is standard practice.” A method that looks better on emissions might require more handling of sensitive material. One that reduces the immediate risk to workers could leave more contamination to manage later. The comparison should cover the whole job, including transport if there is any, waste left behind, and cleanup. It should also say which conclusions depend on the condition of this particular stockpile. A general statement about how explosives are disposed of is not an assessment of the material near Burlington.\n\n**Q: What should people nearby ask for?**\n\nA: Start with an accounting: how much lead is in the inventory, where does the Army expect it to end up, and how will it check? Ask for measurements from before disposal as well as afterward, so there is something to compare. Ask who reviews the results, when the public gets to see them, and what finding would trigger a pause or cleanup. And ask about noise and vibration separately. A frightening bang is not proof of a toxic exposure, and a reassuring report about noise tells you nothing about lead.\n\n**Q: So is this a sensible plan or a terrible one?**\n\nA: It could be sensible. There is no rule of chemistry that says the least dramatic option is the safest. There is, however, a rule of chemistry that says the Army will have just as much lead after the explosion as it had before. The case for the plan rests on what happens to that lead and whether the alternatives would leave workers and neighbors better or worse off. The bang will announce itself. The Army’s obligation is to account for what doesn’t.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 74,
+  "completion_tokens": 1007,
+  "total_tokens": 1081,
+  "cost": 0.010218,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.010218,
+   "upstream_inference_prompt_cost": 0.000148,
+   "upstream_inference_completions_cost": 0.01007
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

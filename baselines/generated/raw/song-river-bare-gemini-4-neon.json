@@ -1,0 +1,38 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "bare",
+ "prompt": "Write the lyrics of a folk song about a river being dammed. Output only the lyrics.",
+ "model": "gemini-4-neon",
+ "max_tokens": 900,
+ "id": "song-river-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "She used to run from the mountain snow,\nDown through the pines and the valley below.\nSinging a song over granite and clay,\nCarrying the seasons and the years away.\n\nOh, roll on, river, where did you go?\nBuried beneath the concrete and the stone.\nThey traded your song for a wire and a light,\nAnd left the old valley to sleep in the night.\n\nThen came the men with their maps and their steel,\nSaid, \"We’ll put a harness on the water’s wheel.\"\nWith dynamite thunder they shattered the ridge,\nAnd tore down the timbers of the old covered bridge.\n\nOh, roll on, river, where did you go?\nBuried beneath the concrete and the stone.\nThey traded your song for a wire and a light,\nAnd left the old valley to sleep in the night.\n\nThe water rose slowly, it swallowed the lane,\nIt drowned out the orchards and the fields of grain.\nThe church steeple vanished, the bell lost its chime,\nAnd the valley was lost to the march of time.\n\nNow the lake is as flat as a pane of glass,\nAnd the boats skim the top where the deer used to pass.\nThey don't hear the current, they don't know the name\nOf the wild silver water before the wall came.\n\nOh, roll on, river, where did you go?\nBuried beneath the concrete and the stone.\nThey traded your song for a wire and a light,\nAnd left the old valley to sleep in the night.\nYeah, they left the old valley to sleep in the night.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 53,
+  "completion_tokens": 1387,
+  "total_tokens": 1440,
+  "cost": 0.020964,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.020964,
+   "upstream_inference_prompt_cost": 0.000159,
+   "upstream_inference_completions_cost": 0.020805
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1041,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

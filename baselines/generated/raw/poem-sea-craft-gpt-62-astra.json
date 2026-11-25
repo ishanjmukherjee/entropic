@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: the sea. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 700,
+ "id": "poem-sea-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "At six in Whitby the sea comes up the Esk\nand lifts the cobles off the mud.\nA man on the fish quay lowers a bucket\nuntil its lip tips under.\nHe hauls it up against the wall;\nthe handle squeals in its two holes.\n\n“I've got your teeth,” a woman calls.\nShe holds up a mustard jar.\nHe puts the bucket down to take it.\n\nAcross the deck he throws the water.\nScales run to the scupper,\nthen a strip of skin too wide to pass.\nHe takes it between finger and thumb\nand slaps it overboard.\n\nThe tide has covered the last iron rung.\nA gull steps off the ferry ramp\nonto its own two yellow feet in the water.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 181,
+  "completion_tokens": 153,
+  "total_tokens": 334,
+  "cost": 0.007568,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.007568,
+   "upstream_inference_prompt_cost": 0.001448,
+   "upstream_inference_completions_cost": 0.00612
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-rbtree-hs",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Haskell source file that implements a persistent red-black tree with insert, member and toList. Output only the code.",
+ "model": "grok-4.7",
+ "max_tokens": 3000,
+ "domain": "functional",
+ "language": "Haskell",
+ "id": "code-rbtree-hs-bare-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "```haskell\n{-# LANGUAGE BangPatterns #-}\n\n-- | Persistent red-black trees.\n--\n-- Red-black trees are balanced binary search trees. This module implements\n-- a purely functional (persistent) variant: every update returns a new tree\n-- and leaves the original unchanged. Insert rebalances in O(log n) and\n-- membership queries are O(log n).\n--\n-- Invariants (Okasaki):\n--   * No red node has a red child.\n--   * Every path from the root to a leaf has the same number of black nodes.\n--   * The root is black.\n--\n-- Keys must be totally ordered ('Ord'). Duplicate keys are ignored on insert\n-- (the existing binding is retained).\nmodule Data.RBTree\n  ( RBTree\n  , Color (..)\n  , empty\n  , singleton\n  , insert\n  , member\n  , toList\n  , fromList\n  , size\n  , null\n  , height\n  ) where\n\nimport Prelude hiding (null)\nimport Data.List (foldl')\n\n-- | Node colour.\ndata Color = R | B\n  deriving (Eq, Show)\n\n-- | A red-black tree of ordered keys.\ndata RBTree a\n  = E\n  | T !Color !(RBTree a) !a !(RBTree a)\n  deriving (Eq, Show)\n\n-- | The empty tree.\nempty :: RBTree a\nempty = E\n\n-- | A tree containing a single key.\nsingleton :: a -> RBTree a\nsingleton x = T B E x E\n\n-- | 'True' iff the tree contains no keys.\nnull :: RBTree a -> Bool\nnull E = True\nnull _ = False\n\n-- | Number of keys in the tree. O(n).\nsize :: RBTree a -> Int\nsize = go 0\n  where\n    go !n E = n\n    go n (T _ l _ r) = go (go (n + 1) l) r\n\n-- | Black-height of the tree (number of black nodes on any root-to-leaf path,\n-- not counting the implicit black leaf). Useful for testing balance. O(log n)\n-- on a valid tree; walks the left spine.\nheight :: RBTree a -> Int\nheight E = 0\nheight (T c l _ _) = height l + (if c == B then 1 else 0)\n\n-- | Membership test. O(log n).\nmember :: Ord a => a -> RBTree a -> Bool\nmember x = go\n  where\n    go E = False\n    go (T _ l y r) = case compare x y of\n      LT -> go l\n      GT -> go r\n      EQ -> True\n\n-- | Insert a key. If the key is already present the tree is returned unchanged.\n-- O(log n). The result is a valid red-black tree.\ninsert :: Ord a => a -> RBTree a -> RBTree a\ninsert x t = blacken (ins t)\n  where\n    ins E = T R E x E\n    ins s@(T c l y r) = case compare x y of\n      LT -> balance c (ins l) y r\n      GT -> balance c l y (ins r)\n      EQ -> s\n    blacken E = E\n    blacken (T _ l y r) = T B l y r\n\n-- | Restore the red-black invariant after a single red-red violation\n-- introduced by insertion. The four rotation cases are the classic Okasaki\n-- balance function; the remaining patterns are identity.\nbalance :: Color -> RBTree a -> a -> RBTree a -> RBTree a\nbalance B (T R (T R a x b) y c) z d = T R (T B a x b) y (T B c z d)\nbalance B (T R a x (T R b y c)) z d = T R (T B a x b) y (T B c z d)\nbalance B a x (T R (T R b y c) z d) = T R (T B a x b) y (T B c z d)\nbalance B a x (T R b y (T R c z d)) = T R (T B a x b) y (T B c z d)\nbalance c l x r = T c l x r\n\n-- | In-order list of keys, ascending. O(n).\ntoList :: RBTree a -> [a]\ntoList t = go t []\n  where\n    go E acc = acc\n    go (T _ l x r) acc = go l (x : go r acc)\n\n-- | Build a tree from a list of keys. Later duplicates are ignored.\n-- O(n log n).\nfromList :: Ord a => [a] -> RBTree a\nfromList = foldl' (flip insert) empty\n```",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1273,
+  "completion_tokens": 1101,
+  "total_tokens": 2374,
+  "cost": 0.007424,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.007424,
+   "upstream_inference_prompt_cost": 0.000818,
+   "upstream_inference_completions_cost": 0.006606
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 54,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

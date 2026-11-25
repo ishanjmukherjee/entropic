@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-remote",
+ "style": "bare",
+ "prompt": "Write an essay arguing for or against the claim that remote work is better than office work for software teams. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "essay-remote-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "At nine on a Tuesday morning, four developers can sit within ten feet of one another and still have no idea why a colleague changed the way their application handles payments. In another team, spread across three cities, a developer can open the proposed change, read the reasoning, and see which alternatives were rejected. The difference is not that distance makes people better communicators. It is that the remote team cannot easily mistake being in the same room for sharing an understanding. For most software teams, remote work is better than office work because it rewards habits that good engineering already requires: protecting attention, making decisions legible, and judging work by what it accomplishes.\n\nConsider what happens when a programmer tries to diagnose an intermittent failure. She may spend half an hour reconstructing the sequence of events that produces it. A well-meaning colleague who stops by with a two-minute question consumes more than two minutes; afterward, she has to reconstruct part of that sequence again. An office makes such interruptions effortless, which is an advantage when the question is urgent and a liability when it is merely convenient to ask. Working remotely gives the programmer more control over when she responds. A team can reserve a call for a failing service and let a question about next month’s release wait until she has finished the work in front of her.\n\nDistance also changes who benefits from a conversation. Suppose two engineers settle a design question over lunch. They may reach an excellent decision quickly, but the teammate who maintains that feature a year later inherits the decision without the reasoning. A short written note explaining, for instance, why the team chose slower processing over a risk of duplicate charges can save that future maintainer from “fixing” an intentional trade-off. Office teams can write such notes, too. The remote team’s advantage is that someone needs the note today: a colleague in another time zone will use it to review the change tomorrow morning. Documentation becomes part of finishing the job rather than a favor owed to an imaginary future reader.\n\nRemote work also expands the range of people who can stay on a team. An engineer whose partner takes a job in another city need not resign halfway through a difficult migration. A developer who finds a crowded office exhausting can contribute without spending the evening recovering from the workday. For an employer, the benefit goes beyond having more applicants for each opening. It includes keeping people who remember why an apparently obsolete system still exists, which customers depend on it, and what went wrong the last time someone tried to replace it. That knowledge is expensive to lose and difficult to recover from even the best handover document.\n\nThe strongest case for the office concerns people who have not yet acquired that knowledge. A new engineer may spend an afternoon stuck on a setup problem that a nearby colleague would recognize at a glance. Worse, the newcomer may not know whether the problem merits asking for help. In an office, a puzzled expression can start a conversation without anyone having to admit defeat. A remote team should take that loss seriously. One practical response is to have an experienced teammate and a newcomer make the first small change together, from downloading the code to seeing it run in production. The newcomer learns how the system works; the experienced engineer sees precisely where the instructions stop making sense. That is more dependable than seating them near each other and hoping the right questions arise.\n\nNone of these benefits survives a manager who treats remote work as office work conducted on camera. A calendar packed with calls offers neither the quiet of working alone nor the easy sociability of a shared room. Nor is a stream of chat messages persuasive evidence that a project is going well. Better evidence might be a feature customers can use, a recurring outage that no longer happens, or a colleague who can now maintain a service without its original author. When a team struggles to identify such evidence, requiring everyone to commute may make the struggle less visible, but it will not resolve it.\n\nThere are good reasons to meet in person. An afternoon at a whiteboard can be worth the trip when several people are trying to discover whether they even agree about the problem. The mistake is to turn that useful afternoon into a standing requirement for every Tuesday, regardless of the work at hand. Remote work is the better default because it leaves the team free to choose: gather when a shared room will materially improve a decision, talk when a conversation will unblock someone, and otherwise let people build. The point is not to keep colleagues apart. It is to make their time together count without claiming all their time as the price.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 41,
+  "completion_tokens": 908,
+  "total_tokens": 949,
+  "cost": 0.036648,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.036648,
+   "upstream_inference_prompt_cost": 0.000328,
+   "upstream_inference_completions_cost": 0.03632
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

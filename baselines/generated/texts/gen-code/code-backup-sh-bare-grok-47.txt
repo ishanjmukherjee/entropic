@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# postgres-s3-backup.sh
+# Dump a PostgreSQL database, upload to S3, and prune backups older than RETENTION_DAYS.
+set -euo pipefail
+
+# --- configuration (override via environment) ---
+: "${PGHOST:=127.0.0.1}"
+: "${PGPORT:=5432}"
+: "${PGUSER:=postgres}"
+: "${PGDATABASE:?PGDATABASE is required}"
+: "${PGPASSWORD:?PGPASSWORD is required}"
+: "${S3_BUCKET:?S3_BUCKET is required}"
+: "${S3_PREFIX:=postgres}"
+: "${AWS_REGION:=us-east-1}"
+: "${RETENTION_DAYS:=14}"
+: "${DUMP_FORMAT:=custom}"          # custom | plain
+: "${COMPRESS_LEVEL:=6}"
+: "${LOCK_FILE:=/var/lock/postgres-s3-backup.lock}"
+: "${TMP_DIR:=${TMPDIR:-/tmp}}"
+
+export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD AWS_REGION
+
+log() {
+  printf '%s %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+}
+
+die() {
+  log "ERROR: $*"
+  exit 1
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+}
+
+cleanup() {
+  local rc=$?
+  if [[ -n "${DUMP_PATH:-}" && -f "${DUMP_PATH}" ]]; then
+    rm -f "${DUMP_PATH}" || true
+  fi
+  if [[ -n "${LOCK_FD:-}" ]]; then
+    flock -u "${LOCK_FD}" 2>/dev/null || true
+  fi
+  if [[ "${rc}" -ne 0 ]]; then
+    log "backup failed with exit code ${rc}"
+  fi
+  exit "${rc}"
+}
+trap cleanup EXIT
+trap 'die "interrupted"' INT TERM
+
+require_cmd pg_dump
+require_cmd aws
+require_cmd flock
+require_cmd gzip
+require_cmd date
+
+[[ "${RETENTION_DAYS}" =~ ^[0-9]+$ ]] || die "RETENTION_DAYS must be a non-negative integer"
+[[ "${S3_BUCKET}" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]] || die "S3_BUCKET looks invalid"
+
+mkdir -p "$(dirname "${LOCK_FILE}")" "${TMP_DIR}"
+exec {LOCK_FD}>"${LOCK_FILE}"
+flock -n "${LOCK_FD}" || die "another backup is already running (${LOCK_FILE})"
+
+STAMP="$(date -u +'%Y%m%dT%H%M%SZ')"
+SAFE_DB="$(printf '%s' "${PGDATABASE}" | tr -c 'A-Za-z0-9._-' '_')"
+case "${DUMP_FORMAT}" in
+  custom)
+    EXT="dump"
+    DUMP_PATH="$(mktemp "${TMP_DIR}/pgbackup.${SAFE_DB}.${STAMP}.XXXXXX.${EXT}")"
+    ;;
+  plain)
+    EXT="sql.gz"
+    DUMP_PATH="$(mktemp "${TMP_DIR}/pgbackup.${SAFE_DB}.${STAMP}.XXXXXX.${EXT}")"
+    ;;
+  *)
+    die "DUMP_FORMAT must be custom or plain"
+    ;;
+esac
+
+S3_KEY="${S3_PREFIX%/}/${SAFE_DB}/${STAMP}.${SAFE_DB}.${EXT}"
+S3_URI="s3://${S3_BUCKET}/${S3_KEY}"
+
+log "starting pg_dump of ${PGDATABASE}@${PGHOST}:${PGPORT} format=${DUMP_FORMAT}"
+if [[ "${DUMP_FORMAT}" == "custom" ]]; then
+  pg_dump \
+    --format=custom \
+    --compress="${COMPRESS_LEVEL}" \
+    --no-password \
+    --file="${DUMP_PATH}" \
+    "${PGDATABASE}"
+else
+  pg_dump \
+    --format=plain \
+    --no-password \
+    "${PGDATABASE}" \
+    | gzip -"${COMPRESS_LEVEL}" > "${DUMP_PATH}"
+fi
+
+[[ -s "${DUMP_PATH}" ]] || die "dump file is empty: ${DUMP_PATH}"
+
+log "uploading ${DUMP_PATH} -> ${S3_URI}"
+aws s3 cp \
+  --only-show-errors \
+  --region "${AWS_REGION}" \
+  --storage-class STANDARD_IA \
+  "${DUMP_PATH}" "${S3_URI}"
+
+# Verify the object exists and size is non-zero.
+REMOTE_SIZE="$(aws s3api head-object \
+  --region "${AWS_REGION}" \
+  --bucket "${S3_BUCKET}" \
+  --key "${S3_KEY}" \
+  --query 'ContentLength' \
+  --output text)"
+[[ "${REMOTE_SIZE}" =~ ^[0-9]+$ && "${REMOTE_SIZE}" -gt 0 ]] || die "uploaded object missing or empty"
+
+log "upload verified (${REMOTE_SIZE} bytes)"
+
+# Rotation: delete objects under the same prefix older than RETENTION_DAYS.
+if [[ "${RETENTION_DAYS}" -gt 0 ]]; then
+  CUTOFF_EPOCH="$(date -u -d "-${RETENTION_DAYS} days" +%s 2>/dev/null || date -u -v-"${RETENTION_DAYS}"d +%s)"
+  PREFIX="${S3_PREFIX%/}/${SAFE_DB}/"
+  log "pruning objects in s3://${S3_BUCKET}/${PREFIX} older than ${RETENTION_DAYS} days"
+
+  # List keys with last-modified; delete those before cutoff. Continue on individual delete failures.
+  aws s3api list-objects-v2 \
+    --region "${AWS_REGION}" \
+    --bucket "${S3_BUCKET}" \
+    --prefix "${PREFIX}" \
+    --query 'Contents[].[Key,LastModified]' \
+    --output text \
+  | while IFS=$'\t' read -r key modified; do
+      [[ -n "${key}" && "${key}" != "None" ]] || continue
+      # GNU date and BSD date
+      mod_epoch="$(date -u -d "${modified}" +%s 2>/dev/null || date -u -j -f '%Y-%m-%dT%H:%M:%S' "${modified%%.*}" +%s 2>/dev/null || echo 0)"
+      if [[ "${mod_epoch}" =~ ^[0-9]+$ && "${mod_epoch}" -gt 0 && "${mod_epoch}" -lt "${CUTOFF_EPOCH}" ]]; then
+        log "deleting expired backup s3://${S3_BUCKET}/${key}"
+        aws s3 rm --region "${AWS_REGION}" --only-show-errors "s3://${S3_BUCKET}/${key}" \
+          || log "WARN: failed to delete s3://${S3_BUCKET}/${key}"
+      fi
+    done
+fi
+
+rm -f "${DUMP_PATH}"
+DUMP_PATH=""
+log "backup complete: ${S3_URI}"
+exit 0

@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+"""Forecast daily sales with additive Holt-Winters seasonality.
+
+Example:
+    python forecast.py sales.csv --date-column date --sales-column sales \
+        --test-days 28 --horizon 14 --output forecast.csv
+
+Dates must be ISO calendar dates (YYYY-MM-DD). Multiple rows on one date
+are summed. Missing calendar days are errors unless --missing is specified.
+Negative sales (e.g. net returns) are allowed. Standard output contains only
+the final forecast CSV unless --output is supplied; diagnostics go to stderr.
+"""
+
+import argparse
+import logging
+import sys
+import warnings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+
+LOG = logging.getLogger("sales_forecast")
+
+
+def positive_int(value: str) -> int:
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError("expected a positive integer")
+    return number
+
+
+def load_sales(path: Path, date_col: str, sales_col: str, missing: str) -> pd.Series:
+    """Return a finite, contiguous daily series, without using future values."""
+    if date_col == sales_col:
+        raise ValueError("date and sales columns must be different")
+    frame = pd.read_csv(path, usecols=[date_col, sales_col], dtype="string")
+    if frame.empty:
+        raise ValueError("CSV contains no sales records")
+
+    raw_dates = frame[date_col].str.strip()
+    dates = pd.to_datetime(
+        raw_dates.where(raw_dates.str.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")),
+        format="%Y-%m-%d",
+        errors="coerce",
+    )
+    amounts = pd.to_numeric(frame[sales_col].str.strip(), errors="coerce").to_numpy(
+        dtype=float, na_value=np.nan
+    )
+    invalid = dates.isna().to_numpy() | ~np.isfinite(amounts)
+    if invalid.any():
+        first = int(np.flatnonzero(invalid)[0]) + 1
+        raise ValueError(
+            f"{invalid.sum()} record(s) have invalid dates or sales; "
+            f"first invalid data record: {first}"
+        )
+
+    daily = pd.Series(amounts, index=pd.DatetimeIndex(dates), name="sales")
+    daily = daily.groupby(level=0, sort=True).sum()
+    if not np.isfinite(daily.to_numpy()).all():
+        raise ValueError("daily sales overflowed during aggregation")
+    daily = daily.asfreq("D")
+    absent = int(daily.isna().sum())
+    if absent:
+        if missing == "error":
+            raise ValueError(f"{absent} missing day(s); choose an explicit --missing policy")
+        LOG.warning("Filling %d missing day(s) using %s", absent, missing)
+        daily = daily.fillna(0.0) if missing == "zero" else daily.ffill()
+    return daily
+
+
+def predict(series: pd.Series, period: int, horizon: int) -> pd.Series:
+    """Fit a damped additive trend and additive seasonal component."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ConvergenceWarning)
+        model = ExponentialSmoothing(
+            series,
+            trend="add",
+            damped_trend=True,
+            seasonal="add",
+            seasonal_periods=period,
+            initialization_method="estimated",
+        )
+        forecast = model.fit(optimized=True).forecast(horizon)
+    if not np.isfinite(forecast.to_numpy()).all():
+        raise ValueError("model produced non-finite forecasts")
+    return forecast.rename("forecast")
+
+
+def report_scores(label: str, actual: np.ndarray, predicted: np.ndarray) -> None:
+    with np.errstate(over="raise", invalid="raise"):
+        residuals = actual - predicted
+        mae = np.mean(np.abs(residuals))
+        rmse = np.sqrt(np.mean(np.square(residuals)))
+    LOG.info("%s: MAE=%.6g RMSE=%.6g", label, mae, rmse)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("csv", type=Path)
+    parser.add_argument("--date-column", default="date")
+    parser.add_argument("--sales-column", default="sales")
+    parser.add_argument("--period", type=positive_int, default=7, help="season length in days")
+    parser.add_argument("--test-days", type=positive_int, default=28)
+    parser.add_argument("--horizon", type=positive_int, default=14)
+    parser.add_argument("--missing", choices=("error", "zero", "ffill"), default="error")
+    parser.add_argument("--output", type=Path, help="forecast CSV path (default: stdout)")
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    if args.period < 2:
+        parser.error("--period must be at least 2")
+
+    try:
+        if args.output and args.output.exists() and args.output.samefile(args.csv):
+            raise ValueError("output must not overwrite the input CSV")
+        daily = load_sales(args.csv, args.date_column, args.sales_column, args.missing)
+        if len(daily) < args.test_days + 2 * args.period:
+            raise ValueError("need two full training seasons plus the holdout period")
+
+        train, test = daily.iloc[:-args.test_days], daily.iloc[-args.test_days:]
+        LOG.info("Holdout: %s through %s", test.index[0].date(), test.index[-1].date())
+        held_out = predict(train, args.period, len(test))
+        report_scores("Holt-Winters", test.to_numpy(), held_out.to_numpy())
+        baseline = np.resize(train.iloc[-args.period:].to_numpy(), len(test))
+        report_scores("Seasonal naive", test.to_numpy(), baseline)
+
+        forecast = predict(daily, args.period, args.horizon)
+        forecast.to_csv(
+            args.output if args.output is not None else sys.stdout,
+            index_label="date",
+            date_format="%Y-%m-%d",
+        )
+    except (OSError, ValueError, ArithmeticError, ConvergenceWarning, np.linalg.LinAlgError) as exc:
+        LOG.error("%s", exc)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

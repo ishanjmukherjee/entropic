@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "bare",
+ "prompt": "Write a poem about a father's hands. Output only the poem, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 700,
+ "id": "poem-father-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "My father's hands could tell a peach was ripe\nwithout a thumbprint on the skin.\nThey tried each buckle on my skates,\nthen set me wobbling on the pond.\nI thought the trick was holding on.\nHe knew the trick was when to stop.\n\nThis winter, at his kitchen table,\nI thread a needle while he waits.\nHe takes it back and mends his cuff,\neach stitch a little longer now.\nI leave my hands beside my cup\nuntil he asks me for the scissors.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 23,
+  "completion_tokens": 106,
+  "total_tokens": 129,
+  "cost": 0.004424,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.004424,
+   "upstream_inference_prompt_cost": 0.000184,
+   "upstream_inference_completions_cost": 0.00424
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

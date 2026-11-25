@@ -1,0 +1,38 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-messenger",
+ "style": "craft",
+ "prompt": "Write a scene for a stage play, about 700 words. Situation: a messenger brings a queen bad news from the war.\n\nWrite it as a skilled playwright would. Each character wants something from the other and will not say what; the scene is the manoeuvring. Lines should be short and speakable, with people cutting across each other, changing the subject, answering the question they wish they had been asked. Keep stage directions few and physical. Let one object on stage matter. No speech that explains a feeling or a history, and no tidy resolution: end on an action or a line that leaves the question open.\n\nFormat: character names in capitals on their own line, the speech on the next line, stage directions in parentheses. Output only the script, with no title or cast list.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1500,
+ "id": "play-messenger-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "(The QUEEN sits at a table. A small silver bell sits beside her elbow. The MESSENGER stands near the door, mud up to his knees.)\n\nQUEEN\nYou’ve brought the road in with you.\n\nMESSENGER\nI didn’t stop at the—\n\nQUEEN\nI can see you didn’t stop. Don’t stand on the rug.\n\n(He steps back onto the stone.)\n\nMESSENGER\nThe Captain said you’d want it straight.\n\nQUEEN\nThe Captain says a great many things. Did he give you water?\n\nMESSENGER\nNo, Majesty.\n\nQUEEN\nHe’s getting careless. Sit down. Not there.\n\nMESSENGER\nI’d rather stand.\n\nQUEEN\nYou’re shaking.\n\nMESSENGER\nIt’s the rain.\n\nQUEEN\nIt hasn’t rained here since Tuesday.\n\nMESSENGER\nIt rained at the river.\n\n(She looks at the silver bell, then back at him.)\n\nQUEEN\nThe river’s high, then.\n\nMESSENGER\nHigh enough.\n\nQUEEN\nGood. It’ll slow them down.\n\nMESSENGER\nIt slowed us down.\n\nQUEEN\nYou’re very young to be riding for the General.\n\nMESSENGER\nI’m twenty-four.\n\nQUEEN\nYou look sixteen. Did you tell the Captain?\n\nMESSENGER\nTell him what?\n\nQUEEN\nWhatever you’ve come to tell me.\n\nMESSENGER\nHe asked for the bag. I said it was for your hands.\n\nQUEEN\nWhere is the bag?\n\nMESSENGER\nI lost the horse three miles back.\n\nQUEEN\nAnd the bag?\n\nMESSENGER\nWith the horse.\n\n(She reaches out and rests a finger on the rim of the bell.)\n\nQUEEN\nYou walked three miles.\n\nMESSENGER\nRan some of it.\n\nQUEEN\nAnd you didn’t tell the Captain.\n\nMESSENGER\nNo.\n\nQUEEN\nWhy?\n\nMESSENGER\nBecause he’s got a loud voice.\n\nQUEEN\nHe does. He’s also got forty men in the courtyard.\n\nMESSENGER\nI saw them. They’re sharpening pikes.\n\nQUEEN\nThey’re always sharpening pikes. It keeps them from drinking.\n\nMESSENGER\nThey won’t need them.\n\nQUEEN\nNo?\n\nMESSENGER\nNot for a day or two.\n\n(She pulls her hand back from the bell.)\n\nQUEEN\nTell me about the bridge.\n\nMESSENGER\nWhich one?\n\nQUEEN\nDon’t be clever.\n\nMESSENGER\nThe stone one’s still there. They’re using it.\n\nQUEEN\nAnd the General?\n\nMESSENGER\nHe sent his regards.\n\nQUEEN\nHe’s never sent his regards in his life.\n\nMESSENGER\nHe was in a hurry.\n\nQUEEN\nSouth or east?\n\nMESSENGER\nHe didn’t say. He just told me to ride until the horse dropped and then keep going.\n\nQUEEN\nYou’re a very obedient boy.\n\nMESSENGER\nI’m twenty-four.\n\nQUEEN\nYou said. What’s your name?\n\nMESSENGER\nThomas.\n\nQUEEN\nThomas. If I ring this bell, the Captain comes in.\n\nMESSENGER\nYes.\n\nQUEEN\nAnd he takes you to the kitchens. You get a hot meal. Dry boots. A bed in the barracks.\n\nMESSENGER\nI don’t want a bed in the barracks.\n\nQUEEN\nYou can barely stand.\n\nMESSENGER\nMy sister lives in the lower town. Near the tannery.\n\nQUEEN\nThe lower town’s a swamp.\n\nMESSENGER\nShe’s got a cart.\n\nQUEEN\nHas she.\n\nMESSENGER\nNo horse, though. They took the mule in April.\n\nQUEEN\nThe army needed mules.\n\nMESSENGER\nThey don’t need them anymore.\n\n(She stares at him. He doesn’t look away.)\n\nQUEEN\nThe South Gate is closed at dusk.\n\nMESSENGER\nIt’s not dusk yet.\n\nQUEEN\nIt’s closed to carts.\n\nMESSENGER\nUnless there’s a paper.\n\nQUEEN\nWhy would I give you a paper?\n\nMESSENGER\nBecause I didn’t tell the Captain.\n\nQUEEN\nYou think he won’t find out?\n\nMESSENGER\nHe’ll find out tomorrow. Maybe tonight, if the riders from the ridge get through.\n\nQUEEN\nThe ridge held?\n\nMESSENGER\nI didn’t say it held. I said riders might get through.\n\nQUEEN\nIf I ring this bell—\n\nMESSENGER\nThen I’ll tell him.\n\nQUEEN\nYou’ll tell him what? You don’t have a dispatch. You don’t have a seal. You’re a boy in a wet coat.\n\nMESSENGER\nI’ve got the General’s ring.\n\n(He doesn’t reach for his pocket.)\n\nQUEEN\nHe took it off?\n\nMESSENGER\nI took it off.\n\nQUEEN\nYou’re a thief as well.\n\nMESSENGER\nHe wasn’t using it.\n\nQUEEN\nGive it to me.\n\nMESSENGER\nI’ll leave it on the table. On my way out.\n\nQUEEN\nOne horse?\n\nMESSENGER\nTwo. The cart’s heavy.\n\nQUEEN\nI’m not giving you two horses.\n\nMESSENGER\nThen I’ll take one. And a paper with the red wax, not the black. The gatekeeper can’t read, he only knows the colour.\n\nQUEEN\nYou know a lot about the South Gate.\n\nMESSENGER\nI’ve been thinking about it since the river.\n\nQUEEN\nIf I write this paper, you don’t stop at the tannery. You don’t stop anywhere.\n\nMESSENGER\nI’m not leaving her.\n\nQUEEN\nI don’t care who you leave. You’re through the gate before the bell rings for vespers.\n\nMESSENGER\nThat’s an hour.\n\nQUEEN\nThen you’d better run.\n\n(She doesn’t move to write. She picks up the silver bell by the handle, holding it just above the wood, keeping the clapper still.)\n\nQUEEN\nWho else knows?\n\nMESSENGER\nNobody.\n\nQUEEN\nYou’re lying.\n\nMESSENGER\nEverybody who knows is still at the river.\n\nQUEEN\nGive me the ring.\n\n(He reaches into his coat, pulls out a muddy ring, and sets it on the edge of the table. He steps back.)\n\nQUEEN\nYou’re sure he’s dead?\n\nMESSENGER\nI didn’t say he was dead.\n\n(She looks at the ring. Her hand shifts, and the bell gives a tiny, dull clink. Neither of them moves.)",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 199,
+  "completion_tokens": 5157,
+  "total_tokens": 5356,
+  "cost": 0.077952,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.077952,
+   "upstream_inference_prompt_cost": 0.000597,
+   "upstream_inference_completions_cost": 0.077355
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 3718,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

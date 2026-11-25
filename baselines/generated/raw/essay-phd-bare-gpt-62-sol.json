@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-phd",
+ "style": "bare",
+ "prompt": "Write an essay of advice for a new PhD student on choosing a research problem. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "id": "essay-phd-bare-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "A good dissertation problem is not necessarily the most important question in your field. It is a question you can make meaningful progress on, whose answer someone besides you has reason to care about, and whose difficulties will teach you something worth knowing. As a new PhD student, you may feel pressure to identify that question immediately. Resist the pressure to announce a grand plan, but not the pressure to begin. You will learn more about what makes a problem good by trying to solve a small one than by spending a semester imagining the perfect dissertation.\n\nStart by paying attention to the moments when reading makes you want to interrupt. An author draws a conclusion that seems stronger than the evidence. Two papers describe what looks like the same phenomenon but explain it differently. A method that works beautifully in one setting is assumed to work in another, though nobody appears to have checked. Write down these moments in your own words. Over time, look for questions you keep returning to even after the novelty has worn off. Curiosity is not enough to make a project viable, but it matters when the work becomes repetitive and the original excitement is no longer doing the work of getting you to your desk.\n\nWhen a question begins to look promising, try explaining why its answer would matter without using the phrase “fills a gap.” Most gaps in the literature can safely remain gaps. What would someone believe, do, or investigate differently if your answer turned out one way rather than another? Be specific about who that person is. You need not produce a result that changes public policy or overturns a field. Showing that a familiar explanation fails in a particular case can be valuable if people have been relying on that explanation to make sense of other cases. A modest claim with a clear consequence is often a stronger starting point than an ambitious claim whose importance is mostly rhetorical.\n\nNext, turn the question into an actual piece of work. What would you need to read, measure, prove, build, or compare? Which materials or skills are already within reach, and which depend on permission, funding, or cooperation you do not yet have? Identify the assumption most likely to make the project impossible, and test it early. If your argument depends on an archive, find out what the archive contains before designing three chapters around it. If it depends on distinguishing two explanations, try writing down what evidence would favor each one. A small pilot is useful not because it guarantees success, but because it replaces some of your speculation with something you can inspect.\n\nThink, too, about what happens if the project does not go as hoped. Suppose the effect is absent, the proof fails, or the sources contradict the story you expected to tell. Would you still have something to say? An unexpected result is valuable only if your approach lets you interpret it; an inconclusive result may simply mean you cannot tell what happened. Look for a project with intermediate results that can stand on their own: a useful comparison, a sharper formulation, a demonstration that an accepted method cannot answer a question it is routinely used to address. This is not an argument for avoiding risk. It is an argument against making several years of work depend on one result coming out exactly as predicted.\n\nAsk for advice while your plans are still easy to change. Rather than asking a supervisor whether an idea is good, bring a short account of the question, why it matters, and what you would do first. Ask what they think you are underestimating. Talk to more experienced students, too. They may know how long it actually takes to obtain a dataset, how often a piece of equipment breaks, or which apparently straightforward method took them six months to learn. Listen for the difference between “this is difficult” and “we do not have the resources to do this here.” The former may be a reason to pursue the work; the latter deserves a concrete plan, not optimism.\n\nFinally, give yourself a deadline for choosing what to try, not for deciding what your dissertation will be. At the end of a few weeks of exploratory work, write down what you learned, what remains uncertain, and what another month would buy you. Continue if you can name a next step that will tell you something important. Revise or stop if the work has exposed a flaw you cannot repair, even if the original idea is still appealing. Walking away from a question after learning why it cannot be answered as posed is not wasted time. It is practice in the judgment a PhD is meant to develop. You do not have to choose the question you will be proudest to have answered five years from now. You have to choose a question worth working on now, and stay attentive enough to notice the better question that the work reveals.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 37,
+  "completion_tokens": 945,
+  "total_tokens": 982,
+  "cost": 0.009524,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009524,
+   "upstream_inference_prompt_cost": 7.4e-05,
+   "upstream_inference_completions_cost": 0.00945
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

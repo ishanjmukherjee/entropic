@@ -1,0 +1,505 @@
+import Foundation
+import SwiftUI
+
+// MARK: - Models
+
+public struct Article: Identifiable, Codable, Equatable, Hashable, Sendable {
+    public let id: String
+    public let title: String
+    public let summary: String
+    public let author: String
+    public let publishedAt: Date
+    public let imageURL: URL?
+    public let articleURL: URL?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case summary
+        case author
+        case publishedAt = "published_at"
+        case imageURL = "image_url"
+        case articleURL = "article_url"
+    }
+}
+
+public struct ArticlePage: Codable, Sendable {
+    public let articles: [Article]
+    public let page: Int
+    public let totalPages: Int
+
+    public var hasMorePages: Bool {
+        page < totalPages
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case articles
+        case page
+        case totalPages = "total_pages"
+    }
+}
+
+// MARK: - Networking
+
+public enum ArticleAPIError: LocalizedError, Equatable {
+    case invalidURL
+    case invalidResponse
+    case httpStatus(Int)
+    case decodingFailed
+    case networkFailure(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "The request URL is invalid."
+        case .invalidResponse:
+            return "Received an invalid response from the server."
+        case .httpStatus(let code):
+            return "Server returned an error (HTTP \(code))."
+        case .decodingFailed:
+            return "Failed to parse the articles data."
+        case .networkFailure(let message):
+            return message
+        }
+    }
+}
+
+public protocol ArticleServiceProtocol: Sendable {
+    func fetchArticles(page: Int, pageSize: Int) async throws -> ArticlePage
+}
+
+public final class ArticleService: ArticleServiceProtocol {
+    private let baseURL: URL
+    private let session: URLSession
+    private let decoder: JSONDecoder
+
+    public init(
+        baseURL: URL,
+        session: URLSession = .shared
+    ) {
+        self.baseURL = baseURL
+        self.session = session
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        self.decoder = decoder
+    }
+
+    public func fetchArticles(page: Int, pageSize: Int) async throws -> ArticlePage {
+        guard var components = URLComponents(
+            url: baseURL.appendingPathComponent("articles"),
+            resolvingAgainstBaseURL: true
+        ) else {
+            throw ArticleAPIError.invalidURL
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "limit", value: String(pageSize))
+        ]
+
+        guard let url = components.url else {
+            throw ArticleAPIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let data: Data
+        let response: URLResponse
+
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw ArticleAPIError.networkFailure(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ArticleAPIError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw ArticleAPIError.httpStatus(httpResponse.statusCode)
+        }
+
+        do {
+            return try decoder.decode(ArticlePage.self, from: data)
+        } catch {
+            throw ArticleAPIError.decodingFailed
+        }
+    }
+}
+
+// MARK: - ViewModel
+
+@MainActor
+public final class ArticlesViewModel: ObservableObject {
+    public enum ViewState: Equatable {
+        case idle
+        case loading
+        case loaded
+        case error(String)
+    }
+
+    @Published public private(set) var articles: [Article] = []
+    @Published public private(set) var state: ViewState = .idle
+    @Published public private(set) var isLoadingNextPage: Bool = false
+    @Published public private(set) var paginationError: String?
+    @Published public private(set) var hasMorePages: Bool = true
+
+    private let service: ArticleServiceProtocol
+    private let pageSize: Int
+    private var currentPage: Int = 0
+    private var seenIDs: Set<String> = []
+    private var loadTask: Task<Void, Never>?
+
+    public init(service: ArticleServiceProtocol, pageSize: Int = 20) {
+        self.service = service
+        self.pageSize = pageSize
+    }
+
+    deinit {
+        loadTask?.cancel()
+    }
+
+    public func loadInitialIfNeeded() async {
+        guard state == .idle else { return }
+        await loadFirstPage(showLoadingIndicator: true)
+    }
+
+    public func refresh() async {
+        loadTask?.cancel()
+        await loadFirstPage(showLoadingIndicator: articles.isEmpty)
+    }
+
+    public func retryInitialLoad() async {
+        await loadFirstPage(showLoadingIndicator: true)
+    }
+
+    public func loadNextPageIfNeeded(currentArticle: Article) async {
+        guard shouldLoadNextPage(for: currentArticle) else { return }
+        await loadNextPage()
+    }
+
+    public func retryPagination() async {
+        guard !isLoadingNextPage, hasMorePages else { return }
+        await loadNextPage()
+    }
+
+    // MARK: - Private Helpers
+
+    private func shouldLoadNextPage(for article: Article) -> Bool {
+        guard
+            state == .loaded,
+            !isLoadingNextPage,
+            hasMorePages,
+            paginationError == nil,
+            let index = articles.firstIndex(where: { $0.id == article.id })
+        else {
+            return false
+        }
+
+        let thresholdIndex = max(articles.count - 5, 0)
+        return index >= thresholdIndex
+    }
+
+    private func loadFirstPage(showLoadingIndicator: Bool) async {
+        if showLoadingIndicator {
+            state = .loading
+        }
+        paginationError = nil
+        isLoadingNextPage = false
+
+        do {
+            let response = try await service.fetchArticles(page: 1, pageSize: pageSize)
+            try Task.checkCancellation()
+
+            var uniqueArticles: [Article] = []
+            var newSeenIDs: Set<String> = []
+            uniqueArticles.reserveCapacity(response.articles.count)
+
+            for article in response.articles where newSeenIDs.insert(article.id).inserted {
+                uniqueArticles.append(article)
+            }
+
+            articles = uniqueArticles
+            seenIDs = newSeenIDs
+            currentPage = response.page
+            hasMorePages = response.hasMorePages
+            state = .loaded
+        } catch is CancellationError {
+            return
+        } catch {
+            if articles.isEmpty {
+                state = .error(error.localizedDescription)
+            } else {
+                paginationError = error.localizedDescription
+                state = .loaded
+            }
+        }
+    }
+
+    private func loadNextPage() async {
+        guard !isLoadingNextPage, hasMorePages else { return }
+
+        isLoadingNextPage = true
+        paginationError = nil
+
+        let nextPage = currentPage + 1
+
+        let task = Task {
+            do {
+                let response = try await service.fetchArticles(page: nextPage, pageSize: pageSize)
+                try Task.checkCancellation()
+
+                let newArticles = response.articles.filter { seenIDs.insert($0.id).inserted }
+                articles.append(contentsOf: newArticles)
+                currentPage = response.page
+                hasMorePages = response.hasMorePages
+            } catch is CancellationError {
+                return
+            } catch {
+                paginationError = error.localizedDescription
+            }
+
+            isLoadingNextPage = false
+        }
+
+        loadTask = task
+        await task.value
+    }
+}
+
+// MARK: - Views
+
+public struct ArticlesListView: View {
+    @StateObject private var viewModel: ArticlesViewModel
+
+    public init(viewModel: ArticlesViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
+
+    public var body: some View {
+        NavigationStack {
+            Group {
+                switch viewModel.state {
+                case .idle, .loading:
+                    loadingView
+                case .error(let message):
+                    errorView(message: message)
+                case .loaded:
+                    if viewModel.articles.isEmpty {
+                        emptyStateView
+                    } else {
+                        articlesList
+                    }
+                }
+            }
+            .navigationTitle("Articles")
+            .task {
+                await viewModel.loadInitialIfNeeded()
+            }
+        }
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text("Loading articles...")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func errorView(message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 40))
+                .foregroundStyle(.secondary)
+
+            Text("Unable to Load Articles")
+                .font(.headline)
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            Button("Try Again") {
+                Task {
+                    await viewModel.retryInitialLoad()
+                }
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 40))
+                .foregroundStyle(.secondary)
+
+            Text("No Articles Found")
+                .font(.headline)
+
+            Text("Pull to refresh or check back later.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var articlesList: some View {
+        List {
+            ForEach(viewModel.articles) { article in
+                ArticleRowView(article: article)
+                    .task {
+                        await viewModel.loadNextPageIfNeeded(currentArticle: article)
+                    }
+            }
+
+            paginationFooter
+        }
+        .listStyle(.plain)
+        .refreshable {
+            await viewModel.refresh()
+        }
+    }
+
+    @ViewBuilder
+    private var paginationFooter: some View {
+        if viewModel.isLoadingNextPage {
+            HStack {
+                Spacer()
+                ProgressView()
+                    .padding(.vertical, 12)
+                Spacer()
+            }
+            .listRowSeparator(.hidden)
+        } else if let errorMessage = viewModel.paginationError {
+            VStack(spacing: 8) {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Button("Retry") {
+                    Task {
+                        await viewModel.retryPagination()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .listRowSeparator(.hidden)
+        } else if !viewModel.hasMorePages && !viewModel.articles.isEmpty {
+            Text("You're all caught up.")
+                .font(.footnote)
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .listRowSeparator(.hidden)
+        }
+    }
+}
+
+private struct ArticleRowView: View {
+    let article: Article
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(article.title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
+                Text(article.summary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+
+                HStack(spacing: 6) {
+                    Text(article.author)
+                        .fontWeight(.medium)
+                    Text("•")
+                    Text(article.publishedAt, style: .date)
+                }
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            }
+
+            Spacer(minLength: 0)
+
+            if let imageURL = article.imageURL {
+                AsyncImage(url: imageURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        Color.secondary.opacity(0.15)
+                            .overlay {
+                                Image(systemName: "photo")
+                                    .foregroundStyle(.secondary)
+                            }
+                    case .empty:
+                        Color.secondary.opacity(0.1)
+                            .overlay {
+                                ProgressView()
+                            }
+                    @unknown default:
+                        Color.secondary.opacity(0.1)
+                    }
+                }
+                .frame(width: 76, height: 76)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Preview
+
+#if DEBUG
+private struct MockArticleService: ArticleServiceProtocol {
+    func fetchArticles(page: Int, pageSize: Int) async throws -> ArticlePage {
+        try await Task.sleep(nanoseconds: 400_000_000)
+
+        let totalPages = 3
+        let start = (page - 1) * pageSize
+        let items = (0..<pageSize).map { offset in
+            let index = start + offset + 1
+            return Article(
+                id: "article-\(index)",
+                title: "Swift Concurrency in Production #\(index)",
+                summary: "A practical guide to building resilient, paginated SwiftUI applications using async/await and structured concurrency.",
+                author: "Jane Doe",
+                publishedAt: Date().addingTimeInterval(Double(-index * 86_400)),
+                imageURL: nil,
+                articleURL: nil
+            )
+        }
+
+        return ArticlePage(articles: items, page: page, totalPages: totalPages)
+    }
+}
+
+#Preview {
+    ArticlesListView(
+        viewModel: ArticlesViewModel(service: MockArticleService(), pageSize: 10)
+    )
+}
+#endif

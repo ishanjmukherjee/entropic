@@ -1,0 +1,84 @@
+{-# LANGUAGE BangPatterns #-}
+
+-- |
+-- Module      : RBTree
+-- Description : Persistent red-black tree set with insert, member and toList.
+--
+-- A purely functional, persistent set implemented as a red-black tree.
+-- Balancing follows Okasaki's formulation, so every update returns a new
+-- tree that shares structure with the old one. Invariants:
+--
+--   * The root is black.
+--   * No red node has a red child.
+--   * Every path from the root to an empty subtree contains the same
+--     number of black nodes.
+--
+-- These invariants guarantee a height of at most 2 * log2(n + 1).
+module RBTree
+  ( RBTree
+  , empty
+  , insert
+  , member
+  , toList
+  , fromList
+  ) where
+
+-- | Node colour.
+data Color = Red | Black
+  deriving (Eq, Show)
+
+-- | A persistent red-black tree of elements of type @a@.
+data RBTree a
+  = Leaf
+  | Node !Color !(RBTree a) !a !(RBTree a)
+  deriving (Show)
+
+-- | The empty tree.
+empty :: RBTree a
+empty = Leaf
+
+-- | Insert an element. If the element is already present, the original
+-- tree is returned unchanged (set semantics).
+insert :: Ord a => a -> RBTree a -> RBTree a
+insert x t = blacken (ins t)
+  where
+    ins Leaf = Node Red Leaf x Leaf
+    ins n@(Node c l y r) = case compare x y of
+      LT -> balance c (ins l) y r
+      GT -> balance c l y (ins r)
+      EQ -> n
+
+    blacken Leaf = Leaf
+    blacken (Node _ l y r) = Node Black l y r
+
+-- | Test whether an element is a member of the tree.
+member :: Ord a => a -> RBTree a -> Bool
+member _ Leaf = False
+member x (Node _ l y r) = case compare x y of
+  LT -> member x l
+  GT -> member x r
+  EQ -> True
+
+-- | Return the elements in ascending order.
+toList :: RBTree a -> [a]
+toList t = go t []
+  where
+    go Leaf acc = acc
+    go (Node _ l y r) acc = go l (y : go r acc)
+
+-- | Build a tree from a list of elements. Duplicates are discarded.
+fromList :: Ord a => [a] -> RBTree a
+fromList = foldl (flip insert) empty
+
+-- | Rebalance a black node whose child/grandchild may contain a
+-- red-red violation. Any other combination is returned as-is.
+balance :: Color -> RBTree a -> a -> RBTree a -> RBTree a
+balance Black (Node Red (Node Red a x b) y c) z d =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balance Black (Node Red a x (Node Red b y c)) z d =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balance Black a x (Node Red (Node Red b y c) z d) =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balance Black a x (Node Red b y (Node Red c z d)) =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balance c l x r = Node c l x r

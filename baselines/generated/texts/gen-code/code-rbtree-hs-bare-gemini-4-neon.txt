@@ -1,0 +1,131 @@
+{-# LANGUAGE DeriveFunctor #-}
+
+-- |
+-- Module      : Data.RBTree
+-- Description : Persistent Red-Black Tree
+-- License     : BSD-3-Clause
+--
+-- A persistent, spine-strict Red-Black Tree implementation providing
+-- \(O(\log n)\) insertion and membership queries, and \(O(n)\) in-order
+-- traversal.
+module Data.RBTree
+  ( RBTree
+  , empty
+  , singleton
+  , null
+  , size
+  , member
+  , insert
+  , toList
+  , fromList
+  ) where
+
+import Data.Function (on)
+import Data.List (foldl')
+import Prelude hiding (null)
+
+data Color = Red | Black
+  deriving (Eq, Show)
+
+-- | A persistent Red-Black Tree storing elements of type @a@.
+data RBTree a
+  = Empty
+  | Node !Color !(RBTree a) !a !(RBTree a)
+  deriving (Functor)
+
+instance Eq a => Eq (RBTree a) where
+  (==) = (==) `on` toList
+
+instance Ord a => Ord (RBTree a) where
+  compare = compare `on` toList
+
+instance Show a => Show (RBTree a) where
+  showsPrec p t =
+    showParen (p > 10) $
+      showString "fromList " . shows (toList t)
+
+instance Foldable RBTree where
+  foldr f = go
+    where
+      go acc Empty = acc
+      go acc (Node _ l x r) = go (f x (go acc r)) l
+
+  foldMap _ Empty = mempty
+  foldMap f (Node _ l x r) = foldMap f l <> f x <> foldMap f r
+
+  null = Data.RBTree.null
+  length = size
+
+instance Ord a => Semigroup (RBTree a) where
+  (<>) = foldl' (flip insert)
+
+instance Ord a => Monoid (RBTree a) where
+  mempty = empty
+
+-- | \(O(1)\). The empty tree.
+empty :: RBTree a
+empty = Empty
+
+-- | \(O(1)\). A tree with a single element.
+singleton :: a -> RBTree a
+singleton x = Node Black Empty x Empty
+
+-- | \(O(1)\). Returns 'True' if the tree is empty.
+null :: RBTree a -> Bool
+null Empty = True
+null _     = False
+
+-- | \(O(n)\). The number of elements in the tree.
+size :: RBTree a -> Int
+size = go 0
+  where
+    go !acc Empty          = acc
+    go !acc (Node _ l _ r) = go (go (acc + 1) l) r
+
+-- | \(O(\log n)\). Returns 'True' if the element is present in the tree.
+member :: Ord a => a -> RBTree a -> Bool
+member _ Empty = False
+member x (Node _ l y r) =
+  case compare x y of
+    LT -> member x l
+    EQ -> True
+    GT -> member x r
+
+-- | \(O(\log n)\). Inserts an element into the tree. If an equal element is
+-- already present, it is replaced with the new element.
+insert :: Ord a => a -> RBTree a -> RBTree a
+insert x t = makeBlack (ins t)
+  where
+    ins Empty = Node Red Empty x Empty
+    ins (Node color l y r) =
+      case compare x y of
+        LT -> balanceL color (ins l) y r
+        EQ -> Node color l x r
+        GT -> balanceR color l y (ins r)
+
+    makeBlack Empty          = Empty
+    makeBlack (Node _ l y r) = Node Black l y r
+
+-- | Rebalance after inserting into the left subtree.
+balanceL :: Color -> RBTree a -> a -> RBTree a -> RBTree a
+balanceL Black (Node Red (Node Red a x b) y c) z d =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balanceL Black (Node Red a x (Node Red b y c)) z d =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balanceL color l x r = Node color l x r
+
+-- | Rebalance after inserting into the right subtree.
+balanceR :: Color -> RBTree a -> a -> RBTree a -> RBTree a
+balanceR Black a x (Node Red (Node Red b y c) z d) =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balanceR Black a x (Node Red b y (Node Red c z d)) =
+  Node Red (Node Black a x b) y (Node Black c z d)
+balanceR color l x r = Node color l x r
+
+-- | \(O(n)\). Returns the elements of the tree in ascending order.
+toList :: RBTree a -> [a]
+toList = foldr (:) []
+
+-- | \(O(n \log n)\). Constructs a tree from a list of elements.
+fromList :: Ord a => [a] -> RBTree a
+fromList = foldl' (flip insert) empty

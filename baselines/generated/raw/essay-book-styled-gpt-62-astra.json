@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-book",
+ "style": "styled",
+ "prompt": "Write an essay of about 800 words on the subject below.\n\nWrite it the way an excellent, idiosyncratic human essayist would: someone with real expertise and strong opinions, writing in the first person for their own blog. Commit to a specific thesis that a thoughtful reader might disagree with. Use concrete particulars (names, numbers, incidents, things only someone who had done the work would know) in place of general statements. Vary sentence length. No headings, no bullet points, no summary paragraph at the end, and none of the stock phrases of AI writing.\n\nOutput only the essay, with no title.\n\nSubject: an essay reviewing a book you think is underrated",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "essay-book-styled-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "I have a test for books about cities: can I still use the book when it rains? Jane Jacobs is wonderful at six on a fine evening, when Roc is bringing out the sidewalk jumble and the ballet of Hudson Street is getting under way. Give me a November lunch hour, a wet coat, and forty minutes to kill between appointments, and I want William H. Whyte. Specifically I want *City: Rediscovering the Center*, his 1988 book, which has suffered the peculiar fate of being eclipsed by its own preliminary report. People who would never dream of abridging Jacobs feel quite content to know Whyte through *The Social Life of Small Urban Spaces*, an exceedingly good little book and film. They know about the movable chairs. Everybody knows about the damn chairs.\n\nWhat they miss is Whyte the political writer. I think he understood something about power in an American city that Jacobs, with her fondness for the competent neighborhood grown-up, never quite got: the decisive question is whether you can stay where you are without having to explain yourself. A neighborhood can be very much alive and still give the wrong answer.\n\nWhyte came to this by an odd route. He had been a writer at *Fortune* and made his name with *The Organization Man*. He knew how executives talked when they thought they were talking sense. In New York the sense ran roughly as follows. Under the 1961 zoning resolution, a builder could get extra floor area upstairs in exchange for providing open space downstairs. The builder got something you could measure in square feet and let at so many dollars per square foot per year. The citizen got a plaza. It took a remarkable degree of institutional courtesy not to ask what, exactly, constituted receipt of a plaza on the citizen’s part. Was it enough that the thing existed? Did you have to be able to get to it? Suppose there was nowhere to sit.\n\nWhyte and his Street Life Project set cameras up above the action. They timed people, mapped them, watched the films over and over. One of the pleasures of reading him is that you begin to feel the physical tedium behind a light sentence. Consider two men who meet on a sidewalk and stop to talk. Where will they stand? In the current of pedestrians, quite often, which is the last place either man would put a conversation if you gave him a pencil and a site plan. To get that observation you have to watch past the handshake. You have to resist the temptation to go down there and ask the men to move.\n\nI especially like Whyte on the people who distribute leaflets. A good distributor has to work out which pedestrians are available, how soon to make the offer, where to station himself relative to a stream of moving shoulders. A bad one is just a man holding paper. There is an education in the difference, and it is an education a traffic engineer, counting the number of bodies passing a given point in fifteen minutes, is almost professionally obliged to forgo. This is where I part company with admirers who praise Whyte chiefly for bringing data to urban design. The traffic engineer has data. Whyte has a subject.\n\nHe is not always a reliable partisan of his own cause. His answer to the property managers worried about “undesirables” is that a well-used place will attract ordinary people in sufficient numbers to take care of the problem. It's an effective answer to a man with a budget for spikes. I wish he had worried more about its terms. The fellow who has been on the ledge since ten this morning has as good a claim on the place at two as the woman who comes down with a sandwich. He doesn't acquire that claim from her arrival. There are moments when Whyte seems so delighted to catch management in an error of fact that he lets it off on the question of principle.\n\nStill, read him before you next go looking for shelter in midtown Manhattan. You may find a glass door that opens into a handsome heated room with tables, a tiny municipal notice, and a uniformed man whose desk is positioned so that walking in feels like cutting in line. I used to think the useful information in that arrangement was on the notice: the room is public, here are its hours. Whyte has made me interested in the desk. Somebody took delivery of it. Somebody stood with a hand on one end and sighted along the floor and said, another foot to the left. Outside, in the rain, a person who could perfectly well go in will look through the glass, hesitate for half a second, and keep walking. No one will have to tell him no.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 143,
+  "completion_tokens": 942,
+  "total_tokens": 1085,
+  "cost": 0.038824,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.038824,
+   "upstream_inference_prompt_cost": 0.001144,
+   "upstream_inference_completions_cost": 0.03768
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

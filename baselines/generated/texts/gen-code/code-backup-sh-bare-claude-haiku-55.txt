@@ -1,0 +1,389 @@
+#!/usr/bin/env bash
+#
+# pg_s3_backup.sh
+#
+# Creates a compressed PostgreSQL custom-format dump, uploads it to S3 with a
+# SHA-256 checksum stored as object metadata, verifies the upload, and rotates
+# old backups according to a retention policy.
+#
+# Required environment:
+#   PGDATABASE            Database to back up
+#   S3_BUCKET             Destination S3 bucket
+#
+# Connection (standard libpq variables; password via PGPASSWORD or ~/.pgpass):
+#   PGHOST, PGPORT, PGUSER
+#
+# Optional environment:
+#   S3_PREFIX             Key prefix (default: pg_backups)
+#   S3_STORAGE_CLASS      Storage class (default: STANDARD)
+#   S3_ENDPOINT_URL       Custom S3 endpoint (MinIO, Cloudflare R2, etc.)
+#   AWS_PROFILE, AWS_REGION
+#   RETENTION_DAYS        Delete backups older than N days (default: 14)
+#   MIN_BACKUPS_TO_KEEP   Never delete the newest N backups (default: 3)
+#   MAX_RETRIES           Upload attempts (default: 4)
+#   WORK_DIR              Scratch base directory (default: $TMPDIR or /tmp)
+#   LOCK_FILE             Lock file path (default: $TMPDIR/pg_s3_backup.lock)
+#   DRY_RUN               If "1", report deletions without performing them
+#
+# Usage:
+#   PGDATABASE=app S3_BUCKET=my-backups ./pg_s3_backup.sh
+#
+# Exit codes:
+#   0  success
+#   1  unexpected error
+#   2  configuration error
+#   3  another instance is already running
+#   4  dump or dump validation failed
+#   5  upload failed
+#   6  upload verification failed
+#   7  rotation failed (the new backup itself succeeded)
+
+set -Eeuo pipefail
+IFS=$'\n\t'
+umask 077
+
+# ---------------------------------------------------------------------------
+# Constants and defaults
+# ---------------------------------------------------------------------------
+readonly SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+readonly EXIT_UNEXPECTED=1
+readonly EXIT_CONFIG=2
+readonly EXIT_LOCKED=3
+readonly EXIT_DUMP=4
+readonly EXIT_UPLOAD=5
+readonly EXIT_VERIFY=6
+readonly EXIT_ROTATE=7
+
+readonly TMP_BASE="${TMPDIR:-/tmp}"
+
+S3_PREFIX="${S3_PREFIX:-pg_backups}"
+S3_STORAGE_CLASS="${S3_STORAGE_CLASS:-STANDARD}"
+RETENTION_DAYS="${RETENTION_DAYS:-14}"
+MIN_BACKUPS_TO_KEEP="${MIN_BACKUPS_TO_KEEP:-3}"
+MAX_RETRIES="${MAX_RETRIES:-4}"
+WORK_DIR="${WORK_DIR:-$TMP_BASE}"
+LOCK_FILE="${LOCK_FILE:-$TMP_BASE/pg_s3_backup.lock}"
+DRY_RUN="${DRY_RUN:-0}"
+
+# Runtime state (set during execution)
+WORK_TMP=""
+LOCAL_DUMP=""
+SHA256=""
+SIZE=""
+S3_KEY=""
+declare -a AWS_ARGS=()
+
+# ---------------------------------------------------------------------------
+# Logging and error handling
+# ---------------------------------------------------------------------------
+log() {
+    local level=$1
+    shift
+    printf '%s [%-5s] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$level" "$*" >&2
+}
+info() { log INFO "$@"; }
+warn() { log WARN "$@"; }
+err()  { log ERROR "$@"; }
+
+die() {
+    local code=$1
+    shift
+    err "$@"
+    exit "$code"
+}
+
+on_error() {
+    local exit_code=$?
+    err "Command '$2' failed at line $1 with exit code ${exit_code}"
+}
+trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
+
+cleanup() {
+    local rc=$?
+    if [[ -n "$WORK_TMP" && -d "$WORK_TMP" ]]; then
+        rm -rf -- "$WORK_TMP"
+    fi
+    if [[ $rc -eq 0 ]]; then
+        info "Backup run completed successfully"
+    else
+        err "Backup run finished with failure (exit ${rc})"
+    fi
+}
+trap cleanup EXIT
+
+signal_exit() {
+    err "Received termination signal; aborting"
+    exit 130
+}
+trap signal_exit INT TERM
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+require_env() {
+    local var
+    for var in "$@"; do
+        if [[ -z "${!var:-}" ]]; then
+            die "$EXIT_CONFIG" "Required variable '${var}' is not set"
+        fi
+    done
+}
+
+require_cmd() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        die "$EXIT_CONFIG" "Required command not found: $1"
+    fi
+}
+
+is_uint() {
+    [[ "$1" =~ ^[0-9]+$ ]]
+}
+
+aws_cli() {
+    aws ${AWS_ARGS[@]+"${AWS_ARGS[@]}"} "$@"
+}
+
+# retry <attempts> <initial_delay_seconds> <command...>
+retry() {
+    local attempts=$1 delay=$2 n=1
+    shift 2
+    until "$@"; do
+        if (( n >= attempts )); then
+            return 1
+        fi
+        warn "Attempt ${n}/${attempts} failed; retrying in ${delay}s"
+        sleep "$delay"
+        delay=$(( delay * 2 ))
+        n=$(( n + 1 ))
+    done
+}
+
+# Convert a backup key's embedded timestamp (…_YYYYmmddTHHMMSSZ.dump) to epoch.
+key_epoch() {
+    local name ts
+    name=${1##*/}
+    ts=${name%.dump}
+    ts=${ts##*_}
+    date -u -d "${ts:0:4}-${ts:4:2}-${ts:6:2}T${ts:9:2}:${ts:11:2}:${ts:13:2}Z" +%s 2>/dev/null
+}
+
+acquire_lock() {
+    exec 9>"$LOCK_FILE"
+    if ! flock -n 9; then
+        die "$EXIT_LOCKED" "Another backup is already running (lock: ${LOCK_FILE})"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+validate_config() {
+    require_env PGDATABASE S3_BUCKET
+
+    require_cmd aws
+    require_cmd date
+    require_cmd flock
+    require_cmd mktemp
+    require_cmd pg_dump
+    require_cmd pg_restore
+    require_cmd sha256sum
+    require_cmd stat
+
+    if [[ ! "$S3_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]; then
+        die "$EXIT_CONFIG" "Invalid S3 bucket name: ${S3_BUCKET}"
+    fi
+
+    if ! is_uint "$RETENTION_DAYS" || (( RETENTION_DAYS < 1 )); then
+        die "$EXIT_CONFIG" "RETENTION_DAYS must be an integer >= 1 (got: ${RETENTION_DAYS})"
+    fi
+    if ! is_uint "$MIN_BACKUPS_TO_KEEP" || (( MIN_BACKUPS_TO_KEEP < 1 )); then
+        die "$EXIT_CONFIG" "MIN_BACKUPS_TO_KEEP must be an integer >= 1 (got: ${MIN_BACKUPS_TO_KEEP})"
+    fi
+    if ! is_uint "$MAX_RETRIES" || (( MAX_RETRIES < 1 )); then
+        die "$EXIT_CONFIG" "MAX_RETRIES must be an integer >= 1 (got: ${MAX_RETRIES})"
+    fi
+    if [[ "$DRY_RUN" != "0" && "$DRY_RUN" != "1" ]]; then
+        die "$EXIT_CONFIG" "DRY_RUN must be 0 or 1 (got: ${DRY_RUN})"
+    fi
+
+    # Normalize prefix: strip leading and trailing slashes.
+    S3_PREFIX="${S3_PREFIX#/}"
+    S3_PREFIX="${S3_PREFIX%/}"
+    if [[ -z "$S3_PREFIX" ]]; then
+        die "$EXIT_CONFIG" "S3_PREFIX must not be empty"
+    fi
+
+    if [[ -n "${S3_ENDPOINT_URL:-}" ]]; then
+        AWS_ARGS=(--endpoint-url "$S3_ENDPOINT_URL")
+    fi
+
+    if [[ ! -d "$WORK_DIR" || ! -w "$WORK_DIR" ]]; then
+        die "$EXIT_CONFIG" "WORK_DIR is not a writable directory: ${WORK_DIR}"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Pipeline stages
+# ---------------------------------------------------------------------------
+dump_database() {
+    info "Dumping database '${PGDATABASE}' to ${LOCAL_DUMP}"
+
+    if ! pg_dump --format=custom --compress=9 --no-owner --no-privileges \
+            --file="$LOCAL_DUMP" "$PGDATABASE"; then
+        die "$EXIT_DUMP" "pg_dump failed for database '${PGDATABASE}'"
+    fi
+
+    if [[ ! -s "$LOCAL_DUMP" ]]; then
+        die "$EXIT_DUMP" "Dump file is missing or empty: ${LOCAL_DUMP}"
+    fi
+
+    # Validate the archive is readable before shipping it off-site.
+    if ! pg_restore --list "$LOCAL_DUMP" >/dev/null; then
+        die "$EXIT_DUMP" "Dump integrity check failed (pg_restore --list)"
+    fi
+
+    SIZE=$(stat -c %s "$LOCAL_DUMP")
+    SHA256=$(sha256sum "$LOCAL_DUMP" | awk '{print $1}')
+    info "Dump complete: ${SIZE} bytes, sha256=${SHA256}"
+}
+
+upload_backup() {
+    info "Uploading to s3://${S3_BUCKET}/${S3_KEY}"
+
+    if ! retry "$MAX_RETRIES" 5 aws_cli s3 cp "$LOCAL_DUMP" "s3://${S3_BUCKET}/${S3_KEY}" \
+            --storage-class "$S3_STORAGE_CLASS" \
+            --metadata "sha256=${SHA256}" \
+            --only-show-errors; then
+        die "$EXIT_UPLOAD" "Upload failed after ${MAX_RETRIES} attempts"
+    fi
+}
+
+verify_upload() {
+    local remote_size remote_sha
+
+    if ! remote_size=$(aws_cli s3api head-object --bucket "$S3_BUCKET" --key "$S3_KEY" \
+            --query 'ContentLength' --output text); then
+        die "$EXIT_VERIFY" "Could not read metadata for s3://${S3_BUCKET}/${S3_KEY}"
+    fi
+    if ! remote_sha=$(aws_cli s3api head-object --bucket "$S3_BUCKET" --key "$S3_KEY" \
+            --query 'Metadata.sha256' --output text); then
+        die "$EXIT_VERIFY" "Could not read checksum metadata for s3://${S3_BUCKET}/${S3_KEY}"
+    fi
+
+    if [[ "$remote_size" != "$SIZE" ]]; then
+        die "$EXIT_VERIFY" "Size mismatch: local=${SIZE} remote=${remote_size}"
+    fi
+    if [[ "$remote_sha" != "$SHA256" ]]; then
+        die "$EXIT_VERIFY" "Checksum mismatch: local=${SHA256} remote=${remote_sha}"
+    fi
+
+    info "Upload verified (size and sha256 match)"
+}
+
+rotate_backups() {
+    local prefix="${S3_PREFIX}/${PGDATABASE}/"
+    local pattern="${prefix}${PGDATABASE}_????????T??????Z.dump"
+    local listing now cutoff key epoch total removable i
+    local failures=0 deleted=0
+    local -a keys=() eligible=() sorted=()
+
+    now=$(date -u +%s)
+    cutoff=$(( now - RETENTION_DAYS * 86400 ))
+
+    if ! listing=$(aws_cli s3api list-objects-v2 --bucket "$S3_BUCKET" --prefix "$prefix" \
+            --query 'Contents[].Key' --output text); then
+        err "Failed to list backups under s3://${S3_BUCKET}/${prefix}"
+        return 1
+    fi
+
+    while IFS= read -r key; do
+        if [[ -n "$key" && "$key" != "None" ]]; then
+            keys+=("$key")
+        fi
+    done < <(printf '%s\n' "$listing" | tr '\t' '\n')
+
+    # Only consider objects matching our exact naming scheme.
+    for key in "${keys[@]}"; do
+        # shellcheck disable=SC2053
+        if [[ "$key" == $pattern ]]; then
+            eligible+=("$key")
+        fi
+    done
+
+    if (( ${#eligible[@]} == 0 )); then
+        info "No existing backups found; nothing to rotate"
+        return 0
+    fi
+
+    # Timestamps are fixed-width, so lexical order is chronological.
+    mapfile -t sorted < <(printf '%s\n' "${eligible[@]}" | sort)
+    total=${#sorted[@]}
+
+    if (( total <= MIN_BACKUPS_TO_KEEP )); then
+        info "Only ${total} backup(s) present (minimum to keep: ${MIN_BACKUPS_TO_KEEP}); nothing to rotate"
+        return 0
+    fi
+
+    removable=$(( total - MIN_BACKUPS_TO_KEEP ))
+    info "Evaluating ${removable} candidate(s) for rotation (retention: ${RETENTION_DAYS} days)"
+
+    for (( i = 0; i < removable; i++ )); do
+        key=${sorted[i]}
+
+        if ! epoch=$(key_epoch "$key"); then
+            warn "Cannot parse timestamp from '${key}'; skipping"
+            continue
+        fi
+
+        if (( epoch >= cutoff )); then
+            continue
+        fi
+
+        if [[ "$DRY_RUN" == "1" ]]; then
+            info "[dry-run] Would delete s3://${S3_BUCKET}/${key}"
+            continue
+        fi
+
+        if aws_cli s3api delete-object --bucket "$S3_BUCKET" --key "$key" >/dev/null; then
+            info "Deleted s3://${S3_BUCKET}/${key}"
+            deleted=$(( deleted + 1 ))
+        else
+            err "Failed to delete s3://${S3_BUCKET}/${key}"
+            failures=$(( failures + 1 ))
+        fi
+    done
+
+    info "Rotation summary: deleted=${deleted} failed=${failures}"
+
+    if (( failures > 0 )); then
+        return 1
+    fi
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+main() {
+    validate_config
+    acquire_lock
+
+    WORK_TMP=$(mktemp -d "${WORK_DIR%/}/pg_s3_backup.XXXXXX")
+
+    local ts
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    S3_KEY="${S3_PREFIX}/${PGDATABASE}/${PGDATABASE}_${ts}.dump"
+    LOCAL_DUMP="${WORK_TMP}/${PGDATABASE}_${ts}.dump"
+
+    info "Starting backup of '${PGDATABASE}' (bucket: ${S3_BUCKET}, retention: ${RETENTION_DAYS}d)"
+
+    dump_database
+    upload_backup
+    verify_upload
+
+    if ! rotate_backups; then
+        die "$EXIT_ROTATE" "Rotation encountered errors; the new backup was stored and verified"
+    fi
+}
+
+main "$@"

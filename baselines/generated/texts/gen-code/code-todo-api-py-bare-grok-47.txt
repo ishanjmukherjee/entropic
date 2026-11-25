@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""Minimal JSON to-do list HTTP API using only the Python standard library."""
+
+from __future__ import annotations
+
+import json
+import threading
+from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
+from urllib.parse import urlparse
+
+HOST = "127.0.0.1"
+PORT = 8080
+
+_lock = threading.Lock()
+_next_id = 1
+_todos: dict[int, dict[str, Any]] = {}
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _json_error(status: int, message: str) -> tuple[int, dict[str, Any]]:
+    return status, {"error": message}
+
+
+class TodoHandler(BaseHTTPRequestHandler):
+    server_version = "TodoAPI/1.0"
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, fmt: str, *args: Any) -> None:
+        print(f"{self.address_string()} - {fmt % args}")
+
+    def do_GET(self) -> None:
+        path, todo_id = self._route()
+        if path == "/health":
+            self._send(200, {"status": "ok"})
+            return
+        if path == "/todos" and todo_id is None:
+            with _lock:
+                items = list(_todos.values())
+            self._send(200, {"todos": items})
+            return
+        if path == "/todos" and todo_id is not None:
+            with _lock:
+                item = _todos.get(todo_id)
+            if item is None:
+                self._send(*_json_error(404, "todo not found"))
+                return
+            self._send(200, item)
+            return
+        self._send(*_json_error(404, "not found"))
+
+    def do_POST(self) -> None:
+        path, todo_id = self._route()
+        if path != "/todos" or todo_id is not None:
+            self._send(*_json_error(404, "not found"))
+            return
+        body, err = self._read_json()
+        if err:
+            self._send(*err)
+            return
+        title = body.get("title")
+        if not isinstance(title, str) or not title.strip():
+            self._send(*_json_error(400, "title is required"))
+            return
+        done = body.get("done", False)
+        if not isinstance(done, bool):
+            self._send(*_json_error(400, "done must be a boolean"))
+            return
+        global _next_id
+        now = _utc_now()
+        with _lock:
+            item = {
+                "id": _next_id,
+                "title": title.strip(),
+                "done": done,
+                "created_at": now,
+                "updated_at": now,
+            }
+            _todos[_next_id] = item
+            _next_id += 1
+        self._send(201, item)
+
+    def do_PATCH(self) -> None:
+        path, todo_id = self._route()
+        if path != "/todos" or todo_id is None:
+            self._send(*_json_error(404, "not found"))
+            return
+        body, err = self._read_json()
+        if err:
+            self._send(*err)
+            return
+        with _lock:
+            item = _todos.get(todo_id)
+            if item is None:
+                self._send(*_json_error(404, "todo not found"))
+                return
+            if "title" in body:
+                title = body["title"]
+                if not isinstance(title, str) or not title.strip():
+                    self._send(*_json_error(400, "title must be a non-empty string"))
+                    return
+                item["title"] = title.strip()
+            if "done" in body:
+                if not isinstance(body["done"], bool):
+                    self._send(*_json_error(400, "done must be a boolean"))
+                    return
+                item["done"] = body["done"]
+            if "title" not in body and "done" not in body:
+                self._send(*_json_error(400, "no updatable fields"))
+                return
+            item["updated_at"] = _utc_now()
+            updated = dict(item)
+        self._send(200, updated)
+
+    def do_DELETE(self) -> None:
+        path, todo_id = self._route()
+        if path != "/todos" or todo_id is None:
+            self._send(*_json_error(404, "not found"))
+            return
+        with _lock:
+            if todo_id not in _todos:
+                self._send(*_json_error(404, "todo not found"))
+                return
+            del _todos[todo_id]
+        self._send(200, {"deleted": todo_id})
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(204)
+        self._common_headers(0)
+        self.end_headers()
+
+    def _route(self) -> tuple[str, int | None]:
+        parsed = urlparse(self.path)
+        parts = [p for p in parsed.path.rstrip("/").split("/") if p]
+        if not parts:
+            return "/", None
+        if parts == ["health"]:
+            return "/health", None
+        if parts == ["todos"]:
+            return "/todos", None
+        if len(parts) == 2 and parts[0] == "todos" and parts[1].isdigit():
+            return "/todos", int(parts[1])
+        return parsed.path, None
+
+    def _read_json(self) -> tuple[dict[str, Any] | None, tuple[int, dict[str, Any]] | None]:
+        length = int(self.headers.get("Content-Length", "0") or 0)
+        if length <= 0:
+            return None, _json_error(400, "JSON body required")
+        if length > 1_000_000:
+            return None, _json_error(413, "payload too large")
+        raw = self.rfile.read(length)
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return None, _json_error(400, "invalid JSON")
+        if not isinstance(data, dict):
+            return None, _json_error(400, "JSON object required")
+        return data, None
+
+    def _send(self, status: int, payload: dict[str, Any]) -> None:
+        body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        self.send_response(status)
+        self._common_headers(len(body))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _common_headers(self, length: int) -> None:
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(length))
+        self.send_header("Connection", "close")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+
+def main() -> None:
+    server = ThreadingHTTPServer((HOST, PORT), TodoHandler)
+    print(f"listening on http://{HOST}:{PORT}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nshutting down")
+    finally:
+        server.server_close()
+
+
+if __name__ == "__main__":
+    main()

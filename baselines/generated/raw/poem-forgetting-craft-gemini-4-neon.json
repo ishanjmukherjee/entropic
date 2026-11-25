@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: forgetting. Form: a villanelle; the refrains may shift slightly each time they return if that serves the poem.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-forgetting-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "At four the lake-wind shifts across the bay.\nA freighter backs out from the Duluth dock.\nThe brass key sits upon the metal tray.\n\nA neighbor in the hallway asks the way\nto Canal Park, then checks the lobby clock.\nAt four the lake-wind shifts across the bay\n\nand drives the newsprint down the gravel. Gray\nwater slaps the pilings. Every lock\nrejects the teeth; I set it on the tray.\n\nMy brother had a molar pulled in May,\nor ten years back; the dentist wore a smock.\nAt four the wind comes cold across the bay.\n\nA woman on the bus has much to say\nabout the price of oats, the cinderblock\ngarage. The brass key sits upon the tray.\n\nThe radiator clanks and spits its spray\nagainst the plaster. Gulls drop on the rock.\nAt four the lake-wind shifts across the bay.\nThe brass key cools upon the metal tray.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 220,
+  "completion_tokens": 3076,
+  "total_tokens": 3296,
+  "cost": 0.0468,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.0468,
+   "upstream_inference_prompt_cost": 0.00066,
+   "upstream_inference_completions_cost": 0.04614
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 2871,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

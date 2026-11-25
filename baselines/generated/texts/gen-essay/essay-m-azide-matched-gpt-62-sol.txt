@@ -1,0 +1,29 @@
+A: The word “pile” is doing a lot of work there. It makes me picture someone with a shovel, which is not an image I want anywhere near a discussion of lead azide. A large inventory is not necessarily one heap, and a plan to destroy an inventory by detonation is not necessarily a plan to destroy it all at once. Those are distinctions the Army ought to make plain. But the basic proposition—that the safest way to dispose of an explosive might be to let it explode under controlled conditions—is less absurd than it sounds.
+
+Q: What is lead azide, and why does the Army have it?
+
+A: It’s a compound of lead and azide, and its job is to be touchy. Chemists call it a primary explosive. “Primary” does not mean it supplies most of the energy in a munition. It means it comes first: a small amount can start the reaction in another explosive that is harder to set off. That sensitivity is a virtue when the material is doing the job it was made for. It is considerably less charming when the material is old, unwanted, and still sitting in storage.
+
+Q: If it’s that sensitive, why do anything to it at all?
+
+A: Because leaving it alone is also a decision. Storage requires people to monitor the material, maintain the facility, and eventually deal with whatever condition the inventory is in. Moving it transfers some of the risk to the people doing the moving and, depending on the route, to people who never agreed to live near an explosives site. None of that proves detonation is the best choice near Burlington. It does explain why “just leave it where it is” and “take it somewhere else” aren’t the easy answers they sound like from the kitchen table.
+
+Q: When it explodes, doesn’t the lead azide go away?
+
+A: The lead azide goes away. The lead doesn’t. This is the part of the story where a chemist starts underlining nouns. An explosion changes what the atoms are joined to and where they end up. It does not repeal the existence of lead. Some of it may remain in residue at the site; some may be carried in particles. How much goes where is a question for evidence, not an inference you can draw from the word “detonation.” And while a bang is over in a moment, lead left in soil can remain a concern long afterward.
+
+Q: Are you saying Burlington is going to get a cloud of lead?
+
+A: No. The fact that a material contains lead does not tell you what dose anybody outside the site might receive. For that, you need to know how much can become airborne, what happens to the particles, and where they might settle. You also need measurements that can test those estimates. It matters where the Army samples, when it samples, and what its instruments can detect. “We found no increase” is reassuring if the monitoring could have detected an increase worth worrying about. Otherwise, it can mean rather less than it appears to.
+
+Q: Could the Army use some other disposal method?
+
+A: That is exactly what I would ask, and I would want the answer in terms more specific than “this is standard practice.” A method that looks better on emissions might require more handling of sensitive material. One that reduces the immediate risk to workers could leave more contamination to manage later. The comparison should cover the whole job, including transport if there is any, waste left behind, and cleanup. It should also say which conclusions depend on the condition of this particular stockpile. A general statement about how explosives are disposed of is not an assessment of the material near Burlington.
+
+Q: What should people nearby ask for?
+
+A: Start with an accounting: how much lead is in the inventory, where does the Army expect it to end up, and how will it check? Ask for measurements from before disposal as well as afterward, so there is something to compare. Ask who reviews the results, when the public gets to see them, and what finding would trigger a pause or cleanup. And ask about noise and vibration separately. A frightening bang is not proof of a toxic exposure, and a reassuring report about noise tells you nothing about lead.
+
+Q: So is this a sensible plan or a terrible one?
+
+A: It could be sensible. There is no rule of chemistry that says the least dramatic option is the safest. There is, however, a rule of chemistry that says the Army will have just as much lead after the explosion as it had before. The case for the plan rests on what happens to that lead and whether the alternatives would leave workers and neighbors better or worse off. The bang will announce itself. The Army’s obligation is to account for what doesn’t.

@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-canal",
+ "style": "bare",
+ "prompt": "Write an essay about the Erie Canal and what it changed. About 800 words. Output only the essay, with no title.",
+ "model": "grok-4.7",
+ "max_tokens": 1600,
+ "id": "essay-canal-bare-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "When the Erie Canal opened in 1825, it did more than connect the Hudson River at Albany to Lake Erie at Buffalo. It reordered the geography of the young United States, turning a difficult overland barrier into a commercial corridor and pulling the interior of the continent into the orbit of New York City. What had been a journey of weeks by wagon became a passage of days by boat, and the cost of moving a ton of freight fell so sharply that goods which had been local curiosities became everyday articles of trade. The canal was a ditch, in one sense, but it was also an argument about what the country could become if distance stopped being destiny.\n\nThe idea was older than the shovel work. Since the late eighteenth century, merchants and politicians had imagined a water route through the Mohawk Valley, the only natural gap in the Appalachians north of Alabama. DeWitt Clinton, more than anyone else, made the scheme political fact. Skeptics called it Clinton’s Ditch and predicted ruin. The engineering was audacious for a nation with little experience of large public works: a channel roughly 363 miles long, forty feet wide and four feet deep, rising and falling through eighty-three locks, fed by reservoirs and crossed by aqueducts. Much of the labor was done by local farmers, Irish immigrants, and contractors working with picks, wheelbarrows, and animal power. When water finally flowed the length of the line and Clinton poured Lake Erie water into the Atlantic at the “Wedding of the Waters,” the spectacle was less important than the freight rates that followed.\n\nThose rates rewrote regional economies. Before the canal, western New York and the Ohio country sent little to the seaboard because wagon haulage ate the value of grain, lumber, and potash. Afterward, wheat, flour, pork, and timber moved east in volume, and manufactured goods, salt, and migrants moved west. Rochester became the Flour City; Buffalo a lake port; Syracuse a salt town tied to national markets. Villages along the towpath—Utica, Rome, Lockport—grew into cities because a boat could stop, unload, and take on cargo. Farmers who had lived near subsistence found cash buyers. The price of bringing a barrel of flour from the Genesee to New York collapsed, and New York’s merchants, already favored by a fine harbor, captured a share of interior trade that Philadelphia and Baltimore could not match by road or by the slower Pennsylvania canal system.\n\nThe political consequences were as large as the commercial ones. The canal was built by New York State, not by the federal government, after national funding failed. Its success became a model and a provocation. Other states borrowed heavily to dig their own ditches, feeding a canal boom and, later, a painful bust when many projects could not pay their debts. The Erie itself did pay. Tolls retired the construction debt and then became a revenue stream, strengthening the case for state-led internal improvements even as arguments over federal power continued. More quietly, the canal bound the Northwest to the Northeast. Grain and politics traveled the same water. When sectional crisis came, the upper Midwest’s commercial ties ran through New York and New England as much as through the Mississippi, a fact that would matter in the 1850s and 1860s.\n\nPeople moved with the freight. The canal was an immigrant highway. Families who landed in New York City could reach the lakes without crossing mountains on foot. Irish laborers who dug the prism often stayed in the towns they had built. Yankee settlers pushed into Michigan and Wisconsin with tools bought in Albany warehouses. The demographic tilt of the northern states— denser, more commercial, more connected to Atlantic capital—owed something to this waterway. So did the growth of New York City itself. By mid-century the city was the nation’s great port not only because of cotton and finance but because the canal had made it the Atlantic outlet for a vast agricultural hinterland. Wall Street and the grain elevator rose together.\n\nThe canal also changed how Americans thought about technology and landscape. It was among the first projects to suggest that civil engineering could be a national vocation. Surveyors, lock tenders, and boat builders formed a practical elite. Travelers wrote of the strange beauty of boats gliding above valleys on aqueducts and of the social world of the packets: close quarters, political talk, the mingling of farmers, speculators, and preachers. Nature was not left untouched. Wetlands were drained or flooded, rivers diverted, and mill sites created or ruined. The towpath brought taverns, stables, and disease as well as prosperity. Cholera and other epidemics moved along the same route as flour.\n\nRailroads eventually surpassed the ditch. By the 1850s trunk lines carried passengers faster and, in time, much of the high-value freight. The canal was enlarged, then enlarged again, and in the twentieth century rebuilt as the Barge Canal, but it never regained the monopoly of its first decades. That later eclipse can obscure what the original work had already done. It had fixed the commercial map before the iron horse arrived. Railroads often followed routes and markets the canal had created; they did not invent the connection between the lakes and the Hudson. Cities founded or swollen by water traffic remained cities when the boats thinned out.\n\nWhat the Erie Canal changed, then, was not a single industry but a relationship between coast and interior. It lowered the cost of distance, enriched a state, elevated a city, and pulled a region into a national market years before railroads and telegraphs finished the job. It showed that public debt could build durable advantage, and that a modest depth of water, patiently locked and leveled, could outweigh mountains. The stone locks and abandoned prisms that still line parts of upstate New York are remnants of that bet. The country that grew up around them—the Midwest tied to New York, the port that outpaced its rivals, the expectation that engineering could rearrange geography—is the larger monument.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1268,
+  "completion_tokens": 1270,
+  "total_tokens": 2538,
+  "cost": 0.008428,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.008428,
+   "upstream_inference_prompt_cost": 0.000808,
+   "upstream_inference_completions_cost": 0.00762
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 49,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

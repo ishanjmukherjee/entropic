@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: insomnia. Form: a sonnet: keep the fourteen lines and the turn; rhyme only if the rhymes surprise.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-insomnia-craft-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "At three-fourteen the ore boat clears the lift bridge\nin Duluth, its engines shaking the glass\nof the storm window. I twist the brass valve\non the radiator until my thumb turns gray.\nThe pipe knocks twice, then settles into a hiss.\nAcross the hall, a toilet flushes, refills,\nand stops. My heel has worn a trough\nin the bottom sheet where I keep kicking.\nMy father died in a room with no windows\nand a thermostat bolted inside a plastic box.\nI get up, run the kitchen tap, and drink\nuntil my teeth ache. On the linoleum,\na moth drags one wing toward the baseboard,\nstopping each time the fridge kicks on.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 217,
+  "completion_tokens": 1792,
+  "total_tokens": 2009,
+  "cost": 0.027531,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.027531,
+   "upstream_inference_prompt_cost": 0.000651,
+   "upstream_inference_completions_cost": 0.02688
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1643,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

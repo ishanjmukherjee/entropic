@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-android",
+ "style": "matched",
+ "prompt": "Write an essay titled “The Android lockdown seems under-theorized”. It is about Google's plan to stop Android phones from running apps whose developers have not registered with Google, and argues that the debate over it lacks a clear theory. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "matched_to": "blogs-tech/dynomight-android",
+ "id": "essay-m-android-matched-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "Imagine that you write a small Android app for your father. It gives him three large buttons for the three people he calls most often. You put it on his phone, show him how it works, and never publish it anywhere. Now suppose the phone refuses to install it because you have not registered with Google. What, exactly, has gone wrong? One answer is that Google has interfered in a transaction to which it is not a party. Another is that a phone which makes an exception for your father must also make one for the caller who claims to be from his bank. Neither answer is frivolous. The trouble is that much of the debate takes one or the other to be conclusive.\n\nGoogle’s plan would make developer verification a condition for installing apps on certified Android devices, including apps obtained outside Google Play. That distinction matters. A shopkeeper who declines to stock a product has made a decision about the shop. A shopkeeper who can prevent you from using the product you bought next door has acquired a different kind of authority. Yet the familiar language of the app-store wars—commissions, competition, the right to operate a rival store—does not quite tell us when that authority is legitimate. A dozen competing stores could all be subject to the same veto.\n\nStart with the strongest case for verification. A scammer persuades someone to install a purported bank app. The victim taps through a warning, not because she has weighed the risks and accepted them, but because a man on the telephone has spent twenty minutes explaining why the warning is normal. To say that she chose to install the app is to leave out the most important fact about her choice. Requiring the publisher to establish an identity might raise the cost of repeating the scam after an app is reported. Security measures need not be infallible to be worthwhile; making a profitable fraud marginally less profitable can spare real people real losses.\n\nBut notice what that argument establishes. It gives Google a reason to put a substantial obstacle between an unsolicited download and a hurried installation. It does not, by itself, give Google a reason to decide whose software a willing, informed owner may run. The gap between those propositions is where a theory ought to go. “My phone, my rules” skips over the first proposition. “Security is our responsibility” skips over the second.\n\nOne useful principle would be that the strength of a platform’s authority should depend on whose interests a decision puts at risk, and on whether those people can reasonably protect themselves. An app that quietly obtains other people’s address books presents a different case from an offline chess program. An employer administering its own fleet of phones has a claim that it does not have over an employee’s personal handset. The principle will not settle every case, but it asks a better question than whether Android is still, in some metaphysical sense, “open.” It asks why this restriction, imposed by this institution, is necessary for these people.\n\nIt also makes the design of an exception more interesting than the usual argument about a toggle buried in Settings. If a caller can dictate the steps for disabling a safeguard in thirty seconds, the safeguard may do little for the person who needs it most. If disabling it requires becoming a professional developer, it does little for the owner who wants to install her son’s three-button app. A delay before an owner can enable unverified installations might interrupt the scam call without giving Google a permanent veto. Whether it actually would is an empirical question. Google is well placed to test it and ought to publish enough evidence for others to judge the answer.\n\nVerification, meanwhile, deserves to be assessed as an institution, not just as a prompt on a screen. Who can register under a pseudonym? What happens to a developer whose papers are rejected, or whose account is mistakenly associated with somebody else’s misconduct? How promptly can a decision be appealed? These questions matter even if registration is cheap and approval is usually automatic. For a dissident publishing a local news reader, the consequential feature may be the identity record that exists after approval, not the inconvenience of obtaining it. For the rest of us, it may be the precedent that a working program needs an ongoing relationship with a company that neither wrote it nor supplied it.\n\nMy starting presumption would be strong protection against deception, coupled with an effective right for an owner to make a deliberate exception. Google could rebut that presumption in particular cases by showing serious harms that a narrower measure cannot address. What it should not be able to do is move from evidence that some installations are dangerous to the conclusion that all publishers require its leave. The missing theory is a theory of jurisdiction: not whether Google can make a phone safer, which it plainly can, but where its responsibility for the phone ends and its owner’s authority begins.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 66,
+  "completion_tokens": 964,
+  "total_tokens": 1030,
+  "cost": 0.039088,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.039088,
+   "upstream_inference_prompt_cost": 0.000528,
+   "upstream_inference_completions_cost": 0.03856
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

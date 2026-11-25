@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "bare",
+ "prompt": "Write a poem about a city bus at night. Output only the poem, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-bus-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "A rolling box of pale blue light,\nit cuts the heavy velvet dark.\nThe air brakes hiss a weary sigh\nbeside the shadows of the park.\n\nInside, a scattered, silent crew—\na nurse in scrubs, a man asleep,\nall cradled by the engine’s hum\nthrough hours only night-shifts keep.\n\nThe windows turn to darkened glass,\nreflecting tired, ghostly eyes,\nwhile neon bleeds across the rain\nbeneath the ink-black city skies.\n\nA yellow cord, a sudden chime,\nthe folding doors swing wide and close.\nA glowing ship of quiet souls,\nit sails the empty streets, and goes.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 53,
+  "completion_tokens": 794,
+  "total_tokens": 847,
+  "cost": 0.012069,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.012069,
+   "upstream_inference_prompt_cost": 0.000159,
+   "upstream_inference_completions_cost": 0.01191
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 653,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

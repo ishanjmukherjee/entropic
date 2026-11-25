@@ -1,0 +1,340 @@
+use std::fmt;
+use std::iter::FusedIterator;
+
+/// A half-open byte range in the original UTF-8 source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TokenKind<'a> {
+    Number(f64),
+    Identifier(&'a str),
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Caret,
+    LeftParen,
+    RightParen,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Token<'a> {
+    pub kind: TokenKind<'a>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorKind {
+    UnexpectedCharacter(char),
+    InvalidNumber,
+    NumberOutOfRange,
+    ExpectedOperand,
+    ExpectedRightParen,
+    UnexpectedToken,
+    NestingLimit,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParseError {
+    pub kind: ErrorKind,
+    pub span: Span,
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "at bytes {}..{}: ", self.span.start, self.span.end)?;
+        match self.kind {
+            ErrorKind::UnexpectedCharacter(c) => write!(f, "unexpected character {c:?}"),
+            ErrorKind::InvalidNumber => f.write_str("invalid numeric literal"),
+            ErrorKind::NumberOutOfRange => f.write_str("numeric literal exceeds finite range"),
+            ErrorKind::ExpectedOperand => f.write_str("expected a number, variable, or '('"),
+            ErrorKind::ExpectedRightParen => f.write_str("expected ')'"),
+            ErrorKind::UnexpectedToken => f.write_str("unexpected token after expression"),
+            ErrorKind::NestingLimit => f.write_str("expression nesting limit exceeded"),
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}
+
+/// Scans decimal numbers, ASCII identifiers, and arithmetic punctuation.
+/// Whitespace is ignored; iteration ends after the first error.
+pub struct Tokenizer<'a> {
+    source: &'a str,
+    pos: usize,
+}
+
+impl<'a> Tokenizer<'a> {
+    pub fn new(source: &'a str) -> Self {
+        Self { source, pos: 0 }
+    }
+
+    fn byte(&self) -> Option<u8> {
+        self.source.as_bytes().get(self.pos).copied()
+    }
+
+    fn digits(&mut self) {
+        while matches!(self.byte(), Some(b'0'..=b'9')) {
+            self.pos += 1;
+        }
+    }
+
+    fn number(&mut self, start: usize) -> Result<TokenKind<'a>, ErrorKind> {
+        self.digits();
+        if self.byte() == Some(b'.') {
+            self.pos += 1;
+            self.digits();
+        }
+        if matches!(self.byte(), Some(b'e' | b'E')) {
+            self.pos += 1;
+            if matches!(self.byte(), Some(b'+' | b'-')) {
+                self.pos += 1;
+            }
+            let exponent = self.pos;
+            self.digits();
+            if self.pos == exponent {
+                return Err(ErrorKind::InvalidNumber);
+            }
+        }
+        let value = self.source[start..self.pos]
+            .parse::<f64>()
+            .map_err(|_| ErrorKind::InvalidNumber)?;
+        if value.is_finite() {
+            Ok(TokenKind::Number(value))
+        } else {
+            Err(ErrorKind::NumberOutOfRange)
+        }
+    }
+}
+
+impl<'a> Iterator for Tokenizer<'a> {
+    type Item = Result<Token<'a>, ParseError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let c = loop {
+            let c = self.source[self.pos..].chars().next()?;
+            if !c.is_whitespace() {
+                break c;
+            }
+            self.pos += c.len_utf8();
+        };
+        let start = self.pos;
+        let result = if c.is_ascii_digit()
+            || (c == '.' && matches!(self.source.as_bytes().get(start + 1), Some(b'0'..=b'9')))
+        {
+            self.number(start)
+        } else if c.is_ascii_alphabetic() || c == '_' {
+            self.pos += 1;
+            while matches!(self.byte(), Some(b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_')) {
+                self.pos += 1;
+            }
+            Ok(TokenKind::Identifier(&self.source[start..self.pos]))
+        } else {
+            self.pos += c.len_utf8();
+            match c {
+                '+' => Ok(TokenKind::Plus),
+                '-' => Ok(TokenKind::Minus),
+                '*' => Ok(TokenKind::Star),
+                '/' => Ok(TokenKind::Slash),
+                '^' => Ok(TokenKind::Caret),
+                '(' => Ok(TokenKind::LeftParen),
+                ')' => Ok(TokenKind::RightParen),
+                _ => Err(ErrorKind::UnexpectedCharacter(c)),
+            }
+        };
+        let span = Span { start, end: self.pos };
+        Some(match result {
+            Ok(kind) => Ok(Token { kind, span }),
+            Err(kind) => {
+                self.pos = self.source.len();
+                Err(ParseError { kind, span })
+            }
+        })
+    }
+}
+
+impl FusedIterator for Tokenizer<'_> {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnaryOp {
+    Plus,
+    Minus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinaryOp {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Power,
+}
+
+pub type NodeId = usize;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum NodeKind<'a> {
+    Number(f64),
+    Variable(&'a str),
+    Group(NodeId),
+    Unary { op: UnaryOp, operand: NodeId },
+    Binary { op: BinaryOp, left: NodeId, right: NodeId },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Node<'a> {
+    pub kind: NodeKind<'a>,
+    pub span: Span,
+}
+
+/// Arena-backed AST. Children precede their parents in `nodes`, allowing
+/// iterative post-order processing even for long left-associative chains.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ast<'a> {
+    pub nodes: Vec<Node<'a>>,
+    pub root: NodeId,
+}
+
+struct Parser<'a> {
+    lexer: Tokenizer<'a>,
+    next: Option<Token<'a>>,
+    nodes: Vec<Node<'a>>,
+}
+
+impl<'a> Parser<'a> {
+    fn span(&self) -> Span {
+        self.next.map_or(
+            Span { start: self.lexer.pos, end: self.lexer.pos },
+            |t| t.span,
+        )
+    }
+
+    fn advance(&mut self) -> Result<(), ParseError> {
+        self.next = self.lexer.next().transpose()?;
+        Ok(())
+    }
+
+    fn push(&mut self, kind: NodeKind<'a>, span: Span) -> NodeId {
+        let id = self.nodes.len();
+        self.nodes.push(Node { kind, span });
+        id
+    }
+
+    // Recursive descent with binding powers. Equal left/right powers make
+    // exponentiation right-associative; prefix signs bind below exponentiation.
+    fn expr(&mut self, minimum: u8, depth: usize) -> Result<NodeId, ParseError> {
+        let span = self.span();
+        if depth >= 128 {
+            return Err(ParseError { kind: ErrorKind::NestingLimit, span });
+        }
+        let mut left = match self.next.map(|t| t.kind) {
+            Some(TokenKind::Number(n)) => {
+                self.advance()?;
+                self.push(NodeKind::Number(n), span)
+            }
+            Some(TokenKind::Identifier(s)) => {
+                self.advance()?;
+                self.push(NodeKind::Variable(s), span)
+            }
+            Some(sign @ (TokenKind::Plus | TokenKind::Minus)) => {
+                self.advance()?;
+                let operand = self.expr(3, depth + 1)?;
+                let op = if sign == TokenKind::Plus { UnaryOp::Plus } else { UnaryOp::Minus };
+                self.push(
+                    NodeKind::Unary { op, operand },
+                    Span { start: span.start, end: self.nodes[operand].span.end },
+                )
+            }
+            Some(TokenKind::LeftParen) => {
+                self.advance()?;
+                let inner = self.expr(0, depth + 1)?;
+                let close = self.span();
+                if !matches!(self.next.map(|t| t.kind), Some(TokenKind::RightParen)) {
+                    return Err(ParseError { kind: ErrorKind::ExpectedRightParen, span: close });
+                }
+                self.advance()?;
+                self.push(NodeKind::Group(inner), Span { start: span.start, end: close.end })
+            }
+            _ => return Err(ParseError { kind: ErrorKind::ExpectedOperand, span }),
+        };
+
+        loop {
+            let (op, precedence, right_min) = match self.next.map(|t| t.kind) {
+                Some(TokenKind::Plus) => (BinaryOp::Add, 1, 2),
+                Some(TokenKind::Minus) => (BinaryOp::Subtract, 1, 2),
+                Some(TokenKind::Star) => (BinaryOp::Multiply, 2, 3),
+                Some(TokenKind::Slash) => (BinaryOp::Divide, 2, 3),
+                Some(TokenKind::Caret) => (BinaryOp::Power, 4, 4),
+                _ => break,
+            };
+            if precedence < minimum {
+                break;
+            }
+            self.advance()?;
+            let right = self.expr(right_min, depth + 1)?;
+            left = self.push(
+                NodeKind::Binary { op, left, right },
+                Span { start: span.start, end: self.nodes[right].span.end },
+            );
+        }
+        Ok(left)
+    }
+}
+
+/// Parses exactly one expression. Supports `+`, `-`, `*`, `/`, `^`, unary
+/// signs, and parentheses. Multiplication must be explicit.
+pub fn parse(source: &str) -> Result<Ast<'_>, ParseError> {
+    let mut parser = Parser {
+        lexer: Tokenizer::new(source),
+        next: None,
+        nodes: Vec::new(),
+    };
+    parser.advance()?;
+    let root = parser.expr(0, 0)?;
+    if parser.next.is_some() {
+        return Err(ParseError { kind: ErrorKind::UnexpectedToken, span: parser.span() });
+    }
+    Ok(Ast { nodes: parser.nodes, root })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn precedence_and_associativity() {
+        let ast = parse("-x^2^3 + .5e1*y").unwrap();
+        let kinds: Vec<_> = ast.nodes.iter().map(|node| node.kind).collect();
+        assert_eq!(kinds, vec![
+            NodeKind::Variable("x"),
+            NodeKind::Number(2.0),
+            NodeKind::Number(3.0),
+            NodeKind::Binary { op: BinaryOp::Power, left: 1, right: 2 },
+            NodeKind::Binary { op: BinaryOp::Power, left: 0, right: 3 },
+            NodeKind::Unary { op: UnaryOp::Minus, operand: 4 },
+            NodeKind::Number(5.0),
+            NodeKind::Variable("y"),
+            NodeKind::Binary { op: BinaryOp::Multiply, left: 6, right: 7 },
+            NodeKind::Binary { op: BinaryOp::Add, left: 5, right: 8 },
+        ]);
+        assert_eq!(ast.root, 9);
+    }
+
+    #[test]
+    fn diagnostics() {
+        for (source, kind, start, end) in [
+            ("1e-", ErrorKind::InvalidNumber, 0, 3),
+            ("1e999", ErrorKind::NumberOutOfRange, 0, 5),
+            ("(x", ErrorKind::ExpectedRightParen, 2, 2),
+            ("x +", ErrorKind::ExpectedOperand, 3, 3),
+            ("x y", ErrorKind::UnexpectedToken, 2, 3),
+            ("x+π", ErrorKind::UnexpectedCharacter('π'), 2, 4),
+        ] {
+            assert_eq!(parse(source).unwrap_err(), ParseError { kind, span: Span { start, end } });
+        }
+    }
+}

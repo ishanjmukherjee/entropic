@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-elasticity",
+ "style": "matched",
+ "prompt": "Write an essay titled “The Elasticity Business”. It is about elasticity of supply and demand over different timescales, and about businesses that profit from supplying capacity when it is scarce. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-sol",
+ "max_tokens": 1600,
+ "matched_to": "blogs-biz/hobart-elasticity-business",
+ "id": "essay-m-elasticity-matched-gpt-62-sol",
+ "model_id": "openai/gpt-6.2-sol",
+ "family": "OpenAI",
+ "raw": "When a thunderstorm grounds flights, the price of a hotel room near the airport can rise before the first stranded passenger reaches the front desk. The hotel has not added rooms or improved its breakfast. What has changed is the value of a room tonight, when hundreds of people need one and almost none can wait for a new hotel to be built. A week later, the same room may go begging. What looks like a business built on real estate is also a business built on time.\n\nEconomists use elasticity to describe how strongly buyers and sellers respond to a change in price. If a small price increase prompts customers to buy much less, demand is elastic. If a higher price induces producers to supply much more, supply is elastic. But neither measure means much without a time horizon. The passenger who needs a bed at midnight may accept a rate she would never pay when planning a vacation. The hotel manager can call in another housekeeper and release a few rooms, but cannot add a floor by morning. Given several years of reliably high rates, however, developers might build another hotel, and travelers might learn to book elsewhere. The choices on both sides change as the clock runs.\n\nBusinesses can profit from the gap between those clocks. Consider a company that rents temporary generators. A factory may go years without a serious outage and still lose more in a day without power than it would spend renting a generator for a month. Buying and maintaining a machine for that rare event may make little sense. The rental company, by serving many customers, can keep a fleet busier than any one of them could. Its useful product is not simply electricity. It is the ability to deliver electricity before the factory’s losses mount enough to make other arrangements worthwhile.\n\nThere are two ways to sell that ability. A business can charge whatever the market will bear when a shortage arrives, or it can charge customers in advance for priority access. In the second case, a customer might pay an annual fee for a generator it never uses. That may look wasteful until the comparison is made with owning a machine that also goes unused. For the supplier, the fee helps cover maintenance, storage, and staffing during quiet periods. But the promise is only as good as the fleet behind it. If every customer needs a generator after the same storm, the company cannot fulfill ten reservations with one machine. Pooling demand works best when customers are unlikely to need help at the same time.\n\nThis makes spare capacity an awkward thing to manage. A warehouse full of idle equipment can look like evidence of poor judgment right up to the week it earns its keep. Yet a company that buys enough equipment to cover every conceivable emergency may never recover its costs. The operator has to decide how much ordinary revenue to give up in exchange for being ready. Renting out the last generator for a routine construction job brings in money today, but it also means the machine may be unavailable tomorrow, when someone would pay much more for it. A utilization target that rewards keeping every machine in use can quietly dismantle the very service customers are paying for.\n\nScarcity profits also come with an expiration date. A warehouse owner may earn unusually high rents when importers suddenly need more space. If high rents persist, builders add warehouses, tenants stack goods more efficiently, and some firms move inventory to cheaper locations. The extra supply and the changes in demand may arrive just as the owner finishes an expensive expansion. The relevant question is not whether capacity is scarce today, but whether it will still be scarce when more of it can be brought to market. A temporary shortage favors businesses that already have capacity or can move it quickly. A durable shortage may justify building, but it gives customers more reason to find ways around the bottleneck.\n\nNone of this means that every scarcity price rewards foresight. An airport hotel can receive a windfall from a storm it did nothing to prepare for, and the ability to pay is not the same as the urgency of need. Higher prices may persuade some passengers to share a room or take a cab farther away, freeing rooms for others, but they cannot conjure beds that night. The stronger case for paying a premium is where it finances something customers would otherwise lack: a maintained fleet, a staffed backup facility, or a credible reservation for a bad day.\n\nThe elasticity business, then, is less about predicting that someone, somewhere, will pay a high price than about knowing who can wait, what can move, and how long it takes to add more. Most customers do not want to own enough capacity for their worst day. They do want someone to have thought about that day before it arrives.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 57,
+  "completion_tokens": 929,
+  "total_tokens": 986,
+  "cost": 0.009404,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009404,
+   "upstream_inference_prompt_cost": 0.000114,
+   "upstream_inference_completions_cost": 0.00929
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

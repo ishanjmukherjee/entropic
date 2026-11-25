@@ -1,0 +1,383 @@
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+
+export type ComboboxOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+  description?: string;
+};
+
+export type AutocompleteComboboxProps = {
+  id?: string;
+  label: string;
+  options: ComboboxOption[];
+  value: string | null;
+  onChange: (value: string | null, option: ComboboxOption | null) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
+  name?: string;
+  error?: string;
+  hint?: string;
+  emptyMessage?: string;
+  loading?: boolean;
+  loadingMessage?: string;
+  clearable?: boolean;
+  maxVisible?: number;
+  filter?: (option: ComboboxOption, query: string) => boolean;
+  onQueryChange?: (query: string) => void;
+  renderOption?: (option: ComboboxOption, state: { active: boolean; selected: boolean }) => ReactNode;
+  className?: string;
+};
+
+function defaultFilter(option: ComboboxOption, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    option.label.toLowerCase().includes(q) ||
+    option.value.toLowerCase().includes(q) ||
+    (option.description?.toLowerCase().includes(q) ?? false)
+  );
+}
+
+function joinClasses(...parts: Array<string | false | undefined>): string {
+  return parts.filter(Boolean).join(" ");
+}
+
+export function AutocompleteCombobox({
+  id,
+  label,
+  options,
+  value,
+  onChange,
+  placeholder = "Search…",
+  disabled = false,
+  required = false,
+  name,
+  error,
+  hint,
+  emptyMessage = "No matches",
+  loading = false,
+  loadingMessage = "Loading…",
+  clearable = true,
+  maxVisible = 8,
+  filter = defaultFilter,
+  onQueryChange,
+  renderOption,
+  className,
+}: AutocompleteComboboxProps) {
+  const reactId = useId();
+  const baseId = id ?? `combobox-${reactId}`;
+  const listboxId = `${baseId}-listbox`;
+  const hintId = `${baseId}-hint`;
+  const errorId = `${baseId}-error`;
+  const statusId = `${baseId}-status`;
+
+  const selected = useMemo(
+    () => options.find((option) => option.value === value) ?? null,
+    [options, value],
+  );
+
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(selected?.label ?? "");
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  const filtered = useMemo(() => {
+    const matches = options.filter((option) => filter(option, query));
+    return matches.slice(0, Math.max(1, maxVisible));
+  }, [options, filter, query, maxVisible]);
+
+  const enabledIndexes = useMemo(
+    () => filtered.map((option, index) => (option.disabled ? -1 : index)).filter((index) => index >= 0),
+    [filtered],
+  );
+
+  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ") || undefined;
+  const activeId = activeIndex >= 0 ? `${baseId}-opt-${activeIndex}` : undefined;
+
+  const commit = useCallback(
+    (option: ComboboxOption | null) => {
+      onChange(option?.value ?? null, option);
+      setQuery(option?.label ?? "");
+      setOpen(false);
+      setActiveIndex(-1);
+    },
+    [onChange],
+  );
+
+  const moveActive = useCallback(
+    (direction: 1 | -1) => {
+      if (enabledIndexes.length === 0) {
+        setActiveIndex(-1);
+        return;
+      }
+      const currentPos = enabledIndexes.indexOf(activeIndex);
+      const nextPos =
+        currentPos === -1
+          ? direction === 1
+            ? 0
+            : enabledIndexes.length - 1
+          : (currentPos + direction + enabledIndexes.length) % enabledIndexes.length;
+      setActiveIndex(enabledIndexes[nextPos]);
+      setOpen(true);
+    },
+    [activeIndex, enabledIndexes],
+  );
+
+  useEffect(() => {
+    if (!open) setQuery(selected?.label ?? "");
+  }, [selected, open]);
+
+  useEffect(() => {
+    if (!open || activeIndex < 0) return;
+    const node = listRef.current?.querySelector<HTMLElement>(`#${CSS.escape(`${baseId}-opt-${activeIndex}`)}`);
+    node?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIndex, baseId]);
+
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setQuery(selected?.label ?? "");
+        setActiveIndex(-1);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [selected]);
+
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        if (!open) setOpen(true);
+        moveActive(1);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        if (!open) setOpen(true);
+        moveActive(-1);
+        break;
+      case "Home":
+        if (open && enabledIndexes.length) {
+          event.preventDefault();
+          setActiveIndex(enabledIndexes[0]);
+        }
+        break;
+      case "End":
+        if (open && enabledIndexes.length) {
+          event.preventDefault();
+          setActiveIndex(enabledIndexes[enabledIndexes.length - 1]);
+        }
+        break;
+      case "Enter":
+        if (open && activeIndex >= 0 && filtered[activeIndex] && !filtered[activeIndex].disabled) {
+          event.preventDefault();
+          commit(filtered[activeIndex]);
+        }
+        break;
+      case "Escape":
+        if (open) {
+          event.preventDefault();
+          setOpen(false);
+          setQuery(selected?.label ?? "");
+          setActiveIndex(-1);
+        }
+        break;
+      case "Tab":
+        setOpen(false);
+        setActiveIndex(-1);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const showList = open && !disabled;
+
+  return (
+    <div ref={rootRef} className={joinClasses("acb", className)} data-disabled={disabled || undefined}>
+      <label className="acb__label" htmlFor={baseId}>
+        {label}
+        {required ? (
+          <span className="acb__required" aria-hidden="true">
+            {" "}
+            *
+          </span>
+        ) : null}
+      </label>
+      {hint ? (
+        <p id={hintId} className="acb__hint">
+          {hint}
+        </p>
+      ) : null}
+      <div className={joinClasses("acb__control", error && "acb__control--invalid")}>
+        <input
+          ref={inputRef}
+          id={baseId}
+          name={name}
+          className="acb__input"
+          role="combobox"
+          type="text"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-autocomplete="list"
+          aria-expanded={showList}
+          aria-controls={listboxId}
+          aria-activedescendant={showList ? activeId : undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          aria-required={required || undefined}
+          aria-busy={loading || undefined}
+          disabled={disabled}
+          placeholder={placeholder}
+          value={query}
+          onChange={(event) => {
+            const next = event.target.value;
+            setQuery(next);
+            setOpen(true);
+            setActiveIndex(0);
+            onQueryChange?.(next);
+            if (selected && next !== selected.label) onChange(null, null);
+          }}
+          onFocus={() => {
+            if (!disabled) setOpen(true);
+          }}
+          onKeyDown={onKeyDown}
+        />
+        {clearable && (query || value) && !disabled ? (
+          <button
+            type="button"
+            className="acb__clear"
+            aria-label="Clear selection"
+            onClick={() => {
+              commit(null);
+              inputRef.current?.focus();
+            }}
+          >
+            ×
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="acb__toggle"
+          tabIndex={-1}
+          aria-label={showList ? "Close options" : "Open options"}
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) return;
+            setOpen((prev) => !prev);
+            inputRef.current?.focus();
+          }}
+        >
+          ▾
+        </button>
+      </div>
+      <ul
+        ref={listRef}
+        id={listboxId}
+        className="acb__list"
+        role="listbox"
+        hidden={!showList}
+        aria-label={label}
+      >
+        {loading ? (
+          <li className="acb__empty" role="presentation">
+            {loadingMessage}
+          </li>
+        ) : filtered.length === 0 ? (
+          <li className="acb__empty" role="presentation">
+            {emptyMessage}
+          </li>
+        ) : (
+          filtered.map((option, index) => {
+            const isSelected = option.value === value;
+            const isActive = index === activeIndex;
+            return (
+              <li
+                key={option.value}
+                id={`${baseId}-opt-${index}`}
+                role="option"
+                aria-selected={isSelected}
+                aria-disabled={option.disabled || undefined}
+                className={joinClasses(
+                  "acb__option",
+                  isActive && "acb__option--active",
+                  isSelected && "acb__option--selected",
+                  option.disabled && "acb__option--disabled",
+                )}
+                onMouseEnter={() => {
+                  if (!option.disabled) setActiveIndex(index);
+                }}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  if (!option.disabled) commit(option);
+                }}
+              >
+                {renderOption ? (
+                  renderOption(option, { active: isActive, selected: isSelected })
+                ) : (
+                  <>
+                    <span className="acb__option-label">{option.label}</span>
+                    {option.description ? (
+                      <span className="acb__option-desc">{option.description}</span>
+                    ) : null}
+                  </>
+                )}
+              </li>
+            );
+          })
+        )}
+      </ul>
+      <div id={statusId} className="acb__sr" aria-live="polite">
+        {showList ? (loading ? loadingMessage : `${filtered.length} results`) : ""}
+      </div>
+      {error ? (
+        <p id={errorId} className="acb__error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <style>{`
+        .acb { position: relative; display: flex; flex-direction: column; gap: 0.35rem; font: 14px/1.4 system-ui, sans-serif; color: #111; max-width: 28rem; }
+        .acb__label { font-weight: 600; }
+        .acb__required { color: #b42318; }
+        .acb__hint, .acb__error { margin: 0; font-size: 0.85rem; }
+        .acb__hint { color: #475467; }
+        .acb__error { color: #b42318; }
+        .acb__control { display: flex; align-items: center; border: 1px solid #98a2b3; border-radius: 8px; background: #fff; }
+        .acb__control:focus-within { outline: 2px solid #175cd3; outline-offset: 1px; }
+        .acb__control--invalid { border-color: #b42318; }
+        .acb__input { flex: 1; border: 0; background: transparent; padding: 0.55rem 0.75rem; font: inherit; min-width: 0; }
+        .acb__input:focus { outline: none; }
+        .acb__clear, .acb__toggle { border: 0; background: transparent; cursor: pointer; padding: 0.4rem 0.6rem; font-size: 1rem; color: #344054; }
+        .acb__clear:disabled, .acb__toggle:disabled, .acb[data-disabled] .acb__input { cursor: not-allowed; opacity: 0.6; }
+        .acb__list { position: absolute; z-index: 20; top: calc(100% - 1.4rem); left: 0; right: 0; margin: 0.25rem 0 0; padding: 0.25rem; list-style: none; background: #fff; border: 1px solid #d0d5dd; border-radius: 8px; box-shadow: 0 8px 24px rgba(16,24,40,.12); max-height: 16rem; overflow: auto; }
+        .acb__list[hidden] { display: none; }
+        .acb__option { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.45rem 0.6rem; border-radius: 6px; cursor: pointer; }
+        .acb__option--active { background: #eff8ff; }
+        .acb__option--selected { font-weight: 650; }
+        .acb__option--disabled { opacity: 0.45; cursor: not-allowed; }
+        .acb__option-desc, .acb__empty { color: #667085; font-size: 0.8rem; }
+        .acb__empty { padding: 0.55rem 0.6rem; }
+        .acb__sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+      `}</style>
+    </div>
+  );
+}
+
+export default AutocompleteCombobox;

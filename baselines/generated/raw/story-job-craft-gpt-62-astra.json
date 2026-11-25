@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-job",
+ "style": "craft",
+ "prompt": "Write a short story of about 800 words. Premise: a first day at a new job.\n\nWrite it as a fine literary short-story writer would. Open in the middle of a particular moment, not with scene-setting or weather. Give each character a want that is never stated. Let the important thing happen slightly off the page or in what goes unsaid, and trust the reader. Use precise, unglamorous physical detail in place of adjectives; dialogue people would actually say, oblique and at cross purposes; and at least one turn the premise does not predict. Choose names a census would contain. No sentence that explains what a moment meant, and no ending on a lesson, a reconciliation or a sunrise.\n\nOutput only the story, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "story-job-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "“Not that end,” Jean said, but Ellen had already pulled, and the paper sleeve came off in her hand. Fifty quarters hit the floor. One went under the scale and kept up a thin, diminishing ring.\n\nJean took the till drawer off the counter so Ellen could get down on her knees without the corner of it in her neck. She did this without interrupting the account she was giving a customer of what had happened to his trousers.\n\n“The ticket says two pair. I can see that as well as you can.”\n\n“Well, there were two.”\n\n“And I have one pair here, Mr. Lyons. Would you like those, or would you like me to keep those too?”\n\nFrom the floor Ellen saw his hand come over the counter. Jean put the trousers in it.\n\nBy eleven Ellen could work the conveyor without sending a hundred empty hangers banging through the slot. She could put a plastic bag over a suit. The trick was not to breathe on it. Jean had given her a blue smock with JAN in embroidery over the pocket. There were three single-edge razor blades in a matchbook in the pocket, and a cough drop gone white around the pleats of its wrapper.\n\n“Was she about my size?” Ellen asked.\n\n“Who?”\n\nShe pinched the pocket out so Jean could see.\n\n“Oh. They take the E off everything.”\n\nJean turned up the inside hem of her own smock. There, in black laundry marker, was JEAN, the E squeezed in above the line.\n\nAt noon a boy came in with a pillowcase. He had bicycle clips on both trouser legs and the nail of one thumb was black to the half moon.\n\n“Your mother know?” Jean asked him.\n\nHe set the pillowcase on the scale.\n\n“It doesn't go by weight,” Jean said.\n\nOut came five shirts on wire hangers twisted together at the necks. They were done up to the collar button. In the left cuff of each there was a little tuck of cloth, sewn down with navy thread, even in the white ones.\n\n“Just the sleeves,” he said.\n\nJean got her glasses out of the drawer.\n\n“Not to wash,” he said.\n\n“I heard you the first time.”\n\nA delivery van was backing up to the side door. Jean gave Ellen the shirts and went to let it in. The boy stood watching Ellen arrange them along the rail.\n\n“You new?”\n\nShe nodded.\n\n“Other lady did them while you waited.”\n\nFrom the side door Jean called, “Other lady could hear through a wall too.”\n\nEllen turned a cuff inside out. The stitches were long enough to get the corner of a blade underneath. She cut one, then pulled the rest out on the point. When she flattened the cuff there was a stripe inside the fold where the cloth hadn't faded.\n\n“All five?” she said.\n\nHe was looking into the glass case under the register. It held things people had left in pockets: two keys on a red whistle, a medal of Saint Anthony, a folding ruler the length of a finger.\n\n“That ruler still works,” he said.\n\nShe did the five cuffs. He took out a change purse with a brass snap. Jean came back rolling a hamper with a sheet tied over it.\n\n“No ticket, no charge,” she said.\n\nHe put the shirts away. The sleeve of the last one hung out of the pillowcase. On his way through the door he put a quarter on the rubber mat without looking round.\n\nJean waited until he'd got his bicycle off the meter.\n\n“Missed one,” she said.\n\nEllen picked it up.\n\nAfter lunch Mr. Lyons came back with the trousers over his arm. Jean's sandwich lay open on wax paper, the tomato on one side and its wet red print on the other.\n\n“These aren't mine,” he said.\n\nJean checked the ticket stapled inside the waistband. “Thirty-eight thirty.”\n\n“That's what I wear.”\n\n“Well.”\n\nHe put a finger into the watch pocket and worked out a folded square of paper. Jean opened it. Ellen, standing beside her, saw a column of figures in pencil, each one crossed out except the last. Underneath was the name of a horse.\n\n“I don't go anymore,” he said.\n\nJean gave him the paper back. She took a staple remover to the ticket, ran the trousers once through her hands and laid them across the counter.\n\n“Try next door,” she said. “Their bags are blue now too.”\n\nHe folded the trousers under his arm again.\n\nAt six Jean showed Ellen how to shut down the steam. Somewhere behind the presses a pipe knocked four times. Ellen unbuttoned the smock and felt in its pocket for the matchbook.\n\n“Leave those,” Jean said. “You'll only have to bring them back.”\n\nOutside, the boy was riding past with no clips on, his trouser legs rolled to his knees. He had on one of the white shirts. He took a hand off the bars to push the cuff back, then used his teeth on the other one.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 161,
+  "completion_tokens": 1015,
+  "total_tokens": 1176,
+  "cost": 0.041888,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.041888,
+   "upstream_inference_prompt_cost": 0.001288,
+   "upstream_inference_completions_cost": 0.0406
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

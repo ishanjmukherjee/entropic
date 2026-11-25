@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-blunders",
+ "style": "matched",
+ "prompt": "Write an essay titled “To code well, avoid blunders”. It argues that writing good code is mostly a matter of avoiding catastrophic mistakes, not of having brilliant insights. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "matched_to": "blogs-tech/goedecke-to-code-well-avoid-blunders",
+ "id": "essay-m-blunders-matched-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "A colleague once showed me the best line of code he had written that year. It was a check that stopped a billing job if the number of invoices was unexpectedly large. He had put it there because the software allowed a perfectly respectable account to have ten times as many invoices as usual, but he thought that, on balance, somebody ought to look. Months later, a change elsewhere caused the job to prepare a second invoice for nearly every customer. The check stopped it. Nobody outside the team knew what had happened, which was exactly what made the line so good.\n\nWe tend to imagine programming ability in terms of the far end of a contest: two people confront a hard problem, and the better programmer sees the trick. There are jobs like that, and it is a pleasure to watch them done well. But most software earns its keep by doing a moderately difficult thing reliably for a long time. In that setting, the difference between a good result and a terrible one is seldom the difference between an ordinary algorithm and a brilliant one. It is often the difference between sending one invoice and sending two.\n\nThe arithmetic favors caution. Suppose an ingenious improvement saves a clerk twenty seconds on a task she performs fifty times a week. That is a real gain, worth having. But if, once a year, the program silently assigns a week's payments to the wrong accounts, the same clerk may spend days with a bank statement and a telephone, trying to put things right. Some of the people she calls will not believe her explanation. The time saved and the time lost appear in different columns, and the loss of trust may not appear in any column at all.\n\nAvoiding blunders begins with learning to distinguish them from ordinary mistakes. A misspelled label is a mistake. A button labeled “Preview” that publishes a document is a blunder. The spelling error announces itself and is cheap to fix. The misleading button gives its victim no reason to hesitate; by the time the author discovers what happened, the document may have readers. When reviewing code, it is useful to pause over each place where the program does something it cannot easily take back. Who has a chance to notice an error before that point? What will they actually see?\n\nSometimes the answer is to remove a decision rather than check it more carefully. Consider a program that produces a report for one customer at a time. If every part of it receives a list of all customers and an instruction about which one to select, every part has an opportunity to disclose somebody else's figures. Give the report writer only the records it needs, and an entire class of errors becomes difficult to make. The resulting code may look almost disappointingly obvious. That is a useful outcome: the next person to change the page layout need not understand the privacy arrangements in order to preserve them.\n\nTests help most when they reflect the same sense of proportion. It is easy to accumulate examples in which a payment goes through. A more revealing test asks what happens when the payment goes through but the reply never arrives. The customer sees a spinning wheel, loses patience, and presses the button again. From the customer's point of view, this is one purchase. From the program's point of view, it is two requests. No extraordinary insight is needed to spot the difference. What is needed is the habit of following the transaction past the point where the demonstration usually ends.\n\nCaution can become a source of blunders in its own right. A team that wraps every small operation in elaborate safeguards may build a system nobody can follow. If every unusual event summons the person on call, that person will eventually sleep through an important one. The billing check was effective partly because it made a modest demand: in a rare circumstance, delay the job until a human being can judge it. It did not require human approval for every invoice. Good judgment consists as much in knowing what can safely go wrong as in recognizing what must not.\n\nThere is room for brilliance in this account of programming, but no obligation to display it. On most days the useful contribution is quieter: noticing that two buttons are too easy to confuse, choosing a design with one fewer place to forget a rule, or asking a colleague what a customer sees after a timeout. Such work rarely produces a story that travels beyond the team. A clerk finishes on time. A draft stays private. A customer buys something once. These are ordinary outcomes, but they are not accidental ones.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 54,
+  "completion_tokens": 891,
+  "total_tokens": 945,
+  "cost": 0.036072,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.036072,
+   "upstream_inference_prompt_cost": 0.000432,
+   "upstream_inference_completions_cost": 0.03564
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-blunders",
+ "style": "matched",
+ "prompt": "Write an essay titled “To code well, avoid blunders”. It argues that writing good code is mostly a matter of avoiding catastrophic mistakes, not of having brilliant insights. About 800 words. Output only the essay, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "matched_to": "blogs-tech/goedecke-to-code-well-avoid-blunders",
+ "id": "essay-m-blunders-matched-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "In amateur tennis, points are rarely won by dazzling, unreturnable serves; they are lost by hitting the ball into the net. In club-level chess, games are seldom decided by twelve-move tactical masterpieces; they are decided by whoever hangs their queen first. Software engineering is no different. Despite a culture that idolizes the lone genius conjuring brilliant algorithms out of thin air, writing good code is overwhelmingly a loser’s game. It is less about having flashes of transcendent insight and more about systematically avoiding catastrophic blunders.\n\nThe myth of the brilliant programmer is deeply ingrained in the industry. We celebrate clever one-liners, intricate design patterns, and custom frameworks built from scratch over a caffeine-fueled weekend. Yet, in the reality of production software, brilliance is often a liability. Brian Kernighan famously observed that debugging is twice as hard as writing the code in the first place, meaning that if you write code as cleverly as possible, you are, by definition, not smart enough to debug it. Cleverness optimizes for the ego of the author at the expense of the sanity of the reader. When a developer tries to be brilliant, they introduce opacity, subtle dependencies, and fragile assumptions. More often than not, the pursuit of brilliance is the exact mechanism that produces a blunder.\n\nConsider the asymmetry of software outcomes. A genuinely brilliant optimization might shave twenty milliseconds off a response time or reduce memory usage by a few percent. That is occasionally valuable, especially at massive scale. A single blunder, however, can bring an entire company to its knees. An unindexed database query that brings down production during a traffic spike, a missing authorization check that leaks user data, a race condition that silently corrupts financial records, or a poorly conceived abstraction that makes future features impossible to build—these are the events that define the trajectory of a codebase. You cannot out-clever a corrupted database. No amount of algorithmic elegance can compensate for a system that fails catastrophically when a third-party API times out.\n\nThe blunders that ruin software are rarely simple typos; modern compilers and linters catch those effortlessly. The real killers are structural and conceptual. They are the unforced errors of engineering: premature optimization, over-engineering for hypothetical future requirements, ignoring edge cases, and failing to account for how a system will behave under failure. Another common blunder is coupling—weaving disparate parts of a system so tightly together that changing one line of code causes an avalanche of regressions elsewhere. These mistakes are rarely the result of a lack of intelligence. They are the result of hubris, haste, or a failure to respect the inherent complexity of software.\n\nIf avoiding blunders is the true mark of a good programmer, then the path to mastery looks decidedly unglamorous. It relies on habits that feel tedious rather than inspired. It means writing boring, obvious code that any junior developer can understand at a glance. It means choosing proven, well-understood technologies over shiny new frameworks. It means validating inputs, handling errors explicitly, writing automated tests for the unhappy paths, and keeping functions small and focused. It means using static type systems, linters, and rigorous code reviews not because you doubt your own intelligence, but because you respect your own fallibility. These practices are guardrails. They do not make you smarter; they simply make it much harder for you to drive off a cliff.\n\nThere is a quiet discipline in this approach. When you stop trying to prove how smart you are through your code, you free up mental energy to ask the questions that actually prevent disasters. What happens if this network call hangs? What happens if this function is called twice with the same data? What happens when this table grows from ten thousand rows to ten million? Answering these questions requires no sudden flash of genius. It requires patience, paranoia, and a willingness to think through the mundane details of how things break.\n\nUltimately, the best codebases rarely look like works of genius. They look clean, predictable, and almost disappointingly simple. They are the digital equivalent of a well-maintained bridge: nobody stops to marvel at the cleverness of the rivets, because the bridge’s highest virtue is that it does not collapse. True excellence in software engineering is measured not by the height of your peaks, but by the height of your floor. Leave the dazzling brilliance to the computer science researchers pushing the boundaries of theory. In the daily craft of building reliable software, the highest form of skill is the humility to recognize how easily things go wrong—and the discipline to simply not make the mistakes that matter.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 84,
+  "completion_tokens": 2911,
+  "total_tokens": 2995,
+  "cost": 0.043917,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.043917,
+   "upstream_inference_prompt_cost": 0.000252,
+   "upstream_inference_completions_cost": 0.043665
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1984,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

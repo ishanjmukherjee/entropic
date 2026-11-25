@@ -1,0 +1,39 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-m-elasticity",
+ "style": "matched",
+ "prompt": "Write an essay titled “The Elasticity Business”. It is about elasticity of supply and demand over different timescales, and about businesses that profit from supplying capacity when it is scarce. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "matched_to": "blogs-biz/hobart-elasticity-business",
+ "id": "essay-m-elasticity-matched-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "On a rainy Friday at six o’clock, a city can run out of taxis without losing a single cab. People who would have walked decide to ride. Traffic slows, so each trip ties up a driver for longer. The shortage may be over by eight, which is little consolation to the passenger getting soaked at six. A driver who comes out just for those two hours is selling something more particular than transportation: a dry seat at the time it is hardest to find.\n\nEconomists use elasticity to describe how strongly the quantity supplied or demanded responds to a change in price. Time matters on both sides. A commuter already standing in the rain may pay twice the usual fare to get home. Given an hour’s notice, she might catch the bus; given a season of expensive rides, she might buy a raincoat and learn the bus schedule. A driver finishing dinner can respond to a higher fare within half an hour. A company deciding whether to put another hundred taxis on the road needs considerably longer. There is no single elasticity of taxi rides independent of the clock.\n\nMuch of the elasticity business consists of doing in advance what others will not have time to do later. Consider a contractor whose excavator breaks down on Tuesday morning. The important figure in the rental quote is not the daily cost of owning an excavator. It is the cost of having six people stand around until the broken one is fixed. A rental yard can deliver a replacement by lunch because it bought the machine months ago, serviced it last week, and kept a truck and a qualified driver available that morning. From the contractor’s perspective, supply has responded in hours. From the rental yard’s perspective, the response began last winter.\n\nThe yard makes this arrangement pay by serving contractors whose bad Tuesdays seldom coincide. Each customer would have little use for a spare excavator; among twenty customers, somebody needs one fairly often. But there is a limit to how hard the yard should try to keep its fleet busy. Renting the last machine cheaply for a month earns revenue every day while forfeiting the chance to fill a more urgent order tomorrow. A manager rewarded solely for keeping every machine out on hire can produce excellent utilization figures and a poor emergency rental business.\n\nElectricity markets make the distinction between use and availability explicit. On a mild afternoon, a power station that runs only at peak times may contribute nothing to the grid. During a heat wave, that same station may keep the lights on. In some markets it earns a capacity payment for committing to be available, as well as payment for the electricity it actually delivers. The first payment buys the right to call; the second pays for answering. This distinction matters when the public quite reasonably asks why it should pay a plant that hardly ever runs. If the plant is reliable, the quiet days are part of the bargain.\n\nSometimes the cheapest way to supply capacity is to find a customer willing to wait. A cold-storage warehouse, for example, can cool its contents a little further before the afternoon peak, then let its compressors rest while temperatures remain within safe limits. For those hours, reducing the warehouse’s draw leaves electricity available for somebody else just as surely as increasing generation would. The food still has to stay cold. What the warehouse can sell is discretion over when to do the cooling.\n\nScarcity prices nevertheless deserve scrutiny. A high fare can persuade a driver to leave home, but it can also simply transfer money from a stranded passenger to a driver who was already at the curb. During an evacuation, the passengers best able to pay are not necessarily those most in need of a seat. A city that contracts for standby buses before storm season can pay for the same readiness while allocating seats according to need. The economic case for paying someone to be ready does not settle who should get the ride.\n\nNor does a handsome return during one emergency establish that buying spare capacity is a good investment. An excavator accrues interest in the yard, a standby generator needs testing, and a driver promised a notice period cannot be summoned instantly. Meanwhile, customers learn. Repeated shortages encourage them to reschedule work, find substitutes, or buy equipment of their own. The rental manager deciding whether to buy another machine must ask not just how many callers went away disappointed last Tuesday, but how many will still call next winter. The lasting skill in the elasticity business is judging which shortages customers will learn to avoid and which bad Tuesdays it will always be worth having someone else prepare for.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 57,
+  "completion_tokens": 894,
+  "total_tokens": 951,
+  "cost": 0.036216,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.036216,
+   "upstream_inference_prompt_cost": 0.000456,
+   "upstream_inference_completions_cost": 0.03576
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

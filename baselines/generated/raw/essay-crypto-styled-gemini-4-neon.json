@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-crypto",
+ "style": "styled",
+ "prompt": "Write an essay of about 800 words on the subject below.\n\nWrite it the way an excellent, idiosyncratic human essayist would: someone with real expertise and strong opinions, writing in the first person for their own blog. Commit to a specific thesis that a thoughtful reader might disagree with. Use concrete particulars (names, numbers, incidents, things only someone who had done the work would know) in place of general statements. Vary sentence length. No headings, no bullet points, no summary paragraph at the end, and none of the stock phrases of AI writing.\n\nOutput only the essay, with no title.\n\nSubject: an essay explaining how public-key cryptography works",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-crypto-styled-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "If someone tries to explain public-key cryptography to you using buckets of paint or a box with two padlocks, you should politely excuse yourself and find a different conversation. Those analogies are worse than useless. They make the whole thing sound like a clever piece of mechanical engineering, like a Swiss watch or a deadbolt. It isn't. Public-key cryptography is not a lock. It is a bluff—an audacious, civilization-scale bet that certain arithmetic problems are too annoying to solve backward.\n\nBefore the 1970s, cryptography had a fatal logistics problem. If I wanted to send you a secret message, we both needed the same key, which meant we had to meet in a parking garage first to swap it. You can’t run an internet on parking-garage meetings. Then, in 1976, Whitfield Diffie and Martin Hellman published a paper proposing something that sounded like a logical contradiction: a system with two keys, one you shout from the rooftops to lock messages, and another you keep in your pocket to unlock them. (Three years earlier, a quiet British mathematician named Clifford Cocks had actually invented the exact math for this at GCHQ, Britain’s intelligence agency, which promptly classified it so thoroughly that Cocks couldn’t even tell his own wife until 1997.)\n\nTo understand how the trick actually works, forget the paint and look at a clock. \n\nClock arithmetic—modular arithmetic, if you want to be formal—just means you wrap around when you hit a certain number. On a 12-hour clock, 9 plus 5 is 2. Now imagine a clock with 323 hours on it. I picked 323 because it is 17 times 19. I am going to tell the whole world two numbers: 323 and 5. That pair is my public key. \n\nIf you want to send me a secret number—say, 4—you raise it to the 5th power, which is 1,024, and then you divide by 323 and keep only the remainder. Three times 323 is 969, leaving a remainder of 55. You send me 55 over an open wire. Anyone watching sees 55, knows my public key is (323, 5), and is now stuck trying to figure out what number, raised to the 5th power on a 323-hour clock, lands on 55. \n\nTo undo it, I don’t try to take a fifth root. I just raise 55 to the 173rd power on that same 323-hour clock, and out pops 4. \n\nWhy 173? Because of an eighteenth-century theorem by Leonhard Euler. Because I know the secret factors of 323 are 17 and 19, I can subtract one from each and multiply them: 16 times 18 is 288. Then I just find a number that, when multiplied by my public exponent 5, leaves a remainder of 1 when divided by 288. Five times 173 is 865, which is three times 288 plus 1. That 173 is my private key. It is a mathematical trapdoor. Knowing 17 and 19 lets me compute 288 in two seconds, which hands me 173 on a silver platter. Without 17 and 19, you are stuck staring at 323.\n\nNow, obviously, anyone can factor 323 in their head. So in the real world—the RSA algorithm, named after Ron Rivest, Adi Shamir, and Leonard Adleman—we don't use 17 and 19. We use two prime numbers that are each over three hundred digits long, multiplying them together to get a 617-digit modulus. Multiplying them takes a laptop a fraction of a millisecond. Factoring the result back into its two primes would take every classical computer on Earth longer than the age of the universe.\n\nProbably.\n\nThis is the part the padlock analogies hide, and the part that keeps cryptographers awake at three in the morning. Nobody has ever *proven* that factoring large numbers is hard. We just haven’t figured out how to do it fast yet. Our best classical weapon, the General Number Field Sieve, is already uncomfortably clever—it runs in \"sub-exponential\" time, which is math-speak for *slower than we’d like if we're breaking it, faster than we'd like if we're defending it*. Every time you buy groceries online, you are betting your bank account that a graduate student in Zurich hasn't quietly stumbled onto a faster way to factor integers.\n\nToday, most serious engineers have moved past RSA for key exchange anyway, preferring elliptic curves like Daniel J. Bernstein’s Curve25519, which does its clock arithmetic modulo $2^{255}-19$ on a bizarre, donut-shaped group of points. The keys are smaller and the math is faster, but the philosophical foundation is identical. Instead of betting on factoring, we’re betting on the discrete logarithm problem. And in 1994, Peter Shor at Bell Labs proved that if anyone ever builds a large, fault-tolerant quantum computer, both bets are dead on arrival. Shor’s algorithm doesn't brute-force the lock; it uses quantum interference to hear the hidden rhythm of the clock arithmetic and shatters RSA and elliptic curves alike.\n\nWhen I open Wireshark and watch my browser negotiate a TLS handshake with a server in Virginia, I don't see a vault door swinging shut. I see two machines trading giant, fragile integers in the dark, trusting that the universe is just slightly more difficult in one direction than the other.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 171,
+  "completion_tokens": 3056,
+  "total_tokens": 3227,
+  "cost": 0.046353,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.046353,
+   "upstream_inference_prompt_cost": 0.000513,
+   "upstream_inference_completions_cost": 0.04584
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1801,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

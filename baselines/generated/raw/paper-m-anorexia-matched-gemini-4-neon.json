@@ -1,0 +1,39 @@
+{
+ "set": "paper",
+ "kind": "paper",
+ "prompt_id": "paper-m-anorexia",
+ "style": "matched",
+ "prompt": "Write the introduction section of an academic paper titled “Self-identity in anorexia nervosa”. The paper is in philosophy of psychiatry. About 700 words. Output only the text of the introduction, with no heading.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1500,
+ "matched_to": "papers/gadsby-self-identity-anorexia",
+ "id": "paper-m-anorexia-matched-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Anorexia nervosa (AN) presents a profound conceptual challenge to both clinical psychiatry and the philosophy of mind. Characterized by severe restriction of energy intake, an intense fear of gaining weight, and a disturbance in the way one’s body weight or shape is experienced, AN carries one of the highest mortality rates of any psychiatric condition. Yet, what makes AN particularly perplexing from a philosophical standpoint is its notoriously ego-syntonic nature. Unlike many other psychiatric conditions—such as obsessive-compulsive disorder or major depressive disorder—whose symptoms are frequently experienced by patients as alien, intrusive, and antithetical to their \"true\" selves, AN is often deeply intertwined with the individual’s core values, personal goals, and sense of self-worth. Patients routinely report that the disorder feels like an integral part of who they are, rather than an external illness afflicting them.\n\nThis intimate entanglement between pathology and personhood unsettles standard biomedical and cognitive-behavioral models of psychiatric illness. Such frameworks typically rely on a clear ontological boundary between the \"healthy self\" and the \"disease entity,\" conceptualizing treatment as the excision of a pathological process to restore an underlying, authentic subject. When applied to AN, however, this bifurcated model encounters significant friction. If an individual’s sense of agency, moral purity, and personal identity are actively constructed through restrictive eating and bodily control, then clinical interventions aimed at weight restoration and behavioral change are frequently experienced not as liberation from a disease, but as an existential threat—a literal erasure of the self. Consequently, understanding the nature of self-identity in AN is not merely a theoretical exercise; it lies at the heart of pressing ethical and clinical dilemmas regarding treatment refusal, decision-making capacity, and the very meaning of recovery.\n\nWithin the philosophy of psychiatry, this tension has largely been framed around the concepts of authenticity and autonomy. Bioethicists and philosophers—such as Jacinta Tan, Tony Hope, and their colleagues—have highlighted how AN alters an individual's evaluative framework, generating \"pathological values\" that complicate standard assessments of competence. On one hand, viewing the anorexic identity as entirely inauthentic risks paternalistically dismissing the patient’s lived experience and agency. On the other hand, accepting the anorexic identity as fully authentic risks romanticizing a life-threatening condition and undermining the justification for life-saving clinical care. While phenomenological psychiatry has made important strides in analyzing the altered embodied subjectivity of AN—emphasizing how patients experience their bodies as objects to be mastered rather than lived-through mediums of being-in-the-world—a comprehensive philosophical account of how these bodily disruptions translate into a durable, identity-constituting structure remains underdeveloped.\n\nIn this paper, I aim to resolve the impasse between the \"alien-disease\" model and the \"authentic-self\" model by offering a nuanced philosophical account of self-identity in anorexia nervosa. Drawing on contemporary theories of embodied subjectivity and narrative self-constitution, I argue that AN is best understood neither as a wholly external pathology hijacking an intact self, nor as an unproblematic expression of authentic personhood. Instead, AN functions as a defensive and constraining mode of self-constitution. Specifically, I contend that when an individual’s pre-reflective, embodied sense of self is disrupted—often in the context of developmental transitions, interpersonal vulnerabilities, or sociocultural pressures—the practices of AN provide a rigid, hyper-reflective scaffold for identity. While this scaffold genuinely generates a sense of coherence and agency, it does so at the cost of severely narrowing the individual's existential possibilities, ultimately undermining the diachronic openness required for flourishing selfhood.\n\nThe paper proceeds in four stages. In Section 1, I examine the clinical and qualitative evidence regarding the ego-syntonicity of AN, demonstrating why traditional disease-entity models fail to capture the phenomenology of the disorder. In Section 2, I critically evaluate existing philosophical debates surrounding authenticity and pathological values, showing how a binary distinction between \"authentic\" and \"inauthentic\" desires obscures the dynamic process of identity formation. In Section 3, I develop my positive account of AN as a constrained mode of embodied-narrative self-constitution, illustrating how bodily control becomes a proxy for existential stability. Finally, in Section 4, I explore the clinical and ethical implications of this framework, arguing that recovery should be conceptualized not as the restoration of a pre-morbid self, but as a collaborative process of identity reconstruction.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 78,
+  "completion_tokens": 2748,
+  "total_tokens": 2826,
+  "cost": 0.041454,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.041454,
+   "upstream_inference_prompt_cost": 0.000234,
+   "upstream_inference_completions_cost": 0.04122
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1845,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

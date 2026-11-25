@@ -1,0 +1,38 @@
+{
+ "set": "fiction",
+ "kind": "fiction",
+ "prompt_id": "story-job",
+ "style": "bare",
+ "prompt": "Write a short story about a first day at a new job. About 800 words. Output only the story, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "story-job-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Maya stood on the sidewalk outside the brick building, staring at her reflection in the tinted glass of the lobby doors. Her new navy blazer felt like cardboard around her shoulders, and her loafers were already pinching her heels. She adjusted the strap of her tote bag, took a slow breath that tasted of city exhaust and autumn rain, and pushed the heavy door open.\n\nInside, the air was warm and smelled faintly of old paper and roasted coffee. Alder & Pine Publishing occupied the third floor. As the elevator climbed, Maya practiced her smile in the brushed-steel doors, trying to find the delicate balance between *eager to learn* and *competent professional*. \n\nThe doors slid open to a sunlit reception area lined with bookshelves. Before she could even approach the desk, a woman in a mustard-yellow cardigan appeared from a hallway, holding a ceramic mug.\n\n\"You must be Maya,\" she said, extending a hand. \"I’m Elena. Welcome to the team.\"\n\n\"Thank you so much. I’m really excited to be here,\" Maya said, her voice pitching slightly higher than usual. \n\nElena’s handshake was firm and warm. \"Come on, let’s get you settled and do the grand tour before the morning chaos kicks in.\"\n\nThe next twenty minutes were a blur of oak desks, potted ferns, and smiling faces. Elena moved briskly, introducing Maya to a dozen people whose names evaporated from her memory the instant she heard them. There was a tall man in accounting who wore bright red glasses, a woman in marketing with a laugh like wind chimes, and two graphic designers sharing a corner table covered in color swatches. Maya nodded, shook hands, and repeated \"Nice to meet you\" until the words lost all meaning. \n\nThey ended the tour in the breakroom, where Elena demonstrated the quirks of the espresso machine—you had to jiggle the handle twice, or it hissed like an angry cat—and showed her where the extra legal pads were kept. \n\nFinally, Elena led her to a desk near a tall window overlooking the street. A silver laptop sat in the center, flanked by a fresh notebook, a branded tote bag, and a small potted succulent. \n\n\"This is home base,\" Elena said. \"IT should have your login ready by now. Take the morning to get your email set up, read through the style guide, and fill out the HR forms. No pressure today. Just get your bearings.\"\n\nOnce Elena walked away, the quiet of the office settled over Maya. Around her, keyboards clicked in a steady, comforting rhythm. A phone rang softly in the distance. Maya sat down, the leather chair sighing beneath her, and opened the laptop. \n\nThe morning crawled by in a haze of password resets, two-factor authentication, and tax forms. She read the employee handbook twice, partly to be thorough and partly because she didn't want to look idle. By eleven-thirty, her eyes were dry, and a familiar, school-cafeteria dread began to creep into her stomach. She had packed a turkey sandwich, and she wondered if she was supposed to eat it at her desk or in the breakroom, alone with the hissing espresso machine.\n\nAt noon, a head popped over the low partition separating her desk from the next. It was a young woman with dark curls and a silver nose ring—Chloe, from editorial. Maya actually remembered her name.\n\n\"Hey, Maya,\" Chloe said, resting her elbows on the divider. \"A few of us are heading to the taco truck down on Fourth. Want to come?\"\n\nRelief washed over Maya so quickly it almost made her dizzy. \"I’d love to. Just let me grab my wallet.\"\n\nWalking down the street with Chloe and two other coworkers, the stiffness in Maya’s shoulders began to thaw. They talked about the unpredictable weather, the best coffee shops in the neighborhood, and the office’s ongoing debate over whether the thermostat was actually connected to anything. Maya listened more than she spoke, laughing at the right moments, grateful for the easy warmth of the group.\n\nWhen they returned, a thick stack of printed pages was waiting on Maya’s desk, topped with a sticky note in Elena’s neat handwriting: *First three chapters of the new mystery. Give it a read and flag any typos or weird phrasing. Have fun!*\n\nMaya pulled a blue pen from her bag, leaned back in her chair, and began to read. At first, she was hyper-aware of the office around her, worried she was reading too slowly. Then, the story pulled her in. On page four, she spotted a missing quotation mark. On page seven, a character’s eye color changed from green to brown. She circled it, writing a neat note in the margin, and felt a small, bright spark of competence bloom in her chest.\n\nBefore she knew it, the light outside the window had turned a deep, dusky amber. People were shutting down their computers and pulling on coats. Elena stopped by her desk, her own bag slung over her shoulder.\n\n\"How’s it going?\" she asked.\n\n\"Really good,\" Maya said, holding up the pages. \"I think I caught a continuity error on page seven.\"\n\nElena smiled. \"See? That’s why we hired you. Pack it up, Maya. First days are exhausting. We’ll see you tomorrow at nine.\"\n\nWalking back out onto the sidewalk, Maya breathed in the cool evening air. Her feet ached from the new loafers, her brain was buzzing with information, and she still couldn't remember the name of the man with the red glasses. But as she turned toward the subway, the navy blazer didn't feel quite so stiff anymore.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 63,
+  "completion_tokens": 2235,
+  "total_tokens": 2298,
+  "cost": 0.033714,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.033714,
+   "upstream_inference_prompt_cost": 0.000189,
+   "upstream_inference_completions_cost": 0.033525
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1051,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

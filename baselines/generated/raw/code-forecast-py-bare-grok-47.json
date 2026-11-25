@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-forecast-py",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Python source file that loads a CSV of daily sales, cleans it, and fits and evaluates a seasonal forecast with pandas and statsmodels. Output only the code.",
+ "model": "grok-4.7",
+ "max_tokens": 3000,
+ "domain": "data-science",
+ "language": "Python",
+ "id": "code-forecast-py-bare-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "```python\n\"\"\"Daily sales cleaning and seasonal forecast evaluation.\n\nExpects a CSV with a date column and a numeric sales column. Fits a\nseasonal ARIMA model and reports holdout metrics.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport argparse\nimport logging\nimport sys\nfrom pathlib import Path\n\nimport numpy as np\nimport pandas as pd\nfrom statsmodels.tsa.seasonal import seasonal_decompose\nfrom statsmodels.tsa.statespace.sarimax import SARIMAX\n\nlogger = logging.getLogger(__name__)\n\nDATE_CANDIDATES = (\"date\", \"day\", \"ds\", \"timestamp\", \"order_date\")\nSALES_CANDIDATES = (\"sales\", \"revenue\", \"amount\", \"units\", \"quantity\", \"y\")\nSEASONAL_PERIOD = 7\nMIN_HISTORY = SEASONAL_PERIOD * 4\nHOLDOUT_DAYS = 28\n\n\ndef _resolve_column(columns: pd.Index, candidates: tuple[str, ...], kind: str) -> str:\n    lowered = {c.lower().strip(): c for c in columns}\n    for name in candidates:\n        if name in lowered:\n            return lowered[name]\n    raise ValueError(\n        f\"Could not find a {kind} column. Looked for {candidates}; got {list(columns)}.\"\n    )\n\n\ndef load_sales(path: Path) -> pd.DataFrame:\n    if not path.is_file():\n        raise FileNotFoundError(path)\n    frame = pd.read_csv(path)\n    if frame.empty:\n        raise ValueError(f\"CSV is empty: {path}\")\n    date_col = _resolve_column(frame.columns, DATE_CANDIDATES, \"date\")\n    sales_col = _resolve_column(frame.columns, SALES_CANDIDATES, \"sales\")\n    out = frame[[date_col, sales_col]].copy()\n    out.columns = [\"date\", \"sales\"]\n    return out\n\n\ndef clean_sales(frame: pd.DataFrame) -> pd.Series:\n    cleaned = frame.copy()\n    cleaned[\"date\"] = pd.to_datetime(cleaned[\"date\"], errors=\"coerce\", utc=False)\n    cleaned[\"sales\"] = pd.to_numeric(cleaned[\"sales\"], errors=\"coerce\")\n    cleaned = cleaned.dropna(subset=[\"date\", \"sales\"])\n    cleaned = cleaned[np.isfinite(cleaned[\"sales\"])]\n    cleaned[\"sales\"] = cleaned[\"sales\"].clip(lower=0)\n    cleaned[\"date\"] = cleaned[\"date\"].dt.normalize()\n    cleaned = cleaned.groupby(\"date\", as_index=False)[\"sales\"].sum()\n    cleaned = cleaned.sort_values(\"date\").set_index(\"date\")\n    full_index = pd.date_range(cleaned.index.min(), cleaned.index.max(), freq=\"D\")\n    series = cleaned[\"sales\"].reindex(full_index)\n    missing = int(series.isna().sum())\n    if missing:\n        logger.info(\"Filled %s missing calendar days with time interpolation.\", missing)\n        series = series.interpolate(method=\"time\").ffill().bfill()\n    series.index.name = \"date\"\n    series.name = \"sales\"\n    if len(series) < MIN_HISTORY:\n        raise ValueError(\n            f\"Need at least {MIN_HISTORY} daily observations after cleaning; got {len(series)}.\"\n        )\n    return series.astype(float)\n\n\ndef evaluate_forecast(series: pd.Series, holdout_days: int = HOLDOUT_DAYS) -> dict[str, float]:\n    if holdout_days < 1 or holdout_days >= len(series) // 2:\n        raise ValueError(\"holdout_days must be positive and leave a usable training window.\")\n    train = series.iloc[:-holdout_days]\n    test = series.iloc[-holdout_days:]\n    model = SARIMAX(\n        train,\n        order=(1, 1, 1),\n        seasonal_order=(1, 1, 1, SEASONAL_PERIOD),\n        enforce_stationarity=False,\n        enforce_invertibility=False,\n    )\n    fitted = model.fit(disp=False, maxiter=200)\n    forecast = fitted.get_forecast(steps=holdout_days)\n    predicted = pd.Series(forecast.predicted_mean.to_numpy(), index=test.index, name=\"forecast\")\n    predicted = predicted.clip(lower=0)\n    error = test.to_numpy() - predicted.to_numpy()\n    mae = float(np.mean(np.abs(error)))\n    rmse = float(np.sqrt(np.mean(error**2)))\n    denom = np.maximum(np.abs(test.to_numpy()), 1e-8)\n    mape = float(np.mean(np.abs(error) / denom) * 100.0)\n    seasonal = seasonal_decompose(train, model=\"additive\", period=SEASONAL_PERIOD, extrapolate_trend=\"freq\")\n    seasonal_strength = float(\n        1.0\n        - np.var(seasonal.resid.dropna())\n        / max(np.var((seasonal.seasonal + seasonal.resid).dropna()), 1e-12)\n    )\n    return {\n        \"n_train\": float(len(train)),\n        \"n_test\": float(len(test)),\n        \"mae\": mae,\n        \"rmse\": rmse,\n        \"mape\": mape,\n        \"aic\": float(fitted.aic),\n        \"seasonal_strength\": seasonal_strength,\n    }\n\n\ndef main(argv: list[str] | None = None) -> int:\n    parser = argparse.ArgumentParser(description=\"Clean daily sales and evaluate a seasonal forecast.\")\n    parser.add_argument(\"csv\", type=Path, help=\"Path to a daily sales CSV.\")\n    parser.add_argument(\"--holdout-days\", type=int, default=HOLDOUT_DAYS)\n    args = parser.parse_args(argv)\n    logging.basicConfig(level=logging.INFO, format=\"%(levelname)s %(message)s\")\n    series = clean_sales(load_sales(args.csv))\n    metrics = evaluate_forecast(series, holdout_days=args.holdout_days)\n    for key, value in metrics.items():\n        print(f\"{key}: {value:.4f}\" if isinstance(value, float) else f\"{key}: {value}\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n```",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1281,
+  "completion_tokens": 1502,
+  "total_tokens": 2783,
+  "cost": 0.009846,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009846,
+   "upstream_inference_prompt_cost": 0.000834,
+   "upstream_inference_completions_cost": 0.009012
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 64,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

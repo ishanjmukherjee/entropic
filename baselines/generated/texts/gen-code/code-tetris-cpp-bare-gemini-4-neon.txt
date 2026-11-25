@@ -1,0 +1,448 @@
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstdint>
+#include <random>
+#include <utility>
+
+namespace blockgame {
+
+constexpr int kBoardWidth = 10;
+constexpr int kVisibleHeight = 20;
+constexpr int kHiddenRows = 4;
+constexpr int kBoardHeight = kVisibleHeight + kHiddenRows;
+
+enum class PieceType : std::uint8_t {
+    I = 0,
+    O,
+    T,
+    S,
+    Z,
+    J,
+    L,
+    Count,
+    None
+};
+
+enum class Rotation : std::uint8_t {
+    Spawn = 0,
+    Right = 1,
+    Reverse = 2,
+    Left = 3
+};
+
+struct Point {
+    int x = 0;
+    int y = 0;
+
+    constexpr bool operator==(const Point& other) const noexcept {
+        return x == other.x && y == other.y;
+    }
+};
+
+using CellOffsets = std::array<Point, 4>;
+using KickTable = std::array<Point, 5>;
+
+constexpr Rotation nextRotation(Rotation r, bool clockwise) noexcept {
+    const auto val = static_cast<int>(r);
+    return static_cast<Rotation>((val + (clockwise ? 1 : 3)) & 3);
+}
+
+constexpr CellOffsets getPieceCells(PieceType type, Rotation rotation) noexcept {
+    constexpr std::array<std::array<CellOffsets, 4>, 7> kShapes = {{
+        // I
+        {{
+            {{{0, 1}, {1, 1}, {2, 1}, {3, 1}}},
+            {{{2, 0}, {2, 1}, {2, 2}, {2, 3}}},
+            {{{0, 2}, {1, 2}, {2, 2}, {3, 2}}},
+            {{{1, 0}, {1, 1}, {1, 2}, {1, 3}}}
+        }},
+        // O
+        {{
+            {{{1, 0}, {2, 0}, {1, 1}, {2, 1}}},
+            {{{1, 0}, {2, 0}, {1, 1}, {2, 1}}},
+            {{{1, 0}, {2, 0}, {1, 1}, {2, 1}}},
+            {{{1, 0}, {2, 0}, {1, 1}, {2, 1}}}
+        }},
+        // T
+        {{
+            {{{1, 0}, {0, 1}, {1, 1}, {2, 1}}},
+            {{{1, 0}, {1, 1}, {2, 1}, {1, 2}}},
+            {{{0, 1}, {1, 1}, {2, 1}, {1, 2}}},
+            {{{1, 0}, {0, 1}, {1, 1}, {1, 2}}}
+        }},
+        // S
+        {{
+            {{{1, 0}, {2, 0}, {0, 1}, {1, 1}}},
+            {{{1, 0}, {1, 1}, {2, 1}, {2, 2}}},
+            {{{1, 1}, {2, 1}, {0, 2}, {1, 2}}},
+            {{{0, 0}, {0, 1}, {1, 1}, {1, 2}}}
+        }},
+        // Z
+        {{
+            {{{0, 0}, {1, 0}, {1, 1}, {2, 1}}},
+            {{{2, 0}, {1, 1}, {2, 1}, {1, 2}}},
+            {{{0, 1}, {1, 1}, {1, 2}, {2, 2}}},
+            {{{1, 0}, {0, 1}, {1, 1}, {0, 2}}}
+        }},
+        // J
+        {{
+            {{{0, 0}, {0, 1}, {1, 1}, {2, 1}}},
+            {{{1, 0}, {2, 0}, {1, 1}, {1, 2}}},
+            {{{0, 1}, {1, 1}, {2, 1}, {2, 2}}},
+            {{{1, 0}, {1, 1}, {0, 2}, {1, 2}}}
+        }},
+        // L
+        {{
+            {{{2, 0}, {0, 1}, {1, 1}, {2, 1}}},
+            {{{1, 0}, {1, 1}, {1, 2}, {2, 2}}},
+            {{{0, 1}, {1, 1}, {2, 1}, {0, 2}}},
+            {{{0, 0}, {1, 0}, {1, 1}, {1, 2}}}
+        }}
+    }};
+
+    const auto idx = static_cast<std::size_t>(type);
+    const auto rot = static_cast<std::size_t>(rotation);
+    return kShapes[idx][rot];
+}
+
+// SRS wall-kick offsets in Y-down coordinates.
+constexpr KickTable getWallKicks(PieceType type, Rotation from, Rotation to) noexcept {
+    constexpr KickTable kNoKick = {{{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}}};
+    if (type == PieceType::O || from == to) {
+        return kNoKick;
+    }
+
+    const int f = static_cast<int>(from);
+    const int t = static_cast<int>(to);
+
+    if (type == PieceType::I) {
+        if (f == 0 && t == 1) return {{{0, 0}, {-2, 0}, {1, 0}, {-2, 1}, {1, -2}}};
+        if (f == 1 && t == 0) return {{{0, 0}, {2, 0}, {-1, 0}, {2, -1}, {-1, 2}}};
+        if (f == 1 && t == 2) return {{{0, 0}, {-1, 0}, {2, 0}, {-1, -2}, {2, 1}}};
+        if (f == 2 && t == 1) return {{{0, 0}, {1, 0}, {-2, 0}, {1, 2}, {-2, -1}}};
+        if (f == 2 && t == 3) return {{{0, 0}, {2, 0}, {-1, 0}, {2, -1}, {-1, 2}}};
+        if (f == 3 && t == 2) return {{{0, 0}, {-2, 0}, {1, 0}, {-2, 1}, {1, -2}}};
+        if (f == 3 && t == 0) return {{{0, 0}, {1, 0}, {-2, 0}, {1, 2}, {-2, -1}}};
+        if (f == 0 && t == 3) return {{{0, 0}, {-1, 0}, {2, 0}, {-1, -2}, {2, 1}}};
+        return kNoKick;
+    }
+
+    // JLSTZ
+    if (f == 0 && t == 1) return {{{0, 0}, {-1, 0}, {-1, -1}, {0, 2}, {-1, 2}}};
+    if (f == 1 && t == 0) return {{{0, 0}, {1, 0}, {1, 1}, {0, -2}, {1, -2}}};
+    if (f == 1 && t == 2) return {{{0, 0}, {1, 0}, {1, 1}, {0, -2}, {1, -2}}};
+    if (f == 2 && t == 1) return {{{0, 0}, {-1, 0}, {-1, -1}, {0, 2}, {-1, 2}}};
+    if (f == 2 && t == 3) return {{{0, 0}, {1, 0}, {1, -1}, {0, 2}, {1, 2}}};
+    if (f == 3 && t == 2) return {{{0, 0}, {-1, 0}, {-1, 1}, {0, -2}, {-1, -2}}};
+    if (f == 3 && t == 0) return {{{0, 0}, {-1, 0}, {-1, 1}, {0, -2}, {-1, -2}}};
+    if (f == 0 && t == 3) return {{{0, 0}, {1, 0}, {1, -1}, {0, 2}, {1, 2}}};
+    return kNoKick;
+}
+
+struct Piece {
+    PieceType type = PieceType::None;
+    Rotation rotation = Rotation::Spawn;
+    Point pos{0, 0};
+
+    [[nodiscard]] CellOffsets worldCells() const noexcept {
+        auto cells = getPieceCells(type, rotation);
+        for (auto& c : cells) {
+            c.x += pos.x;
+            c.y += pos.y;
+        }
+        return cells;
+    }
+};
+
+class BagRandomizer {
+public:
+    explicit BagRandomizer(std::uint32_t seed = std::random_device{}())
+        : rng_(seed) {
+        refill();
+    }
+
+    [[nodiscard]] PieceType next() {
+        if (index_ >= bag_.size()) {
+            refill();
+        }
+        return bag_[index_++];
+    }
+
+    [[nodiscard]] PieceType peek() const {
+        return bag_[index_];
+    }
+
+private:
+    void refill() {
+        bag_ = {
+            PieceType::I, PieceType::O, PieceType::T, PieceType::S,
+            PieceType::Z, PieceType::J, PieceType::L
+        };
+        std::shuffle(bag_.begin(), bag_.end(), rng_);
+        index_ = 0;
+    }
+
+    std::mt19937 rng_;
+    std::array<PieceType, 7> bag_{};
+    std::size_t index_ = 7;
+};
+
+class Board {
+public:
+    Board() { reset(); }
+
+    void reset() noexcept {
+        for (auto& row : grid_) {
+            row.fill(PieceType::None);
+        }
+    }
+
+    [[nodiscard]] static constexpr bool isInside(int x, int y) noexcept {
+        return x >= 0 && x < kBoardWidth && y >= 0 && y < kBoardHeight;
+    }
+
+    [[nodiscard]] PieceType at(int x, int y) const noexcept {
+        if (!isInside(x, y)) {
+            return PieceType::None;
+        }
+        return grid_[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)];
+    }
+
+    [[nodiscard]] bool isOccupied(int x, int y) const noexcept {
+        return !isInside(x, y) || at(x, y) != PieceType::None;
+    }
+
+    [[nodiscard]] bool collides(const Piece& piece) const noexcept {
+        for (const auto& cell : piece.worldCells()) {
+            if (isOccupied(cell.x, cell.y)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void lockPiece(const Piece& piece) noexcept {
+        for (const auto& cell : piece.worldCells()) {
+            if (isInside(cell.x, cell.y)) {
+                grid_[static_cast<std::size_t>(cell.y)][static_cast<std::size_t>(cell.x)] = piece.type;
+            }
+        }
+    }
+
+    [[nodiscard]] int clearLines() noexcept {
+        int cleared = 0;
+        int writeRow = kBoardHeight - 1;
+
+        for (int readRow = kBoardHeight - 1; readRow >= 0; --readRow) {
+            const auto& row = grid_[static_cast<std::size_t>(readRow)];
+            const bool full = std::all_of(row.begin(), row.end(), [](PieceType cell) {
+                return cell != PieceType::None;
+            });
+
+            if (full) {
+                ++cleared;
+            } else {
+                if (writeRow != readRow) {
+                    grid_[static_cast<std::size_t>(writeRow)] = row;
+                }
+                --writeRow;
+            }
+        }
+
+        for (int row = writeRow; row >= 0; --row) {
+            grid_[static_cast<std::size_t>(row)].fill(PieceType::None);
+        }
+
+        return cleared;
+    }
+
+private:
+    std::array<std::array<PieceType, kBoardWidth>, kBoardHeight> grid_{};
+};
+
+struct GameStats {
+    std::uint64_t score = 0;
+    int linesCleared = 0;
+    int level = 1;
+};
+
+class Game {
+public:
+    explicit Game(std::uint32_t seed = std::random_device{}())
+        : bag_(seed) {
+        reset();
+    }
+
+    void reset() {
+        board_.reset();
+        stats_ = {};
+        holdPiece_ = PieceType::None;
+        holdUsed_ = false;
+        gameOver_ = false;
+        nextPiece_ = bag_.next();
+        spawnNextPiece();
+    }
+
+    bool move(int dx, int dy) noexcept {
+        if (gameOver_) return false;
+        Piece candidate = current_;
+        candidate.pos.x += dx;
+        candidate.pos.y += dy;
+        if (board_.collides(candidate)) {
+            return false;
+        }
+        current_ = candidate;
+        return true;
+    }
+
+    bool rotate(bool clockwise) noexcept {
+        if (gameOver_) return false;
+        const Rotation targetRot = nextRotation(current_.rotation, clockwise);
+        const auto kicks = getWallKicks(current_.type, current_.rotation, targetRot);
+
+        for (const auto& kick : kicks) {
+            Piece candidate = current_;
+            candidate.rotation = targetRot;
+            candidate.pos.x += kick.x;
+            candidate.pos.y += kick.y;
+            if (!board_.collides(candidate)) {
+                current_ = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool softDrop() {
+        if (move(0, 1)) {
+            stats_.score += 1;
+            return true;
+        }
+        return false;
+    }
+
+    int hardDrop() {
+        if (gameOver_) return 0;
+        int distance = 0;
+        while (move(0, 1)) {
+            ++distance;
+        }
+        stats_.score += static_cast<std::uint64_t>(distance) * 2;
+        lockAndAdvance();
+        return distance;
+    }
+
+    bool hold() {
+        if (gameOver_ || holdUsed_) return false;
+        if (holdPiece_ == PieceType::None) {
+            holdPiece_ = current_.type;
+            spawnNextPiece();
+        } else {
+            const PieceType swapped = holdPiece_;
+            holdPiece_ = current_.type;
+            spawnPiece(swapped);
+        }
+        holdUsed_ = true;
+        return true;
+    }
+
+    void tick() {
+        if (gameOver_) return;
+        if (!move(0, 1)) {
+            lockAndAdvance();
+        }
+    }
+
+    [[nodiscard]] Point ghostPosition() const noexcept {
+        Piece ghost = current_;
+        while (true) {
+            Piece next = ghost;
+            next.pos.y += 1;
+            if (board_.collides(next)) {
+                break;
+            }
+            ghost = next;
+        }
+        return ghost.pos;
+    }
+
+    [[nodiscard]] const Board& board() const noexcept { return board_; }
+    [[nodiscard]] const Piece& currentPiece() const noexcept { return current_; }
+    [[nodiscard]] PieceType nextPiece() const noexcept { return nextPiece_; }
+    [[nodiscard]] PieceType holdPiece() const noexcept { return holdPiece_; }
+    [[nodiscard]] const GameStats& stats() const noexcept { return stats_; }
+    [[nodiscard]] bool isGameOver() const noexcept { return gameOver_; }
+
+private:
+    void spawnNextPiece() {
+        const PieceType type = nextPiece_;
+        nextPiece_ = bag_.next();
+        spawnPiece(type);
+    }
+
+    void spawnPiece(PieceType type) {
+        current_ = Piece{
+            type,
+            Rotation::Spawn,
+            Point{(kBoardWidth - 4) / 2, kHiddenRows - 2}
+        };
+        if (board_.collides(current_)) {
+            gameOver_ = true;
+        }
+    }
+
+    void lockAndAdvance() {
+        board_.lockPiece(current_);
+        const int cleared = board_.clearLines();
+        if (cleared > 0) {
+            constexpr std::array<std::uint64_t, 5> kLineScores = {0, 100, 300, 500, 800};
+            stats_.score += kLineScores[static_cast<std::size_t>(cleared)] * static_cast<std::uint64_t>(stats_.level);
+            stats_.linesCleared += cleared;
+            stats_.level = 1 + (stats_.linesCleared / 10);
+        }
+        holdUsed_ = false;
+        spawnNextPiece();
+    }
+
+    Board board_;
+    BagRandomizer bag_;
+    Piece current_{};
+    PieceType nextPiece_ = PieceType::None;
+    PieceType holdPiece_ = PieceType::None;
+    bool holdUsed_ = false;
+    bool gameOver_ = false;
+    GameStats stats_{};
+};
+
+}  // namespace blockgame
+
+int main() {
+    using namespace blockgame;
+
+    Game game(42);
+    assert(!game.isGameOver());
+
+    // Movement and rotation sanity checks.
+    const Point initialPos = game.currentPiece().pos;
+    assert(game.move(-1, 0));
+    assert(game.currentPiece().pos.x == initialPos.x - 1);
+    assert(game.rotate(true));
+    assert(game.hold());
+    assert(!game.hold());  // Cannot hold twice before locking.
+
+    // Hard drop should lock the piece and re-enable hold.
+    const int dropped = game.hardDrop();
+    assert(dropped > 0);
+    assert(game.stats().score > 0);
+
+    // Direct board line-clearing verification.
+    Board board;
+    for (int x = 0; x < kBoardWidth; ++x) {
+        Piece single{PieceType::I, Rotation::Spawn, {x, kBoardHeight - 2}};
+        board.lockPiece(single);
+    }
+    assert(board.clearLines() == 1);
+
+    return 0;
+}

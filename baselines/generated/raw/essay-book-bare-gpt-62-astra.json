@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-book",
+ "style": "bare",
+ "prompt": "Write an essay reviewing a book you think is underrated. About 800 words. Output only the essay, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 1600,
+ "id": "essay-book-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "Early in J. L. Carr’s *A Month in the Country*, Tom Birkin moves into the bell chamber of a Yorkshire church. He has come to uncover a medieval wall painting, and sleeping on the premises is an economy. It also means that he can get up in the morning, go down to his scaffolding, and start work without explaining himself to anybody. In the summer of 1920, this is no small advantage. Birkin has survived the trenches, his marriage is in trouble, and a twitch in his face advertises distress he would rather keep to himself. Nobody has hired him to get well. They have hired him because he knows how to take plaster off a wall without bringing the picture away with it.\n\nPublished in 1980, Carr’s short novel was nominated for the Booker Prize and later made into a film. It is underrated less in the sense of having gone undiscovered than in the modest terms on which it tends to be recommended. A small, lovely book about a restorative summer in an English village: all of that is true, and it leaves out nearly everything that makes the book interesting. For one thing, Birkin is very good at his job, and Carr understands what a pleasure it is to spend time with someone who can see distinctions that escape you.\n\nThe painting is a Last Judgment. Long before anyone standing on the church floor can make much of it, Birkin is up close, working out how the painter organized his labour, where he spent money on colour, what he entrusted to lesser hands. There is an agreeable professional impertinence in his appraisal. Several centuries of reverence fall away; one working man is looking over another’s shoulder. Birkin wants to know who this fellow was, but the question arises out of an admiration for particular decisions. Carr makes a persuasive case for getting to know people in this order. One might learn quite a lot about a stranger by attending to something he took pains to do well.\n\nMeanwhile, outside the church, another veteran, Charles Moon, has been employed to find a grave. He lives in a hole in the ground, an arrangement both men can recognize as an improvement on certain quarters they occupied in France. Their friendship gets going without the customary exchange of confidences. Each has a piece of work about which the other can ask an intelligent question; each knows when to let a silence stand. Carr is especially funny about the practical business of living alone among people who have noticed the fact. Birkin may consider himself self-sufficient, but the village has its own ideas about where he ought to eat his Sunday dinner.\n\nOne of the book’s shrewdest choices is to make its clergyman almost entirely proof against the appeal of the plot. The Reverend Keach does not particularly want a medieval masterpiece on his wall. The work is being done under the terms of a bequest, and his dealings with Birkin have the chill of an irksome administrative duty. In a more obliging novel the picture would win him over. Here, looking at the same patch of wall produces professional excitement in one man and an unwelcome prospect of visitors in another. There is room to sympathize with Keach, especially once it becomes clear how eagerly Birkin awaits the visits of Keach’s wife.\n\nAlice Keach is the novel’s one considerable frustration. We get her beauty, her proximity, and the extraordinary charge Birkin feels when the two are alone; we get very little of what she does with the hours between their meetings. That is partly the point. An older Birkin is telling the story, and he cannot report a life he never got to share. Still, I sometimes wished Carr had given Alice one inconvenient enthusiasm, some subject on which she might talk past the moment when her admirer wanted her to stop. The villagers who press food and obligations on Birkin have a weight in the world that the woman he remembers most intensely never quite acquires.\n\nWhat the older narrator can recover with astonishing precision is the pace of those weeks. At first there is an almost embarrassing abundance of time. A visit can be put off; the next stretch of painted wall will still be there tomorrow. Then the very evidence that the job is going well begins to tell against him. Each day he uncovers more of the picture and has less reason to stay. Carr needs no sudden calamity to turn the story. All it takes to bring this happy arrangement to an end is for Birkin to finish the work he came to do. Years afterward he can summon the church, the summer light, the people calling him down to a meal. What he cannot summon, and what Carr lets us enjoy for a little while, is the ordinary conviction that there will be another such day.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 31,
+  "completion_tokens": 962,
+  "total_tokens": 993,
+  "cost": 0.038728,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.038728,
+   "upstream_inference_prompt_cost": 0.000248,
+   "upstream_inference_completions_cost": 0.03848
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

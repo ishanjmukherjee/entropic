@@ -1,0 +1,39 @@
+{
+ "set": "paper",
+ "kind": "paper",
+ "prompt_id": "paper-m-bladder",
+ "style": "matched",
+ "prompt": "Write the introduction section of an academic paper titled “Fixing a Model That Learned Worse Cancer Means Lower Risk: Monotonic Constraints in Bladder Cancer Recurrence Prediction”. The paper is in clinical machine learning. About 700 words. Output only the text of the introduction, with no heading.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1500,
+ "matched_to": "papers/abbas-monotonic-bladder",
+ "id": "paper-m-bladder-matched-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Bladder cancer is among the most prevalent malignancies worldwide, with non-muscle-invasive bladder cancer (NMIBC) accounting for approximately 75% of newly diagnosed cases. Although NMIBC carries a relatively favorable survival prognosis compared to muscle-invasive disease, it is characterized by remarkably high rates of recurrence, affecting up to 70% of patients within five years of initial transurethral resection. Consequently, patients require frequent, long-term cystoscopic surveillance and repeated adjuvant interventions, making bladder cancer one of the most expensive malignancies to manage on a per-patient basis. Accurate prediction of recurrence risk is therefore central to clinical management, enabling urologists to tailor surveillance schedules, select candidates for intravesical therapy, and balance the harms of overtreatment against the risks of delayed detection.\n\nHistorically, clinicians have relied on traditional prognostic scoring systems, such as the European Organisation for Research and Treatment of Cancer (EORTC) and the Club Urológico Español de Tratamiento Oncológico (CUETO) risk tables, to stratify patients. While these models are transparent and easy to apply at the bedside, they rely on rigid, additive assumptions and exhibit only modest discriminative performance across contemporary, diverse patient cohorts. In response, clinical machine learning (ML)—particularly flexible, non-linear algorithms such as gradient-boosted decision trees—has gained substantial traction in oncology risk prediction. By automatically capturing complex, high-order interactions among demographic, pathological, and clinical variables, ML models routinely outperform conventional risk calculators on standard statistical benchmarks.\n\nHowever, the very flexibility that allows ML models to excel on observational clinical datasets also leaves them vulnerable to learning spurious, clinically implausible relationships. In retrospective oncology cohorts, a particularly insidious failure mode arises from confounding by indication. Patients presenting with more severe disease—such as higher tumor grade, advanced pathological stage, larger tumor diameter, or concomitant carcinoma in situ—are systematically more likely to receive aggressive clinical management, including immediate postoperative chemotherapy, intravesical Bacillus Calmette-Guérin (BCG) immunotherapy, or repeat resection. Because these interventions effectively lower the observed rate of recurrence in treated high-risk patients, an unconstrained ML model trained on real-world clinical data may inadvertently learn a dangerous shortcut: that worse cancer pathology predicts a lower risk of recurrence.\n\nSuch counterintuitive behavior represents a fundamental barrier to the safe deployment of ML in clinical care. Standard aggregate evaluation metrics, including the area under the receiver operating characteristic curve (AUROC) and overall calibration, frequently mask localized violations of clinical domain knowledge. A model can achieve impressive global discrimination while simultaneously assigning a lower predicted recurrence risk to a high-grade tumor than to an otherwise identical low-grade tumor. When clinicians encounter predictions that contradict basic oncologic principles, trust in the system rapidly erodes. More critically, if such a model is integrated into clinical decision support workflows, it could recommend inappropriately de-escalated surveillance or withheld adjuvant therapy for the very patients who require intensive monitoring, posing a direct threat to patient safety.\n\nAddressing this vulnerability requires moving beyond purely data-driven optimization toward domain-informed machine learning. Monotonic constraints offer a principled, mathematically rigorous, and computationally efficient mechanism for embedding established clinical knowledge directly into model training. By restricting the functional form of the model such that the predicted risk is non-decreasing with respect to specific input features, monotonic constraints guarantee that an increase in a known pathological severity marker can never yield a lower predicted probability of recurrence. Crucially, this form of structural regularization prevents the model from exploiting treatment-confounded shortcuts while preserving its capacity to learn complex, non-linear interactions across unconstrained clinical variables.\n\nIn this paper, we examine the emergence and mitigation of counterintuitive risk inversions in bladder cancer recurrence prediction. First, we demonstrate that standard, unconstrained ML models trained on clinical bladder cancer data readily learn non-monotonic relationships in which worse tumor characteristics correspond to lower predicted recurrence risk. Second, we incorporate monotonic constraints into tree-based ML architectures to enforce clinically coherent risk trajectories across established oncologic severity markers. Third, we evaluate the resulting models across both statistical performance and clinical plausibility, showing that monotonic constraints eliminate nonsensical risk inversions without sacrificing—and in some settings improving—overall discrimination and calibration. Our findings underscore that enforcing domain-aligned monotonicity is a practical and necessary step toward building trustworthy, clinically actionable machine learning systems in oncology.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 92,
+  "completion_tokens": 2705,
+  "total_tokens": 2797,
+  "cost": 0.040851,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.040851,
+   "upstream_inference_prompt_cost": 0.000276,
+   "upstream_inference_completions_cost": 0.040575
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1831,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

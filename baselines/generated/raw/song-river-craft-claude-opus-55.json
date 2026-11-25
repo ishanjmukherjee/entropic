@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "craft",
+ "prompt": "Write the lyrics of a folk song about a river being dammed.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 900,
+ "id": "song-river-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "Daddy pumped Sinclair at Carver's Ferry,\nGreen tin dinosaur up on a pole,\nTwo men from the Authority came sighting\nA tripod up and down the river road.\nThey shot the grade at Kessler's Feed and Seed,\nAnd Mama's kitchen floor at eight-eighteen,\nThey gave her forty dollars for the walnut\nAnd a pamphlet with the valley painted green.\n\nMark it down at eight-twenty,\nPaint it orange on the wall,\nEverything below the line\nGoes to the river, house and all.\n\nIn March a crew from Knoxville dug the churchyard,\nThree men to a grave and a truck to a row,\nGrandma Ada rode up to the ridge in pine\nWith a number on the lid where her name should go.\nThey set her by the new road with the others\nOn a stone the government had paid,\nThey'd cut it ADDIE where it should say ADA,\nAnd Daddy took his hat off just the same.\n\nMark it down at eight-twenty,\nPaint it orange on the wall,\nEverything below the line\nGoes to the river, house and all.\n\nDaddy drained the last Ethyl in the Ford truck,\nThe church bell went to Dalton for ninety and a ham,\nNow the bulb above our sink up on the ridge\nComes down a wire from the Elk Fork Dam.\nMama'd leave it burning after midnight,\nWouldn't let him reach and pull the chain,\nShe'd sit there with her coffee and the radio\nLike she was waiting on the Ferry road to drain.\n\nMark it down at eight-twenty,\nPaint it orange on the wall,\nEverything below the line\nGoes to the river, house and all.\n\nIn the dry fall of eighty-eight they drew it down\nTill the old road surfaced like a seam,\nI walked out past the stumps in Daddy's boots\nAnd found the pump island, cracked and clean.\nThe dinosaur was gone but there's the pole,\nAnd a grape Nehi bottle in the clay,\nI stood up on the step to Mama's kitchen\nTill the rain come in on Thursday and it all went back away.\n\nMark me down at eight-twenty,\nNot up on the ridge at all,\nEverything below the line\nGoes to the river, house and all.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

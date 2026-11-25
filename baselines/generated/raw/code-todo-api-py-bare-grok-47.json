@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-todo-api-py",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Python source file that serves a small JSON HTTP API for a to-do list using only the standard library. Output only the code.",
+ "model": "grok-4.7",
+ "max_tokens": 3000,
+ "domain": "web-backend",
+ "language": "Python",
+ "id": "code-todo-api-py-bare-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "```python\n#!/usr/bin/env python3\n\"\"\"Minimal JSON to-do list HTTP API using only the Python standard library.\"\"\"\n\nfrom __future__ import annotations\n\nimport json\nimport threading\nfrom datetime import datetime, timezone\nfrom http.server import BaseHTTPRequestHandler, ThreadingHTTPServer\nfrom typing import Any\nfrom urllib.parse import urlparse\n\nHOST = \"127.0.0.1\"\nPORT = 8080\n\n_lock = threading.Lock()\n_next_id = 1\n_todos: dict[int, dict[str, Any]] = {}\n\n\ndef _utc_now() -> str:\n    return datetime.now(timezone.utc).strftime(\"%Y-%m-%dT%H:%M:%SZ\")\n\n\ndef _json_error(status: int, message: str) -> tuple[int, dict[str, Any]]:\n    return status, {\"error\": message}\n\n\nclass TodoHandler(BaseHTTPRequestHandler):\n    server_version = \"TodoAPI/1.0\"\n    protocol_version = \"HTTP/1.1\"\n\n    def log_message(self, fmt: str, *args: Any) -> None:\n        print(f\"{self.address_string()} - {fmt % args}\")\n\n    def do_GET(self) -> None:\n        path, todo_id = self._route()\n        if path == \"/health\":\n            self._send(200, {\"status\": \"ok\"})\n            return\n        if path == \"/todos\" and todo_id is None:\n            with _lock:\n                items = list(_todos.values())\n            self._send(200, {\"todos\": items})\n            return\n        if path == \"/todos\" and todo_id is not None:\n            with _lock:\n                item = _todos.get(todo_id)\n            if item is None:\n                self._send(*_json_error(404, \"todo not found\"))\n                return\n            self._send(200, item)\n            return\n        self._send(*_json_error(404, \"not found\"))\n\n    def do_POST(self) -> None:\n        path, todo_id = self._route()\n        if path != \"/todos\" or todo_id is not None:\n            self._send(*_json_error(404, \"not found\"))\n            return\n        body, err = self._read_json()\n        if err:\n            self._send(*err)\n            return\n        title = body.get(\"title\")\n        if not isinstance(title, str) or not title.strip():\n            self._send(*_json_error(400, \"title is required\"))\n            return\n        done = body.get(\"done\", False)\n        if not isinstance(done, bool):\n            self._send(*_json_error(400, \"done must be a boolean\"))\n            return\n        global _next_id\n        now = _utc_now()\n        with _lock:\n            item = {\n                \"id\": _next_id,\n                \"title\": title.strip(),\n                \"done\": done,\n                \"created_at\": now,\n                \"updated_at\": now,\n            }\n            _todos[_next_id] = item\n            _next_id += 1\n        self._send(201, item)\n\n    def do_PATCH(self) -> None:\n        path, todo_id = self._route()\n        if path != \"/todos\" or todo_id is None:\n            self._send(*_json_error(404, \"not found\"))\n            return\n        body, err = self._read_json()\n        if err:\n            self._send(*err)\n            return\n        with _lock:\n            item = _todos.get(todo_id)\n            if item is None:\n                self._send(*_json_error(404, \"todo not found\"))\n                return\n            if \"title\" in body:\n                title = body[\"title\"]\n                if not isinstance(title, str) or not title.strip():\n                    self._send(*_json_error(400, \"title must be a non-empty string\"))\n                    return\n                item[\"title\"] = title.strip()\n            if \"done\" in body:\n                if not isinstance(body[\"done\"], bool):\n                    self._send(*_json_error(400, \"done must be a boolean\"))\n                    return\n                item[\"done\"] = body[\"done\"]\n            if \"title\" not in body and \"done\" not in body:\n                self._send(*_json_error(400, \"no updatable fields\"))\n                return\n            item[\"updated_at\"] = _utc_now()\n            updated = dict(item)\n        self._send(200, updated)\n\n    def do_DELETE(self) -> None:\n        path, todo_id = self._route()\n        if path != \"/todos\" or todo_id is None:\n            self._send(*_json_error(404, \"not found\"))\n            return\n        with _lock:\n            if todo_id not in _todos:\n                self._send(*_json_error(404, \"todo not found\"))\n                return\n            del _todos[todo_id]\n        self._send(200, {\"deleted\": todo_id})\n\n    def do_OPTIONS(self) -> None:\n        self.send_response(204)\n        self._common_headers(0)\n        self.end_headers()\n\n    def _route(self) -> tuple[str, int | None]:\n        parsed = urlparse(self.path)\n        parts = [p for p in parsed.path.rstrip(\"/\").split(\"/\") if p]\n        if not parts:\n            return \"/\", None\n        if parts == [\"health\"]:\n            return \"/health\", None\n        if parts == [\"todos\"]:\n            return \"/todos\", None\n        if len(parts) == 2 and parts[0] == \"todos\" and parts[1].isdigit():\n            return \"/todos\", int(parts[1])\n        return parsed.path, None\n\n    def _read_json(self) -> tuple[dict[str, Any] | None, tuple[int, dict[str, Any]] | None]:\n        length = int(self.headers.get(\"Content-Length\", \"0\") or 0)\n        if length <= 0:\n            return None, _json_error(400, \"JSON body required\")\n        if length > 1_000_000:\n            return None, _json_error(413, \"payload too large\")\n        raw = self.rfile.read(length)\n        try:\n            data = json.loads(raw.decode(\"utf-8\"))\n        except (UnicodeDecodeError, json.JSONDecodeError):\n            return None, _json_error(400, \"invalid JSON\")\n        if not isinstance(data, dict):\n            return None, _json_error(400, \"JSON object required\")\n        return data, None\n\n    def _send(self, status: int, payload: dict[str, Any]) -> None:\n        body = json.dumps(payload, separators=(\",\", \":\")).encode(\"utf-8\")\n        self.send_response(status)\n        self._common_headers(len(body))\n        self.end_headers()\n        self.wfile.write(body)\n\n    def _common_headers(self, length: int) -> None:\n        self.send_header(\"Content-Type\", \"application/json; charset=utf-8\")\n        self.send_header(\"Content-Length\", str(length))\n        self.send_header(\"Connection\", \"close\")\n        self.send_header(\"Access-Control-Allow-Origin\", \"*\")\n        self.send_header(\"Access-Control-Allow-Methods\", \"GET, POST, PATCH, DELETE, OPTIONS\")\n        self.send_header(\"Access-Control-Allow-Headers\", \"Content-Type\")\n\n\ndef main() -> None:\n    server = ThreadingHTTPServer((HOST, PORT), TodoHandler)\n    print(f\"listening on http://{HOST}:{PORT}\")\n    try:\n        server.serve_forever()\n    except KeyboardInterrupt:\n        print(\"\\nshutting down\")\n    finally:\n        server.server_close()\n\n\nif __name__ == \"__main__\":\n    main()\n```",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1276,
+  "completion_tokens": 1863,
+  "total_tokens": 3139,
+  "cost": 0.012002,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.012002,
+   "upstream_inference_prompt_cost": 0.000824,
+   "upstream_inference_completions_cost": 0.011178
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 57,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

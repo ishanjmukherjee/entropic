@@ -1,0 +1,240 @@
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+/*
+ * Fixed-capacity LRU cache mapping uint64_t keys to uint64_t values.
+ * Successful lookups and insertions/updates mark the entry most recently used.
+ * Calls on a shared cache require external synchronization.
+ */
+
+typedef struct lru_cache lru_cache;
+
+typedef enum {
+    LRU_OK = 0,
+    LRU_INVALID,
+    LRU_NO_MEMORY,
+    LRU_ZERO_CAPACITY
+} lru_status;
+
+/* Returns NULL on allocation failure. A zero-capacity cache is valid. */
+lru_cache *lru_create(size_t capacity);
+void lru_destroy(lru_cache *cache);
+void lru_clear(lru_cache *cache);
+size_t lru_size(const lru_cache *cache);
+size_t lru_capacity(const lru_cache *cache);
+
+/* value may be NULL. On a miss, its contents are unchanged. */
+bool lru_get(lru_cache *cache, uint64_t key, uint64_t *value);
+bool lru_peek(const lru_cache *cache, uint64_t key, uint64_t *value);
+
+/* Evicts the least recently used entry if necessary. Atomic on failure. */
+lru_status lru_put(lru_cache *cache, uint64_t key, uint64_t value);
+bool lru_remove(lru_cache *cache, uint64_t key);
+
+typedef struct lru_entry {
+    uint64_t key;
+    uint64_t value;
+    struct lru_entry *prev;
+    struct lru_entry *next;
+    struct lru_entry *hash_next;
+    struct lru_entry **hash_link; /* Pointer currently pointing to this node. */
+} lru_entry;
+
+struct lru_cache {
+    size_t capacity;
+    size_t size;
+    lru_entry **buckets;
+    lru_entry *head; /* Most recently used. */
+    lru_entry *tail;
+};
+
+static size_t bucket_index(const lru_cache *cache, uint64_t key)
+{
+    /* SplitMix64 finalizer. Only called for nonzero capacity. */
+    key ^= key >> 30;
+    key *= UINT64_C(0xbf58476d1ce4e5b9);
+    key ^= key >> 27;
+    key *= UINT64_C(0x94d049bb133111eb);
+    key ^= key >> 31;
+    return (size_t)(key % cache->capacity);
+}
+
+static lru_entry *find_entry(const lru_cache *cache, uint64_t key)
+{
+    if (cache == NULL || cache->size == 0)
+        return NULL;
+
+    for (lru_entry *e = cache->buckets[bucket_index(cache, key)];
+         e != NULL; e = e->hash_next) {
+        if (e->key == key)
+            return e;
+    }
+    return NULL;
+}
+
+static void unlink_hash(lru_entry *e)
+{
+    *e->hash_link = e->hash_next;
+    if (e->hash_next != NULL)
+        e->hash_next->hash_link = e->hash_link;
+}
+
+static void unlink_list(lru_cache *cache, lru_entry *e)
+{
+    if (e->prev != NULL)
+        e->prev->next = e->next;
+    else
+        cache->head = e->next;
+
+    if (e->next != NULL)
+        e->next->prev = e->prev;
+    else
+        cache->tail = e->prev;
+}
+
+static void prepend(lru_cache *cache, lru_entry *e)
+{
+    e->prev = NULL;
+    e->next = cache->head;
+    if (cache->head != NULL)
+        cache->head->prev = e;
+    else
+        cache->tail = e;
+    cache->head = e;
+}
+
+static void touch(lru_cache *cache, lru_entry *e)
+{
+    if (cache->head != e) {
+        unlink_list(cache, e);
+        prepend(cache, e);
+    }
+}
+
+lru_cache *lru_create(size_t capacity)
+{
+    if (capacity > SIZE_MAX / sizeof(lru_entry *))
+        return NULL;
+
+    lru_cache *cache = malloc(sizeof *cache);
+    if (cache == NULL)
+        return NULL;
+
+    *cache = (lru_cache){ .capacity = capacity };
+    if (capacity != 0) {
+        cache->buckets = malloc(capacity * sizeof *cache->buckets);
+        if (cache->buckets == NULL) {
+            free(cache);
+            return NULL;
+        }
+        for (size_t i = 0; i < capacity; ++i)
+            cache->buckets[i] = NULL;
+    }
+    return cache;
+}
+
+void lru_clear(lru_cache *cache)
+{
+    if (cache == NULL)
+        return;
+
+    while (cache->head != NULL) {
+        lru_entry *e = cache->head;
+        cache->head = e->next;
+        unlink_hash(e);
+        free(e);
+    }
+    cache->tail = NULL;
+    cache->size = 0;
+}
+
+void lru_destroy(lru_cache *cache)
+{
+    if (cache != NULL) {
+        lru_clear(cache);
+        free(cache->buckets);
+        free(cache);
+    }
+}
+
+size_t lru_size(const lru_cache *cache)
+{
+    return cache != NULL ? cache->size : 0;
+}
+
+size_t lru_capacity(const lru_cache *cache)
+{
+    return cache != NULL ? cache->capacity : 0;
+}
+
+bool lru_peek(const lru_cache *cache, uint64_t key, uint64_t *value)
+{
+    const lru_entry *e = find_entry(cache, key);
+    if (e == NULL)
+        return false;
+    if (value != NULL)
+        *value = e->value;
+    return true;
+}
+
+bool lru_get(lru_cache *cache, uint64_t key, uint64_t *value)
+{
+    lru_entry *e = find_entry(cache, key);
+    if (e == NULL)
+        return false;
+    touch(cache, e);
+    if (value != NULL)
+        *value = e->value;
+    return true;
+}
+
+lru_status lru_put(lru_cache *cache, uint64_t key, uint64_t value)
+{
+    if (cache == NULL)
+        return LRU_INVALID;
+    if (cache->capacity == 0)
+        return LRU_ZERO_CAPACITY;
+
+    lru_entry *e = find_entry(cache, key);
+    if (e != NULL) {
+        e->value = value;
+        touch(cache, e);
+        return LRU_OK;
+    }
+
+    if (cache->size == cache->capacity) {
+        e = cache->tail;
+        unlink_hash(e);
+        unlink_list(cache, e);
+    } else {
+        e = malloc(sizeof *e);
+        if (e == NULL)
+            return LRU_NO_MEMORY;
+        ++cache->size;
+    }
+
+    e->key = key;
+    e->value = value;
+    e->hash_link = &cache->buckets[bucket_index(cache, key)];
+    e->hash_next = *e->hash_link;
+    if (e->hash_next != NULL)
+        e->hash_next->hash_link = &e->hash_next;
+    *e->hash_link = e;
+    prepend(cache, e);
+    return LRU_OK;
+}
+
+bool lru_remove(lru_cache *cache, uint64_t key)
+{
+    lru_entry *e = find_entry(cache, key);
+    if (e == NULL)
+        return false;
+
+    unlink_hash(e);
+    unlink_list(cache, e);
+    free(e);
+    --cache->size;
+    return true;
+}

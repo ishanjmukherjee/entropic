@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "bare",
+ "prompt": "Write a sonnet about insomnia. Output only the poem, with no title.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 700,
+ "id": "poem-insomnia-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "The clock strikes three. I hear the little spring\nDraw back its hammer from the single bell.\nBy day I never hear the wretched thing;\nBy night I know its aftershiver well.\nI turn my pillow to the cooler side\nAnd shut my eyes against the window square.\nA motor passes like a falling tide\nAnd leaves the bedroom floating on the air.\nThen, just as I forget to wish for sleep,\nA blackbird tries a note and lets it fall.\nI wait to hear if he intends to keep\nThat one clear note, or fashion it a call.\nHe sings again. The window fills with gray.\nI close my eyes and miss the break of day.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 22,
+  "completion_tokens": 143,
+  "total_tokens": 165,
+  "cost": 0.005896,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.005896,
+   "upstream_inference_prompt_cost": 0.000176,
+   "upstream_inference_completions_cost": 0.00572
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

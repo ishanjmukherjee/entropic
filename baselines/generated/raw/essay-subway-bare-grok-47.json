@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-subway",
+ "style": "bare",
+ "prompt": "Write an essay on why building subways costs so much more in some countries than in others. About 800 words. Output only the essay, with no title.",
+ "model": "grok-4.7",
+ "max_tokens": 1600,
+ "id": "essay-subway-bare-grok-47",
+ "model_id": "x-ai/grok-4.7",
+ "family": "xAI",
+ "raw": "Subway construction is one of the clearest examples of how the same physical task can produce wildly different bills. A kilometer of urban rail that costs a few tens of millions of dollars in Madrid or Seoul can cost several times that in New York, London, or Toronto. The gap is not mainly a mystery of geology or of “modern standards.” It is the product of institutions: how projects are designed, who must consent, how labor is organized, how risk is priced, and how long money sits idle before trains run.\n\nStart with what is actually being built. Much of the cost difference is not in the tunnel itself. Tunnel-boring machines and their crews are expensive everywhere, but they are a smaller share of the total than station boxes, mezzanines, ventilation plants, and the surface disruption around them. Cities that dig deep caverns with multiple levels, long passageways, and elaborate finishes spend heavily on excavation, concrete, and temporary works. Cities that accept simpler, shallower stations with standardized layouts spend less per rider served. Overbuilding is often a choice dressed up as necessity: extra width “for future capacity,” architectural signature projects, or gold-plated accessibility and fire-safety interpretations that go beyond what peer systems treat as adequate.\n\nLabor markets matter, but not only through wage rates. High wages raise costs; so do work rules that limit what one crew may do, require large minimum staffing, and slow the handoff between trades. Where experienced tunnel and station crews move from job to job inside a steady national program, productivity is higher and learning is retained. Where each megaproject is a one-off, assembled from consultants and contractors who may not build another subway for a decade, every lesson is paid for again. Overtime, night work, and restrictive access windows in dense downtowns amplify the difference. A worker-hour that costs more and accomplishes less is a double penalty.\n\nProcess is the other great multiplier. In some countries a transit agency with a clear mandate can align utilities, acquire land, and obtain permits on a timetable measured in a few years. In others, dozens of agencies hold vetoes: environmental review, historic preservation, traffic management, utility owners, fire authorities, and local governments. Each review is defensible on its own. Together they stretch projects across political cycles, invite redesign, and turn uncertainty into contingency. Contingency is not free. Contractors price delay, unknown utilities, and the chance of litigation into their bids. Owners then add their own contingencies. A project that takes fifteen years to deliver does not merely cost more in inflation; it pays interest, keeps management teams employed, and loses the chance to standardize the next contract on the last one.\n\nProcurement rules shape those prices. Low-bid, design-bid-build contracting can look thrifty and then explode through change orders once drawings meet reality. Design-build and alliances can transfer risk, but only if the owner knows what it wants and does not rewrite the job midstream. Heavy reliance on outside consultants, layered legal review, and fear of audit can produce specifications so prescriptive that bidders cannot offer cheaper methods they have used abroad. Buy-local rules, security mandates, and bespoke technical standards further shrink the pool of firms willing to bid. Thin competition is a tax.\n\nLand and politics sit underneath the engineering. In cities where property rights are fragmented and compensation disputes are slow, station sites and construction shafts become bottlenecks. Political leaders often prefer visible station architecture and extensive mitigation—sound walls, business compensation, night-work limits—over the quieter discipline of a repeatable design. Mitigation is sometimes just. It is also a way to buy consent without admitting that consent has a price. Countries with stronger metropolitan governments, or with national programs that fund many lines at once, can trade local demands against a pipeline of work. Cities that build a subway once a generation cannot.\n\nGeology and density are real constraints, not excuses that explain everything. Boring through mixed ground under centuries of unmapped utilities is harder than boring through competent rock on a planned alignment. Deep stations avoid surface demolition but cost more to excavate and to operate. Yet peer cities with old streets and hard politics still build more cheaply when they keep stations compact, utilities coordinated, and schedules short. The expensive places are often those that combine difficult ground with maximal process and maximal specification.\n\nFinancing closes the loop. Cheap, predictable public capital lowers the cost of a long asset. Chaotic appropriations, stop-start funding, and private finance loaded with risk premiums do the opposite. Duration and financing costs feed each other: delay raises the interest bill, and an expensive financing structure makes delay more painful, which encourages still more defensive contracting.\n\nNone of this implies that cheaper is always better. Cutting corners on fire safety, worker protection, or genuine accessibility is a false economy. The useful comparison is among systems that move large numbers of people safely. Those comparisons suggest that cost is governed less by destiny than by design choices and governance: standardize stations, shorten reviews without abandoning environmental care, keep in-house expertise, pay for productivity rather than for idle time, and build often enough that the next kilometer is not a reinvention. Until those habits change, the same hole in the ground will keep producing very different invoices.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 1275,
+  "completion_tokens": 1289,
+  "total_tokens": 2564,
+  "cost": 0.008556,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 1152,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.008556,
+   "upstream_inference_prompt_cost": 0.000822,
+   "upstream_inference_completions_cost": 0.007734
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 226,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

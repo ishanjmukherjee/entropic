@@ -1,0 +1,38 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-city",
+ "style": "bare",
+ "prompt": "Write a personal essay about moving to a new city. About 800 words. Output only the essay, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 1600,
+ "id": "essay-city-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "The first night in a new city always smells like cardboard and someone else’s bleach. I lay on a bare mattress in the center of my living room, listening to the unfamiliar cadence of sirens and the distant, rhythmic hum of a highway I did not yet know the name of. Without curtains, the amber glow of a streetlamp painted long, jagged shadows across the drywall. Back home, I knew the exact creak of the floorboards in the hallway; I knew which neighbor’s dog barked at the mailman at two o’clock. Here, every sound was a question mark. I had spent months romanticizing this move, picturing myself as the protagonist of a fresh chapter, yet in the quiet dark, I mostly just felt like an intruder in my own life.\n\nThe first few weeks were a humbling exercise in losing my muscle memory. In my old city, I could drive to the grocery store on autopilot, my mind drifting while my hands made the turns. Here, I was tethered to the glowing blue dot on my phone screen. I needed turn-by-turn directions just to find a pharmacy or a decent cup of coffee. Everything required an exhausting amount of deliberate thought. I stood on the wrong side of the escalator, fumbled with my transit card at the turnstile while a line of impatient commuters sighed behind me, and constantly mispronounced the names of local streets. The city felt like a massive, indifferent machine, and I was a foreign gear that had not been filed down to fit.\n\nThere is a very specific kind of loneliness that only exists when you are surrounded by hundreds of thousands of people. On Saturday afternoons, I would walk through crowded neighborhoods, watching friends spill out of brunch spots, laughing in the easy shorthand of shared history. I missed being known without having to explain myself. I missed the friends who did not need the backstory to understand why a particular song made me sad, or why a long week at work had left me drained. Moving forces you to narrate your own life from scratch to strangers, and for a while, I grew tired of hearing my own voice. I ate a lot of takeout on my couch, scrolling through photos of a life that was still happening without me three hundred miles away.\n\nSlowly, almost imperceptibly, the friction began to lessen. It did not happen through some grand, cinematic breakthrough, but through the quiet accumulation of tiny routines. I finally bought curtains for the living room, softening the harsh glare of the streetlamp, and hung the framed prints that had been leaning against the baseboards for months. I found a corner bakery where the woman behind the counter started reaching for a plain croissant the moment the bell above the door jingled. I discovered a narrow, tree-lined path along the river that felt like a secret, even though dozens of joggers used it every morning. I learned which train car stopped closest to the exit near my apartment. These small victories felt absurdly monumental. Each one was a tiny stake driven into the ground, a quiet declaration that I was no longer just passing through.\n\nThe real turning point arrived on a rainy Tuesday in October, nearly six months after I had unloaded the moving truck. I was walking home from work, my umbrella tilted against the wind, lost in thought about what to make for dinner. I turned left at the dry cleaner, cut through the small plaza with the brick fountain, and crossed the avenue just as the light turned green. Halfway down my block, I suddenly stopped. I had not looked at my phone once. My feet had simply known the way. A few minutes later, a tourist with a damp, folded map asked me how to get to the art museum, and I pointed south, rattling off three street names and a landmark without hesitating. When I walked away, a strange, warm pride bloomed in my chest.\n\nMoving to a new city does not erase the person you were, nor does it replace the places you left behind. I still feel a sudden tug of nostalgia when the weather shifts and reminds me of my old hometown. But uprooting yourself strips away the comfortable wallpaper of your old life and forces you to see what is left underneath. It teaches you that home is not a static dot on a map, or a collection of buildings you grew up beside. It is something you carry in your own resilience, something you build brick by brick out of morning coffee runs, memorized bus routes, and the quiet courage to keep showing up until the unfamiliar finally begins to feel like yours.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 61,
+  "completion_tokens": 2887,
+  "total_tokens": 2948,
+  "cost": 0.043488,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.043488,
+   "upstream_inference_prompt_cost": 0.000183,
+   "upstream_inference_completions_cost": 0.043305
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1967,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

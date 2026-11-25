@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "bare",
+ "prompt": "Write a sonnet about insomnia. Output only the poem, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-insomnia-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "The world is hushed beneath a heavy shroud,\nWhile shadows stretch across the bedroom wall,\nYet in my skull the racing thoughts are loud,\nAnd answer to a silent, frantic call.\nI twist and turn within the tangled sheet,\nAnd watch the crimson numbers slowly creep,\nMy weary body begs for soft retreat,\nYet stubborn eyes refuse the gift of sleep.\nOld ghosts of errors whisper in the dark,\nTomorrow's burdens weigh upon my chest,\nEach fleeting worry strikes a sudden spark,\nThat burns away the quiet hope of rest.\nAt last the pale and bitter morning breaks,\nTo find me spent before the day awakes.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 49,
+  "completion_tokens": 1338,
+  "total_tokens": 1387,
+  "cost": 0.020217,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.020217,
+   "upstream_inference_prompt_cost": 0.000147,
+   "upstream_inference_completions_cost": 0.02007
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 1199,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

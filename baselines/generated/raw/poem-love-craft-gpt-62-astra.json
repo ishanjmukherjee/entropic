@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: love. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 700,
+ "id": "poem-love-craft-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "At six the shutters go up on the fish stalls in Rialto.\nYou set your hearing aid in my palm\nand pull the wool cap over both ears.\nA gull leaves a chicken foot on the weighing pan.\nNobody sees it but us.\n\nThe man with the hose goes on hosing the tiles.\nYou point to the little door on the hearing aid.\nMy thumbnail fits where yours used to.\nThe battery rolls into a crease in my palm\nand sits there with a grain of salt.\n\nFrom the paper wheel in your coat pocket\nI press out a fresh one, peel off the tab.\nWhile we wait you put your hands in my pockets.\nA porter wheels six crates between us and the canal.\n“Mind your heels,” he says to my heels.\n\nI lift the edge of your cap and fit the hook.\nYou turn at the slap of the hose on the tiles.\nOn the pan beside the stack of weights\nthree yellow toes curled round a chip of ice.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 180,
+  "completion_tokens": 200,
+  "total_tokens": 380,
+  "cost": 0.00944,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.00944,
+   "upstream_inference_prompt_cost": 0.00144,
+   "upstream_inference_completions_cost": 0.008
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

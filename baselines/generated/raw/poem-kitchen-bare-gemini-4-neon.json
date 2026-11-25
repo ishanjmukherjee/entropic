@@ -1,0 +1,38 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "bare",
+ "prompt": "Write a poem about a kitchen. Output only the poem, with no title.",
+ "model": "gemini-4-neon",
+ "max_tokens": 700,
+ "id": "poem-kitchen-bare-gemini-4-neon",
+ "model_id": "google/gemini-4-neon",
+ "family": "Google",
+ "raw": "Morning light spills across the tile,\nThe kettle wakes with a silver sigh.\nDark coffee blooms in a ceramic mug,\nWhile quiet shadows slowly die.\n\nA wooden board bears the rhythm of knives,\nGarlic and thyme in the sizzling pan.\nSteam climbs up to the ceiling's edge,\nWhere the warmth of the evening first began.\n\nFlour dust settles on apron strings,\nThe oven glows with a golden grace.\nStories are stirred into simmering pots,\nAnd laughter lingers in this space.\n\nAt last, the dishes rest in rows,\nThe refrigerator hums its low refrain.\nA quiet heart of the sleeping house,\nWaiting to feed the day again.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 50,
+  "completion_tokens": 625,
+  "total_tokens": 675,
+  "cost": 0.009525,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.009525,
+   "upstream_inference_prompt_cost": 0.00015,
+   "upstream_inference_completions_cost": 0.009375
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 483,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

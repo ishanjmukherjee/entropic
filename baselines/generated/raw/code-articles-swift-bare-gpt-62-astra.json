@@ -1,0 +1,40 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-articles-swift",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Swift (SwiftUI) source file that implements a view and view model for a paginated list of articles fetched from a JSON API. Output only the code.",
+ "model": "gpt-6.2-astra",
+ "max_tokens": 3000,
+ "domain": "mobile",
+ "language": "Swift (SwiftUI)",
+ "id": "code-articles-swift-bare-gpt-62-astra",
+ "model_id": "openai/gpt-6.2-astra",
+ "family": "OpenAI",
+ "raw": "import Foundation\nimport SwiftUI\n\n// API contract: GET endpoint?page=1&page_size=25\n// Response: {\"articles\":[{\"id\":\"a1\",\"title\":\"Title\",\"summary\":\"Optional text\"}],\"next_page\":2}\n// A null or absent next_page marks the end of the list.\nstruct Article: Identifiable, Decodable, Sendable {\n    let id: String\n    let title: String\n    let summary: String?\n}\n\nstruct ArticlePage: Decodable, Sendable {\n    let articles: [Article]\n    let nextPage: Int?\n\n    private enum CodingKeys: String, CodingKey {\n        case articles\n        case nextPage = \"next_page\"\n    }\n}\n\nprotocol ArticlePageLoading: Sendable {\n    func load(page: Int) async throws -> ArticlePage\n}\n\nstruct ArticleAPI: ArticlePageLoading {\n    let endpoint: URL\n    let session: URLSession\n    let pageSize: Int\n\n    init(endpoint: URL, session: URLSession = .shared, pageSize: Int = 25) {\n        self.endpoint = endpoint\n        self.session = session\n        self.pageSize = max(1, pageSize)\n    }\n\n    func load(page: Int) async throws -> ArticlePage {\n        guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: true) else {\n            throw URLError(.badURL)\n        }\n\n        var items = (components.queryItems ?? []).filter {\n            $0.name != \"page\" && $0.name != \"page_size\"\n        }\n        items.append(URLQueryItem(name: \"page\", value: String(page)))\n        items.append(URLQueryItem(name: \"page_size\", value: String(pageSize)))\n        components.queryItems = items\n\n        guard let url = components.url else { throw URLError(.badURL) }\n        var request = URLRequest(url: url)\n        request.setValue(\"application/json\", forHTTPHeaderField: \"Accept\")\n        let (data, response) = try await session.data(for: request)\n\n        guard let http = response as? HTTPURLResponse else {\n            throw URLError(.badServerResponse)\n        }\n        guard (200..<300).contains(http.statusCode) else {\n            throw ArticleAPIError.http(http.statusCode)\n        }\n\n        let result = try JSONDecoder().decode(ArticlePage.self, from: data)\n        if let next = result.nextPage, next <= page {\n            throw ArticleAPIError.invalidPagination\n        }\n        return result\n    }\n}\n\nprivate enum ArticleAPIError: LocalizedError {\n    case http(Int)\n    case invalidPagination\n\n    var errorDescription: String? {\n        switch self {\n        case .http(let status):\n            return \"The server returned an error (HTTP \\(status)).\"\n        case .invalidPagination:\n            return \"The server returned an invalid page number.\"\n        }\n    }\n}\n\n@MainActor\nfinal class ArticleListViewModel: ObservableObject {\n    enum Phase {\n        case idle, loading, failed(String)\n    }\n\n    @Published private(set) var articles: [Article] = []\n    @Published private(set) var phase: Phase = .idle\n    @Published private(set) var nextPage: Int? = 1\n\n    private let loader: any ArticlePageLoading\n    private var seenIDs: Set<String> = []\n    private var generation = UUID()\n    private var retryPage: Int?\n\n    init(loader: any ArticlePageLoading) {\n        self.loader = loader\n    }\n\n    func loadNext() async {\n        guard case .idle = phase, let page = nextPage else { return }\n        await fetch(page)\n    }\n\n    func refresh() async {\n        // Supersede any pending append without discarding visible content.\n        await fetch(1)\n    }\n\n    func retry() async {\n        guard case .failed = phase, let page = retryPage else { return }\n        await fetch(page)\n    }\n\n    private func fetch(_ page: Int) async {\n        let token = UUID()\n        generation = token\n        phase = .loading\n        retryPage = nil\n\n        do {\n            let result = try await loader.load(page: page)\n            try Task.checkCancellation()\n            guard generation == token else { return }\n\n            if page == 1 {\n                seenIDs.removeAll(keepingCapacity: true)\n                articles = result.articles.filter { seenIDs.insert($0.id).inserted }\n            } else {\n                let additions = result.articles.filter { seenIDs.insert($0.id).inserted }\n                articles.append(contentsOf: additions)\n            }\n            nextPage = result.nextPage\n            phase = .idle\n        } catch {\n            guard generation == token else { return }\n            if Task.isCancelled || error is CancellationError ||\n                (error as? URLError)?.code == .cancelled {\n                phase = .idle\n            } else {\n                retryPage = page\n                phase = .failed(error.localizedDescription)\n            }\n        }\n    }\n}\n\n@available(iOS 15.0, macOS 12.0, *)\n@MainActor\nstruct ArticleListView: View {\n    @StateObject private var model: ArticleListViewModel\n\n    init(endpoint: URL) {\n        self.init(loader: ArticleAPI(endpoint: endpoint))\n    }\n\n    init(loader: any ArticlePageLoading) {\n        _model = StateObject(wrappedValue: ArticleListViewModel(loader: loader))\n    }\n\n    var body: some View {\n        List {\n            ForEach(model.articles) { article in\n                VStack(alignment: .leading, spacing: 6) {\n                    Text(article.title)\n                        .font(.headline)\n                    if let summary = article.summary, !summary.isEmpty {\n                        Text(summary)\n                            .font(.subheadline)\n                            .foregroundStyle(.secondary)\n                    }\n                }\n                .padding(.vertical, 4)\n                .accessibilityElement(children: .combine)\n            }\n\n            switch model.phase {\n            case .loading:\n                ProgressView()\n                    .frame(maxWidth: .infinity)\n                    .accessibilityLabel(\"Loading articles\")\n\n            case .failed(let message):\n                VStack(alignment: .leading, spacing: 8) {\n                    Text(message)\n                    Button(\"Try Again\") {\n                        Task { await model.retry() }\n                    }\n                }\n\n            case .idle:\n                if model.nextPage != nil {\n                    Button(\"Load More Articles\") {\n                        Task { await model.loadNext() }\n                    }\n                } else if model.articles.isEmpty {\n                    Text(\"No articles available.\")\n                        .foregroundStyle(.secondary)\n                }\n            }\n        }\n        .navigationTitle(\"Articles\")\n        .task {\n            if model.nextPage == 1 {\n                await model.loadNext()\n            }\n        }\n        .refreshable {\n            await model.refresh()\n        }\n    }\n}",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 44,
+  "completion_tokens": 1403,
+  "total_tokens": 1447,
+  "cost": 0.056472,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "cache_write_tokens": 0,
+   "audio_tokens": 0,
+   "video_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.056472,
+   "upstream_inference_prompt_cost": 0.000352,
+   "upstream_inference_completions_cost": 0.05612
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 0,
+   "audio_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

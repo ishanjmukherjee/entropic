@@ -1,0 +1,423 @@
+/**
+ * @file sht3x_driver.c
+ * @brief Bare-metal ARM Cortex-M I2C driver for SHT3x temperature and humidity
+ *        sensors with an ISR-safe fixed-size ring buffer.
+ */
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+/* ============================================================================
+ * Configuration & Constants
+ * ========================================================================== */
+
+#ifndef SHT3X_RING_BUF_SIZE
+#define SHT3X_RING_BUF_SIZE         (64U) /* Must be a power of 2 */
+#endif
+
+#if (SHT3X_RING_BUF_SIZE == 0U) || ((SHT3X_RING_BUF_SIZE & (SHT3X_RING_BUF_SIZE - 1U)) != 0U)
+#error "SHT3X_RING_BUF_SIZE must be a non-zero power of 2"
+#endif
+
+#define SHT3X_RING_BUF_MASK         (SHT3X_RING_BUF_SIZE - 1U)
+
+#define SHT3X_I2C_ADDR_DEFAULT      (0x44U)
+#define SHT3X_I2C_ADDR_ALT          (0x45U)
+
+/* SHT3x Commands (16-bit big-endian) */
+#define SHT3X_CMD_MEAS_HIGH_NOCS    (0x2400U) /* Single shot, high rep, no clock stretch */
+#define SHT3X_CMD_MEAS_MED_NOCS     (0x240BU) /* Single shot, med rep, no clock stretch  */
+#define SHT3X_CMD_MEAS_LOW_NOCS     (0x2416U) /* Single shot, low rep, no clock stretch  */
+#define SHT3X_CMD_SOFT_RESET        (0x30A2U)
+#define SHT3X_CMD_READ_STATUS       (0xF32DU)
+#define SHT3X_CMD_CLEAR_STATUS      (0x3041U)
+
+/* Timing constants (milliseconds) */
+#define SHT3X_RESET_DELAY_MS        (2U)
+#define SHT3X_MEAS_HIGH_DELAY_MS    (16U)
+#define SHT3X_MEAS_MED_DELAY_MS     (7U)
+#define SHT3X_MEAS_LOW_DELAY_MS     (5U)
+
+/* CRC-8 parameters: Polynomial 0x31 (x^8 + x^5 + x^4 + 1), Init 0xFF */
+#define SHT3X_CRC8_POLY             (0x31U)
+#define SHT3X_CRC8_INIT             (0xFFU)
+
+/* ============================================================================
+ * Types & Data Structures
+ * ========================================================================== */
+
+typedef enum {
+    SHT3X_OK = 0,
+    SHT3X_ERR_NULL_PTR,
+    SHT3X_ERR_NOT_INIT,
+    SHT3X_ERR_INVALID_ARG,
+    SHT3X_ERR_I2C_WRITE,
+    SHT3X_ERR_I2C_READ,
+    SHT3X_ERR_CRC_MISMATCH,
+    SHT3X_ERR_BUF_EMPTY
+} sht3x_status_t;
+
+typedef enum {
+    SHT3X_REP_LOW = 0,
+    SHT3X_REP_MEDIUM,
+    SHT3X_REP_HIGH
+} sht3x_repeatability_t;
+
+typedef struct {
+    int32_t  temp_mc;       /* Temperature in milli-degrees Celsius (e.g., 23450 = 23.450 C) */
+    uint32_t rh_mpct;       /* Relative humidity in milli-percent (e.g., 55120 = 55.120 %RH) */
+    uint32_t timestamp_ms;  /* System tick at measurement completion */
+} sht3x_reading_t;
+
+/**
+ * @brief Hardware abstraction callbacks.
+ *        I2C callbacks must return 0 on success, non-zero on error.
+ */
+typedef int32_t  (*sht3x_i2c_write_fn)(uint8_t dev_addr, const uint8_t *data, size_t len, void *ctx);
+typedef int32_t  (*sht3x_i2c_read_fn)(uint8_t dev_addr, uint8_t *data, size_t len, void *ctx);
+typedef void     (*sht3x_delay_ms_fn)(uint32_t ms, void *ctx);
+typedef uint32_t (*sht3x_get_tick_ms_fn)(void *ctx);
+
+typedef struct {
+    sht3x_i2c_write_fn   i2c_write;
+    sht3x_i2c_read_fn    i2c_read;
+    sht3x_delay_ms_fn    delay_ms;
+    sht3x_get_tick_ms_fn get_tick_ms; /* Optional; timestamps are 0 if NULL */
+    void                *hal_ctx;     /* User context passed to HAL callbacks */
+    uint8_t              i2c_addr;    /* 7-bit I2C address */
+} sht3x_config_t;
+
+typedef struct {
+    sht3x_reading_t entries[SHT3X_RING_BUF_SIZE];
+    uint32_t        head;
+    uint32_t        tail;
+    uint32_t        count;
+    uint32_t        overflow_count;
+} sht3x_ring_buf_t;
+
+typedef struct {
+    sht3x_config_t   cfg;
+    sht3x_ring_buf_t ring_buf;
+    bool             initialized;
+} sht3x_dev_t;
+
+/* ============================================================================
+ * ARM Cortex-M Critical Section Helpers
+ * ========================================================================== */
+
+static inline uint32_t arm_irq_save(void)
+{
+    uint32_t primask;
+    __asm volatile ("mrs %0, primask" : "=r" (primask) :: "memory");
+    __asm volatile ("cpsid i" ::: "memory");
+    return primask;
+}
+
+static inline void arm_irq_restore(uint32_t primask)
+{
+    __asm volatile ("msr primask, %0" :: "r" (primask) : "memory");
+}
+
+/* ============================================================================
+ * Internal Helper Functions
+ * ========================================================================== */
+
+static uint8_t sht3x_crc8(const uint8_t *data, size_t len)
+{
+    uint8_t crc = SHT3X_CRC8_INIT;
+
+    for (size_t i = 0U; i < len; i++) {
+        crc ^= data[i];
+        for (uint8_t bit = 0U; bit < 8U; bit++) {
+            if ((crc & 0x80U) != 0U) {
+                crc = (uint8_t)((crc << 1U) ^ SHT3X_CRC8_POLY);
+            } else {
+                crc = (uint8_t)(crc << 1U);
+            }
+        }
+    }
+
+    return crc;
+}
+
+static sht3x_status_t sht3x_write_cmd(const sht3x_dev_t *dev, uint16_t cmd)
+{
+    uint8_t buf[2];
+    buf[0] = (uint8_t)(cmd >> 8U);
+    buf[1] = (uint8_t)(cmd & 0xFFU);
+
+    if (dev->cfg.i2c_write(dev->cfg.i2c_addr, buf, sizeof(buf), dev->cfg.hal_ctx) != 0) {
+        return SHT3X_ERR_I2C_WRITE;
+    }
+
+    return SHT3X_OK;
+}
+
+static void ring_buf_reset(sht3x_ring_buf_t *rb)
+{
+    uint32_t primask = arm_irq_save();
+    rb->head           = 0U;
+    rb->tail           = 0U;
+    rb->count          = 0U;
+    rb->overflow_count = 0U;
+    arm_irq_restore(primask);
+}
+
+static void ring_buf_push(sht3x_ring_buf_t *rb, const sht3x_reading_t *reading)
+{
+    uint32_t primask = arm_irq_save();
+
+    rb->entries[rb->head] = *reading;
+    rb->head = (rb->head + 1U) & SHT3X_RING_BUF_MASK;
+
+    if (rb->count == SHT3X_RING_BUF_SIZE) {
+        /* Overwrite oldest entry */
+        rb->tail = (rb->tail + 1U) & SHT3X_RING_BUF_MASK;
+        rb->overflow_count++;
+    } else {
+        rb->count++;
+    }
+
+    arm_irq_restore(primask);
+}
+
+static bool ring_buf_pop(sht3x_ring_buf_t *rb, sht3x_reading_t *out)
+{
+    bool has_data = false;
+    uint32_t primask = arm_irq_save();
+
+    if (rb->count > 0U) {
+        *out = rb->entries[rb->tail];
+        rb->tail = (rb->tail + 1U) & SHT3X_RING_BUF_MASK;
+        rb->count--;
+        has_data = true;
+    }
+
+    arm_irq_restore(primask);
+    return has_data;
+}
+
+static bool ring_buf_peek_latest(const sht3x_ring_buf_t *rb, sht3x_reading_t *out)
+{
+    bool has_data = false;
+    uint32_t primask = arm_irq_save();
+
+    if (rb->count > 0U) {
+        uint32_t latest_idx = (rb->head - 1U) & SHT3X_RING_BUF_MASK;
+        *out = rb->entries[latest_idx];
+        has_data = true;
+    }
+
+    arm_irq_restore(primask);
+    return has_data;
+}
+
+/* ============================================================================
+ * Public API
+ * ========================================================================== */
+
+sht3x_status_t sht3x_init(sht3x_dev_t *dev, const sht3x_config_t *cfg)
+{
+    if ((dev == NULL) || (cfg == NULL)) {
+        return SHT3X_ERR_NULL_PTR;
+    }
+
+    if ((cfg->i2c_write == NULL) || (cfg->i2c_read == NULL) || (cfg->delay_ms == NULL)) {
+        return SHT3X_ERR_INVALID_ARG;
+    }
+
+    if ((cfg->i2c_addr != SHT3X_I2C_ADDR_DEFAULT) && (cfg->i2c_addr != SHT3X_I2C_ADDR_ALT)) {
+        return SHT3X_ERR_INVALID_ARG;
+    }
+
+    dev->cfg = *cfg;
+    dev->initialized = false;
+    ring_buf_reset(&dev->ring_buf);
+
+    sht3x_status_t status = sht3x_write_cmd(dev, SHT3X_CMD_SOFT_RESET);
+    if (status != SHT3X_OK) {
+        return status;
+    }
+
+    dev->cfg.delay_ms(SHT3X_RESET_DELAY_MS, dev->cfg.hal_ctx);
+    dev->initialized = true;
+
+    return SHT3X_OK;
+}
+
+sht3x_status_t sht3x_soft_reset(sht3x_dev_t *dev)
+{
+    if (dev == NULL) {
+        return SHT3X_ERR_NULL_PTR;
+    }
+    if (!dev->initialized) {
+        return SHT3X_ERR_NOT_INIT;
+    }
+
+    sht3x_status_t status = sht3x_write_cmd(dev, SHT3X_CMD_SOFT_RESET);
+    if (status != SHT3X_OK) {
+        return status;
+    }
+
+    dev->cfg.delay_ms(SHT3X_RESET_DELAY_MS, dev->cfg.hal_ctx);
+    return SHT3X_OK;
+}
+
+sht3x_status_t sht3x_read_status_reg(const sht3x_dev_t *dev, uint16_t *status_reg)
+{
+    if ((dev == NULL) || (status_reg == NULL)) {
+        return SHT3X_ERR_NULL_PTR;
+    }
+    if (!dev->initialized) {
+        return SHT3X_ERR_NOT_INIT;
+    }
+
+    sht3x_status_t status = sht3x_write_cmd(dev, SHT3X_CMD_READ_STATUS);
+    if (status != SHT3X_OK) {
+        return status;
+    }
+
+    uint8_t rx[3];
+    if (dev->cfg.i2c_read(dev->cfg.i2c_addr, rx, sizeof(rx), dev->cfg.hal_ctx) != 0) {
+        return SHT3X_ERR_I2C_READ;
+    }
+
+    if (sht3x_crc8(&rx[0], 2U) != rx[2]) {
+        return SHT3X_ERR_CRC_MISMATCH;
+    }
+
+    *status_reg = ((uint16_t)rx[0] << 8U) | (uint16_t)rx[1];
+    return SHT3X_OK;
+}
+
+sht3x_status_t sht3x_measure_single_shot(sht3x_dev_t *dev,
+                                         sht3x_repeatability_t rep,
+                                         sht3x_reading_t *out_reading)
+{
+    if (dev == NULL) {
+        return SHT3X_ERR_NULL_PTR;
+    }
+    if (!dev->initialized) {
+        return SHT3X_ERR_NOT_INIT;
+    }
+
+    uint16_t cmd;
+    uint32_t wait_ms;
+
+    switch (rep) {
+        case SHT3X_REP_LOW:
+            cmd     = SHT3X_CMD_MEAS_LOW_NOCS;
+            wait_ms = SHT3X_MEAS_LOW_DELAY_MS;
+            break;
+        case SHT3X_REP_MEDIUM:
+            cmd     = SHT3X_CMD_MEAS_MED_NOCS;
+            wait_ms = SHT3X_MEAS_MED_DELAY_MS;
+            break;
+        case SHT3X_REP_HIGH:
+            cmd     = SHT3X_CMD_MEAS_HIGH_NOCS;
+            wait_ms = SHT3X_MEAS_HIGH_DELAY_MS;
+            break;
+        default:
+            return SHT3X_ERR_INVALID_ARG;
+    }
+
+    sht3x_status_t status = sht3x_write_cmd(dev, cmd);
+    if (status != SHT3X_OK) {
+        return status;
+    }
+
+    dev->cfg.delay_ms(wait_ms, dev->cfg.hal_ctx);
+
+    uint8_t rx[6];
+    if (dev->cfg.i2c_read(dev->cfg.i2c_addr, rx, sizeof(rx), dev->cfg.hal_ctx) != 0) {
+        return SHT3X_ERR_I2C_READ;
+    }
+
+    if ((sht3x_crc8(&rx[0], 2U) != rx[2]) || (sht3x_crc8(&rx[3], 2U) != rx[5])) {
+        return SHT3X_ERR_CRC_MISMATCH;
+    }
+
+    uint16_t raw_temp = ((uint16_t)rx[0] << 8U) | (uint16_t)rx[1];
+    uint16_t raw_rh   = ((uint16_t)rx[3] << 8U) | (uint16_t)rx[4];
+
+    sht3x_reading_t reading;
+    /* T(mC) = -45000 + (175000 * raw_temp) / 65535 (rounded) */
+    reading.temp_mc = (int32_t)((((int64_t)raw_temp * 175000LL) + 32767LL) / 65535LL) - 45000;
+    /* RH(m%) = (100000 * raw_rh) / 65535 (rounded) */
+    reading.rh_mpct = (uint32_t)((((uint64_t)raw_rh * 100000ULL) + 32767ULL) / 65535ULL);
+    reading.timestamp_ms = (dev->cfg.get_tick_ms != NULL)
+                               ? dev->cfg.get_tick_ms(dev->cfg.hal_ctx)
+                               : 0U;
+
+    ring_buf_push(&dev->ring_buf, &reading);
+
+    if (out_reading != NULL) {
+        *out_reading = reading;
+    }
+
+    return SHT3X_OK;
+}
+
+sht3x_status_t sht3x_get_reading(sht3x_dev_t *dev, sht3x_reading_t *out_reading)
+{
+    if ((dev == NULL) || (out_reading == NULL)) {
+        return SHT3X_ERR_NULL_PTR;
+    }
+    if (!dev->initialized) {
+        return SHT3X_ERR_NOT_INIT;
+    }
+
+    return ring_buf_pop(&dev->ring_buf, out_reading) ? SHT3X_OK : SHT3X_ERR_BUF_EMPTY;
+}
+
+sht3x_status_t sht3x_peek_latest_reading(const sht3x_dev_t *dev, sht3x_reading_t *out_reading)
+{
+    if ((dev == NULL) || (out_reading == NULL)) {
+        return SHT3X_ERR_NULL_PTR;
+    }
+    if (!dev->initialized) {
+        return SHT3X_ERR_NOT_INIT;
+    }
+
+    return ring_buf_peek_latest(&dev->ring_buf, out_reading) ? SHT3X_OK : SHT3X_ERR_BUF_EMPTY;
+}
+
+uint32_t sht3x_get_buffered_count(const sht3x_dev_t *dev)
+{
+    if ((dev == NULL) || (!dev->initialized)) {
+        return 0U;
+    }
+
+    uint32_t primask = arm_irq_save();
+    uint32_t count = dev->ring_buf.count;
+    arm_irq_restore(primask);
+
+    return count;
+}
+
+uint32_t sht3x_get_overflow_count(const sht3x_dev_t *dev)
+{
+    if ((dev == NULL) || (!dev->initialized)) {
+        return 0U;
+    }
+
+    uint32_t primask = arm_irq_save();
+    uint32_t overflows = dev->ring_buf.overflow_count;
+    arm_irq_restore(primask);
+
+    return overflows;
+}
+
+sht3x_status_t sht3x_clear_buffer(sht3x_dev_t *dev)
+{
+    if (dev == NULL) {
+        return SHT3X_ERR_NULL_PTR;
+    }
+    if (!dev->initialized) {
+        return SHT3X_ERR_NOT_INIT;
+    }
+
+    ring_buf_reset(&dev->ring_buf);
+    return SHT3X_OK;
+}

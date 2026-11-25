@@ -1,0 +1,714 @@
+#!/usr/bin/env bash
+#
+# pg_backup_s3.sh - Back up a PostgreSQL database to Amazon S3 with retention-based rotation.
+#
+# Features:
+#   * pg_dump in custom format (compressed, restorable with pg_restore)
+#   * Optional GPG encryption (symmetric passphrase file or public-key recipient)
+#   * SHA-256 checksum generated, verified locally, and uploaded alongside the dump
+#   * Dump integrity check via `pg_restore --list` before upload
+#   * Upload with server-side encryption, configurable storage class, retries with backoff
+#   * Remote upload verification (object size check)
+#   * Rotation: keeps at least KEEP_MIN newest backups and deletes anything older than RETENTION_DAYS
+#   * Single-instance locking via flock
+#   * Structured logging to stderr and an optional log file
+#   * Optional failure/success notification hook
+#   * Dry-run mode
+#
+# Requirements: bash >= 4, pg_dump, pg_restore, aws (CLI v2 recommended), sha256sum, flock,
+#               GNU date; gpg only if encryption is enabled.
+#
+# Authentication:
+#   * PostgreSQL: use ~/.pgpass, PGPASSFILE, or the PGPASSWORD environment variable.
+#     Passwords are never accepted on the command line.
+#   * AWS: standard credential chain (env vars, profile, instance role, SSO, etc.).
+#
+# Exit codes:
+#   0 success
+#   1 general/runtime error
+#   2 usage/configuration error
+#   3 another instance is already running
+#
+
+set -Eeuo pipefail
+shopt -s inherit_errexit 2>/dev/null || true
+umask 077
+
+readonly SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+readonly SCRIPT_VERSION="1.0.0"
+
+# --------------------------------------------------------------------------------------
+# Defaults (override via environment or command-line flags)
+# --------------------------------------------------------------------------------------
+PGHOST="${PGHOST:-localhost}"
+PGPORT="${PGPORT:-5432}"
+PGUSER="${PGUSER:-postgres}"
+PGDATABASE="${PGDATABASE:-}"
+
+S3_BUCKET="${S3_BUCKET:-}"
+S3_PREFIX="${S3_PREFIX:-postgres-backups}"
+S3_STORAGE_CLASS="${S3_STORAGE_CLASS:-STANDARD_IA}"
+S3_SSE="${S3_SSE:-AES256}"                  # AES256 or aws:kms
+S3_KMS_KEY_ID="${S3_KMS_KEY_ID:-}"          # used when S3_SSE=aws:kms
+S3_ENDPOINT_URL="${S3_ENDPOINT_URL:-}"      # for S3-compatible services
+AWS_PROFILE_NAME="${AWS_PROFILE_NAME:-}"
+AWS_REGION_NAME="${AWS_REGION_NAME:-${AWS_REGION:-${AWS_DEFAULT_REGION:-}}}"
+
+RETENTION_DAYS="${RETENTION_DAYS:-30}"
+KEEP_MIN="${KEEP_MIN:-7}"
+
+COMPRESS_LEVEL="${COMPRESS_LEVEL:-6}"
+PG_DUMP_JOBS_EXTRA_OPTS="${PG_DUMP_EXTRA_OPTS:-}"  # extra pg_dump options, space-separated
+
+GPG_RECIPIENT="${GPG_RECIPIENT:-}"
+GPG_PASSPHRASE_FILE="${GPG_PASSPHRASE_FILE:-}"
+
+WORK_DIR="${WORK_DIR:-${TMPDIR:-/tmp}}"
+LOCK_FILE="${LOCK_FILE:-/tmp/${SCRIPT_NAME%.sh}.lock}"
+LOG_FILE="${LOG_FILE:-}"
+NOTIFY_CMD="${NOTIFY_CMD:-}"                # invoked as: NOTIFY_CMD <status> <message>
+
+MAX_RETRIES="${MAX_RETRIES:-5}"
+RETRY_BASE_DELAY="${RETRY_BASE_DELAY:-5}"
+
+DRY_RUN="${DRY_RUN:-0}"
+SKIP_ROTATION="${SKIP_ROTATION:-0}"
+VERBOSE="${VERBOSE:-0}"
+
+# Runtime state
+TMP_DIR=""
+CURRENT_STEP="initialization"
+START_EPOCH="$(date +%s)"
+
+# --------------------------------------------------------------------------------------
+# Logging
+# --------------------------------------------------------------------------------------
+_log() {
+    local level="$1"; shift
+    local ts
+    ts="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+    local line="${ts} [${level}] ${SCRIPT_NAME}: $*"
+    printf '%s\n' "$line" >&2
+    if [[ -n "$LOG_FILE" ]]; then
+        printf '%s\n' "$line" >>"$LOG_FILE" 2>/dev/null || true
+    fi
+}
+log_info()  { _log INFO "$@"; }
+log_warn()  { _log WARN "$@"; }
+log_error() { _log ERROR "$@"; }
+log_debug() { [[ "$VERBOSE" == "1" ]] && _log DEBUG "$@" || true; }
+
+die() {
+    local code="${2:-1}"
+    log_error "$1"
+    notify "FAILURE" "$1"
+    exit "$code"
+}
+
+notify() {
+    local status="$1" message="$2"
+    [[ -z "$NOTIFY_CMD" ]] && return 0
+    # Notification failures must never mask the real outcome.
+    if ! "$NOTIFY_CMD" "$status" "[${PGDATABASE:-unknown}@${PGHOST}] ${message}" >/dev/null 2>&1; then
+        log_warn "Notification command failed: $NOTIFY_CMD"
+    fi
+}
+
+# --------------------------------------------------------------------------------------
+# Traps
+# --------------------------------------------------------------------------------------
+cleanup() {
+    local rc=$?
+    if [[ -n "$TMP_DIR" && -d "$TMP_DIR" ]]; then
+        rm -rf -- "$TMP_DIR"
+        log_debug "Removed temporary directory $TMP_DIR"
+    fi
+    return "$rc"
+}
+
+on_error() {
+    local rc=$? line="${1:-?}" cmd="${2:-?}"
+    trap - ERR
+    log_error "Failed during step '${CURRENT_STEP}' (line ${line}, exit ${rc}): ${cmd}"
+    notify "FAILURE" "Backup failed during '${CURRENT_STEP}' (exit ${rc})"
+    exit "$rc"
+}
+
+on_signal() {
+    local sig="$1"
+    trap - ERR
+    log_error "Received signal ${sig}; aborting during step '${CURRENT_STEP}'"
+    notify "FAILURE" "Backup aborted by signal ${sig}"
+    exit 130
+}
+
+trap cleanup EXIT
+trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
+trap 'on_signal INT' INT
+trap 'on_signal TERM' TERM
+trap 'on_signal HUP' HUP
+
+# --------------------------------------------------------------------------------------
+# Usage
+# --------------------------------------------------------------------------------------
+usage() {
+    cat <<EOF
+${SCRIPT_NAME} v${SCRIPT_VERSION}
+Back up a PostgreSQL database to S3 with retention-based rotation.
+
+Usage: ${SCRIPT_NAME} [options]
+
+Database options:
+  -d, --database NAME        Database to back up (required) [PGDATABASE]
+  -H, --host HOST            Database host (default: ${PGHOST}) [PGHOST]
+  -p, --port PORT            Database port (default: ${PGPORT}) [PGPORT]
+  -U, --user USER            Database user (default: ${PGUSER}) [PGUSER]
+  -Z, --compress LEVEL       pg_dump compression level 0-9 (default: ${COMPRESS_LEVEL})
+
+S3 options:
+  -b, --bucket BUCKET        S3 bucket (required) [S3_BUCKET]
+  -P, --prefix PREFIX        Key prefix (default: ${S3_PREFIX}) [S3_PREFIX]
+      --storage-class CLASS  S3 storage class (default: ${S3_STORAGE_CLASS})
+      --sse MODE             AES256 or aws:kms (default: ${S3_SSE})
+      --kms-key-id ID        KMS key id when --sse aws:kms
+      --endpoint-url URL     Custom S3 endpoint
+      --profile NAME         AWS CLI profile
+      --region REGION        AWS region
+
+Rotation options:
+  -r, --retention-days N     Delete backups older than N days (default: ${RETENTION_DAYS})
+  -k, --keep-min N           Always keep at least N newest backups (default: ${KEEP_MIN})
+      --skip-rotation        Do not delete old backups
+
+Encryption options:
+      --gpg-recipient ID     Encrypt to this GPG public key
+      --gpg-passphrase-file F  Symmetric encryption using passphrase from file
+
+Misc options:
+  -w, --work-dir DIR         Directory for temporary files (default: ${WORK_DIR})
+  -l, --log-file FILE        Also append logs to FILE
+      --lock-file FILE       Lock file path (default: ${LOCK_FILE})
+      --notify-cmd CMD       Executable called as: CMD <SUCCESS|FAILURE> <message>
+      --retries N            Max attempts for network operations (default: ${MAX_RETRIES})
+  -n, --dry-run              Perform dump and checks, but do not upload or delete
+  -v, --verbose              Enable debug logging
+  -h, --help                 Show this help
+  -V, --version              Show version
+
+Password: use ~/.pgpass, PGPASSFILE, or PGPASSWORD. Never pass passwords as arguments.
+EOF
+}
+
+# --------------------------------------------------------------------------------------
+# Argument parsing
+# --------------------------------------------------------------------------------------
+require_arg() {
+    if [[ $# -lt 2 || -z "$2" || "$2" == -* ]]; then
+        log_error "Option $1 requires a value"
+        usage >&2
+        exit 2
+    fi
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d|--database)        require_arg "$@"; PGDATABASE="$2"; shift 2 ;;
+            -H|--host)            require_arg "$@"; PGHOST="$2"; shift 2 ;;
+            -p|--port)            require_arg "$@"; PGPORT="$2"; shift 2 ;;
+            -U|--user)            require_arg "$@"; PGUSER="$2"; shift 2 ;;
+            -Z|--compress)        require_arg "$@"; COMPRESS_LEVEL="$2"; shift 2 ;;
+            -b|--bucket)          require_arg "$@"; S3_BUCKET="$2"; shift 2 ;;
+            -P|--prefix)          require_arg "$@"; S3_PREFIX="$2"; shift 2 ;;
+            --storage-class)      require_arg "$@"; S3_STORAGE_CLASS="$2"; shift 2 ;;
+            --sse)                require_arg "$@"; S3_SSE="$2"; shift 2 ;;
+            --kms-key-id)         require_arg "$@"; S3_KMS_KEY_ID="$2"; shift 2 ;;
+            --endpoint-url)       require_arg "$@"; S3_ENDPOINT_URL="$2"; shift 2 ;;
+            --profile)            require_arg "$@"; AWS_PROFILE_NAME="$2"; shift 2 ;;
+            --region)             require_arg "$@"; AWS_REGION_NAME="$2"; shift 2 ;;
+            -r|--retention-days)  require_arg "$@"; RETENTION_DAYS="$2"; shift 2 ;;
+            -k|--keep-min)        require_arg "$@"; KEEP_MIN="$2"; shift 2 ;;
+            --skip-rotation)      SKIP_ROTATION=1; shift ;;
+            --gpg-recipient)      require_arg "$@"; GPG_RECIPIENT="$2"; shift 2 ;;
+            --gpg-passphrase-file) require_arg "$@"; GPG_PASSPHRASE_FILE="$2"; shift 2 ;;
+            -w|--work-dir)        require_arg "$@"; WORK_DIR="$2"; shift 2 ;;
+            -l|--log-file)        require_arg "$@"; LOG_FILE="$2"; shift 2 ;;
+            --lock-file)          require_arg "$@"; LOCK_FILE="$2"; shift 2 ;;
+            --notify-cmd)         require_arg "$@"; NOTIFY_CMD="$2"; shift 2 ;;
+            --retries)            require_arg "$@"; MAX_RETRIES="$2"; shift 2 ;;
+            -n|--dry-run)         DRY_RUN=1; shift ;;
+            -v|--verbose)         VERBOSE=1; shift ;;
+            -h|--help)            usage; exit 0 ;;
+            -V|--version)         printf '%s %s\n' "$SCRIPT_NAME" "$SCRIPT_VERSION"; exit 0 ;;
+            --)                   shift; break ;;
+            *)                    log_error "Unknown option: $1"; usage >&2; exit 2 ;;
+        esac
+    done
+    if [[ $# -gt 0 ]]; then
+        log_error "Unexpected positional arguments: $*"
+        usage >&2
+        exit 2
+    fi
+}
+
+# --------------------------------------------------------------------------------------
+# Validation
+# --------------------------------------------------------------------------------------
+is_uint() { [[ "$1" =~ ^[0-9]+$ ]]; }
+
+validate_config() {
+    CURRENT_STEP="validation"
+    local errors=0
+
+    [[ -n "$PGDATABASE" ]] || { log_error "Database name is required (--database or PGDATABASE)"; errors=$((errors + 1)); }
+    [[ -n "$S3_BUCKET" ]]  || { log_error "S3 bucket is required (--bucket or S3_BUCKET)"; errors=$((errors + 1)); }
+
+    if [[ -n "$S3_BUCKET" && ! "$S3_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]; then
+        log_error "Invalid S3 bucket name: $S3_BUCKET"; errors=$((errors + 1))
+    fi
+
+    is_uint "$PGPORT" && (( PGPORT >= 1 && PGPORT <= 65535 )) \
+        || { log_error "Invalid port: $PGPORT"; errors=$((errors + 1)); }
+    is_uint "$COMPRESS_LEVEL" && (( COMPRESS_LEVEL <= 9 )) \
+        || { log_error "Compression level must be 0-9: $COMPRESS_LEVEL"; errors=$((errors + 1)); }
+    is_uint "$RETENTION_DAYS" && (( RETENTION_DAYS >= 1 )) \
+        || { log_error "Retention days must be a positive integer: $RETENTION_DAYS"; errors=$((errors + 1)); }
+    is_uint "$KEEP_MIN" && (( KEEP_MIN >= 1 )) \
+        || { log_error "keep-min must be a positive integer: $KEEP_MIN"; errors=$((errors + 1)); }
+    is_uint "$MAX_RETRIES" && (( MAX_RETRIES >= 1 )) \
+        || { log_error "retries must be a positive integer: $MAX_RETRIES"; errors=$((errors + 1)); }
+    is_uint "$RETRY_BASE_DELAY" \
+        || { log_error "RETRY_BASE_DELAY must be a non-negative integer"; errors=$((errors + 1)); }
+
+    case "$S3_SSE" in
+        AES256) ;;
+        aws:kms) ;;
+        *) log_error "Unsupported --sse value: $S3_SSE (use AES256 or aws:kms)"; errors=$((errors + 1)) ;;
+    esac
+
+    if [[ -n "$GPG_RECIPIENT" && -n "$GPG_PASSPHRASE_FILE" ]]; then
+        log_error "Use either --gpg-recipient or --gpg-passphrase-file, not both"; errors=$((errors + 1))
+    fi
+    if [[ -n "$GPG_PASSPHRASE_FILE" && ! -r "$GPG_PASSPHRASE_FILE" ]]; then
+        log_error "GPG passphrase file is not readable: $GPG_PASSPHRASE_FILE"; errors=$((errors + 1))
+    fi
+
+    if [[ ! -d "$WORK_DIR" || ! -w "$WORK_DIR" ]]; then
+        log_error "Work directory does not exist or is not writable: $WORK_DIR"; errors=$((errors + 1))
+    fi
+
+    # Normalise prefix: strip leading/trailing slashes.
+    S3_PREFIX="${S3_PREFIX#/}"
+    S3_PREFIX="${S3_PREFIX%/}"
+
+    if (( errors > 0 )); then
+        notify "FAILURE" "Configuration invalid (${errors} error(s))"
+        exit 2
+    fi
+}
+
+check_dependencies() {
+    CURRENT_STEP="dependency check"
+    local missing=() cmd
+    local required=(pg_dump pg_restore aws sha256sum flock date awk sort stat)
+    if [[ -n "$GPG_RECIPIENT" || -n "$GPG_PASSPHRASE_FILE" ]]; then
+        required+=(gpg)
+    fi
+    for cmd in "${required[@]}"; do
+        command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
+    done
+    if (( ${#missing[@]} > 0 )); then
+        die "Missing required commands: ${missing[*]}" 2
+    fi
+    if ! date -u -d '1970-01-01T00:00:00Z' +%s >/dev/null 2>&1; then
+        die "GNU date is required (date -d support)" 2
+    fi
+    if (( BASH_VERSINFO[0] < 4 )); then
+        die "bash >= 4 is required" 2
+    fi
+}
+
+# --------------------------------------------------------------------------------------
+# Helpers
+# --------------------------------------------------------------------------------------
+aws_cli() {
+    local args=()
+    [[ -n "$AWS_PROFILE_NAME" ]] && args+=(--profile "$AWS_PROFILE_NAME")
+    [[ -n "$AWS_REGION_NAME" ]]  && args+=(--region "$AWS_REGION_NAME")
+    [[ -n "$S3_ENDPOINT_URL" ]]  && args+=(--endpoint-url "$S3_ENDPOINT_URL")
+    aws "${args[@]}" "$@"
+}
+
+# retry <description> <command...>
+retry() {
+    local desc="$1"; shift
+    local attempt=1 delay rc
+    while true; do
+        if "$@"; then
+            return 0
+        else
+            rc=$?
+        fi
+        if (( attempt >= MAX_RETRIES )); then
+            log_error "${desc}: failed after ${attempt} attempt(s) (exit ${rc})"
+            return "$rc"
+        fi
+        delay=$(( RETRY_BASE_DELAY * (2 ** (attempt - 1)) ))
+        (( delay > 300 )) && delay=300
+        log_warn "${desc}: attempt ${attempt}/${MAX_RETRIES} failed (exit ${rc}); retrying in ${delay}s"
+        sleep "$delay"
+        attempt=$((attempt + 1))
+    done
+}
+
+human_size() {
+    local bytes="$1"
+    awk -v b="$bytes" 'BEGIN {
+        split("B KiB MiB GiB TiB", u, " "); i = 1
+        while (b >= 1024 && i < 5) { b /= 1024; i++ }
+        printf (i == 1 ? "%d %s" : "%.2f %s"), b, u[i]
+    }'
+}
+
+file_size() { stat -c %s -- "$1"; }
+
+sanitize_name() {
+    # Restrict to safe characters for filenames and S3 keys.
+    printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '_'
+}
+
+s3_key_base() {
+    if [[ -n "$S3_PREFIX" ]]; then
+        printf '%s/%s/' "$S3_PREFIX" "$(sanitize_name "$PGDATABASE")"
+    else
+        printf '%s/' "$(sanitize_name "$PGDATABASE")"
+    fi
+}
+
+acquire_lock() {
+    CURRENT_STEP="lock acquisition"
+    local lock_dir
+    lock_dir="$(dirname -- "$LOCK_FILE")"
+    [[ -d "$lock_dir" && -w "$lock_dir" ]] || die "Lock directory not writable: $lock_dir" 2
+    exec 9>"$LOCK_FILE"
+    if ! flock -n 9; then
+        log_error "Another instance is already running (lock: $LOCK_FILE)"
+        notify "FAILURE" "Skipped: another backup instance is already running"
+        exit 3
+    fi
+    log_debug "Acquired lock $LOCK_FILE"
+}
+
+# --------------------------------------------------------------------------------------
+# Steps
+# --------------------------------------------------------------------------------------
+check_connectivity() {
+    CURRENT_STEP="connectivity check"
+    log_info "Checking S3 bucket access: s3://${S3_BUCKET}"
+    retry "S3 bucket check" aws_cli s3api head-bucket --bucket "$S3_BUCKET" >/dev/null \
+        || die "Cannot access S3 bucket '${S3_BUCKET}'. Check credentials and permissions."
+
+    if command -v pg_isready >/dev/null 2>&1; then
+        log_info "Checking PostgreSQL availability at ${PGHOST}:${PGPORT}"
+        retry "PostgreSQL readiness check" \
+            pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -t 10 >/dev/null \
+            || die "PostgreSQL at ${PGHOST}:${PGPORT} is not accepting connections"
+    fi
+}
+
+check_disk_space() {
+    CURRENT_STEP="disk space check"
+    local avail_kb
+    avail_kb="$(df -Pk -- "$WORK_DIR" | awk 'NR==2 {print $4}')"
+    if [[ -z "$avail_kb" ]] || ! is_uint "$avail_kb"; then
+        log_warn "Could not determine free space in $WORK_DIR"
+        return 0
+    fi
+    log_info "Free space in ${WORK_DIR}: $(human_size $((avail_kb * 1024)))"
+    if (( avail_kb < 1048576 )); then
+        log_warn "Less than 1 GiB free in ${WORK_DIR}; the dump may fail"
+    fi
+}
+
+dump_database() {
+    CURRENT_STEP="pg_dump"
+    local out="$1"
+    local extra_opts=()
+    if [[ -n "$PG_DUMP_JOBS_EXTRA_OPTS" ]]; then
+        # Intentional word splitting of user-provided extra options.
+        read -r -a extra_opts <<<"$PG_DUMP_JOBS_EXTRA_OPTS"
+    fi
+
+    log_info "Dumping database '${PGDATABASE}' from ${PGUSER}@${PGHOST}:${PGPORT}"
+    local stderr_file="${TMP_DIR}/pg_dump.stderr"
+    if ! pg_dump \
+            --host="$PGHOST" \
+            --port="$PGPORT" \
+            --username="$PGUSER" \
+            --dbname="$PGDATABASE" \
+            --format=custom \
+            --compress="$COMPRESS_LEVEL" \
+            --no-password \
+            --file="$out" \
+            "${extra_opts[@]}" 2>"$stderr_file"; then
+        log_error "pg_dump output: $(tail -n 20 "$stderr_file" 2>/dev/null)"
+        die "pg_dump failed for database '${PGDATABASE}'"
+    fi
+    if [[ -s "$stderr_file" ]]; then
+        log_warn "pg_dump warnings: $(tail -n 20 "$stderr_file")"
+    fi
+
+    [[ -s "$out" ]] || die "pg_dump produced an empty file"
+    log_info "Dump complete: $(human_size "$(file_size "$out")")"
+}
+
+verify_dump() {
+    CURRENT_STEP="dump verification"
+    local file="$1"
+    log_info "Verifying dump archive integrity"
+    local entries
+    if ! entries="$(pg_restore --list -- "$file" 2>"${TMP_DIR}/pg_restore.stderr" | grep -cv '^;' || true)"; then
+        die "pg_restore could not read the dump archive"
+    fi
+    if [[ -s "${TMP_DIR}/pg_restore.stderr" ]]; then
+        log_error "pg_restore output: $(tail -n 20 "${TMP_DIR}/pg_restore.stderr")"
+        die "Dump archive verification failed"
+    fi
+    log_info "Dump archive is valid (${entries} TOC entries)"
+}
+
+encrypt_file() {
+    CURRENT_STEP="encryption"
+    local in="$1" out="$2"
+    if [[ -n "$GPG_RECIPIENT" ]]; then
+        log_info "Encrypting dump for GPG recipient ${GPG_RECIPIENT}"
+        gpg --batch --yes --no-tty --trust-model always \
+            --recipient "$GPG_RECIPIENT" \
+            --output "$out" --encrypt -- "$in" \
+            || die "GPG public-key encryption failed"
+    else
+        log_info "Encrypting dump with symmetric passphrase"
+        gpg --batch --yes --no-tty --pinentry-mode loopback \
+            --passphrase-file "$GPG_PASSPHRASE_FILE" \
+            --symmetric --cipher-algo AES256 \
+            --output "$out" -- "$in" \
+            || die "GPG symmetric encryption failed"
+    fi
+    [[ -s "$out" ]] || die "Encryption produced an empty file"
+    rm -f -- "$in"
+}
+
+create_checksum() {
+    CURRENT_STEP="checksum"
+    local file="$1" sum_file="$2"
+    (cd -- "$(dirname -- "$file")" && sha256sum -- "$(basename -- "$file")") >"$sum_file" \
+        || die "Failed to compute checksum"
+    (cd -- "$(dirname -- "$file")" && sha256sum --check --quiet -- "$sum_file") \
+        || die "Checksum self-verification failed"
+    log_info "SHA-256: $(awk '{print $1}' "$sum_file")"
+}
+
+s3_upload() {
+    local src="$1" dest_key="$2" content_type="$3"
+    local args=(
+        s3 cp "$src" "s3://${S3_BUCKET}/${dest_key}"
+        --only-show-errors
+        --no-progress
+        --storage-class "$S3_STORAGE_CLASS"
+        --content-type "$content_type"
+        --sse "$S3_SSE"
+        --metadata "database=$(sanitize_name "$PGDATABASE"),host=$(sanitize_name "$PGHOST"),created-by=${SCRIPT_NAME}"
+    )
+    if [[ "$S3_SSE" == "aws:kms" && -n "$S3_KMS_KEY_ID" ]]; then
+        args+=(--sse-kms-key-id "$S3_KMS_KEY_ID")
+    fi
+    aws_cli "${args[@]}"
+}
+
+verify_remote_size() {
+    local key="$1" expected="$2"
+    local actual
+    actual="$(aws_cli s3api head-object --bucket "$S3_BUCKET" --key "$key" \
+        --query 'ContentLength' --output text)" || return 1
+    if [[ "$actual" != "$expected" ]]; then
+        log_error "Remote size mismatch for ${key}: expected ${expected}, got ${actual}"
+        return 1
+    fi
+}
+
+upload_backup() {
+    CURRENT_STEP="upload"
+    local file="$1" sum_file="$2" key_base="$3"
+    local key="${key_base}$(basename -- "$file")"
+    local sum_key="${key_base}$(basename -- "$sum_file")"
+    local size
+    size="$(file_size "$file")"
+
+    if [[ "$DRY_RUN" == "1" ]]; then
+        log_info "[dry-run] Would upload ${file} -> s3://${S3_BUCKET}/${key} ($(human_size "$size"))"
+        log_info "[dry-run] Would upload ${sum_file} -> s3://${S3_BUCKET}/${sum_key}"
+        return 0
+    fi
+
+    log_info "Uploading to s3://${S3_BUCKET}/${key} ($(human_size "$size"))"
+    retry "Upload of backup" s3_upload "$file" "$key" "application/octet-stream" \
+        || die "Failed to upload backup to S3"
+
+    CURRENT_STEP="upload verification"
+    retry "Remote verification" verify_remote_size "$key" "$size" \
+        || die "Uploaded object failed verification: s3://${S3_BUCKET}/${key}"
+
+    CURRENT_STEP="checksum upload"
+    retry "Upload of checksum" s3_upload "$sum_file" "$sum_key" "text/plain" \
+        || die "Failed to upload checksum file to S3"
+
+    log_info "Upload complete and verified"
+}
+
+rotate_backups() {
+    CURRENT_STEP="rotation"
+    local key_base="$1"
+
+    if [[ "$SKIP_ROTATION" == "1" ]]; then
+        log_info "Rotation skipped by request"
+        return 0
+    fi
+
+    log_info "Applying retention: delete backups older than ${RETENTION_DAYS} day(s), keep at least ${KEEP_MIN}"
+
+    local listing
+    listing="$(retry "List backups" aws_cli s3api list-objects-v2 \
+        --bucket "$S3_BUCKET" \
+        --prefix "$key_base" \
+        --query 'Contents[].[Key, LastModified]' \
+        --output text)" || die "Failed to list existing backups for rotation"
+
+    if [[ -z "$listing" || "$listing" == "None" ]]; then
+        log_info "No existing backups found under s3://${S3_BUCKET}/${key_base}"
+        return 0
+    fi
+
+    # Only consider primary backup objects (not checksum sidecars).
+    # Format per line: <epoch>\t<key>, sorted newest first.
+    local sorted=()
+    local key modified epoch
+    while IFS=$'\t' read -r key modified; do
+        [[ -z "$key" || "$key" == "None" ]] && continue
+        [[ "$key" == *.sha256 ]] && continue
+        [[ "$key" == *.dump || "$key" == *.dump.gpg ]] || continue
+        if ! epoch="$(date -u -d "$modified" +%s 2>/dev/null)"; then
+            log_warn "Could not parse LastModified '${modified}' for ${key}; skipping"
+            continue
+        fi
+        sorted+=("${epoch}"$'\t'"${key}")
+    done <<<"$listing"
+
+    local total=${#sorted[@]}
+    if (( total == 0 )); then
+        log_info "No backup objects eligible for rotation"
+        return 0
+    fi
+
+    mapfile -t sorted < <(printf '%s\n' "${sorted[@]}" | sort -t $'\t' -k1,1nr)
+
+    local cutoff now
+    now="$(date -u +%s)"
+    cutoff=$(( now - RETENTION_DAYS * 86400 ))
+
+    local idx=0 deleted=0 failed=0 entry obj_epoch obj_key
+    for entry in "${sorted[@]}"; do
+        idx=$((idx + 1))
+        obj_epoch="${entry%%$'\t'*}"
+        obj_key="${entry#*$'\t'}"
+
+        if (( idx <= KEEP_MIN )); then
+            log_debug "Keeping (within newest ${KEEP_MIN}): ${obj_key}"
+            continue
+        fi
+        if (( obj_epoch >= cutoff )); then
+            log_debug "Keeping (within retention): ${obj_key}"
+            continue
+        fi
+
+        if [[ "$DRY_RUN" == "1" ]]; then
+            log_info "[dry-run] Would delete s3://${S3_BUCKET}/${obj_key} (+ .sha256)"
+            deleted=$((deleted + 1))
+            continue
+        fi
+
+        log_info "Deleting expired backup s3://${S3_BUCKET}/${obj_key}"
+        if retry "Delete ${obj_key}" aws_cli s3api delete-object \
+                --bucket "$S3_BUCKET" --key "$obj_key" >/dev/null; then
+            deleted=$((deleted + 1))
+            # Sidecar checksum: best effort.
+            aws_cli s3api delete-object --bucket "$S3_BUCKET" --key "${obj_key}.sha256" >/dev/null 2>&1 \
+                || log_warn "Could not delete checksum sidecar ${obj_key}.sha256"
+        else
+            failed=$((failed + 1))
+        fi
+    done
+
+    log_info "Rotation complete: ${total} backup(s) found, ${deleted} deleted, ${failed} failed"
+    if (( failed > 0 )); then
+        die "Rotation completed with ${failed} deletion failure(s)"
+    fi
+}
+
+# --------------------------------------------------------------------------------------
+# Main
+# --------------------------------------------------------------------------------------
+main() {
+    parse_args "$@"
+
+    if [[ -n "$LOG_FILE" ]]; then
+        touch -- "$LOG_FILE" 2>/dev/null || { LOG_FILE=""; log_warn "Log file not writable; logging to stderr only"; }
+    fi
+
+    validate_config
+    check_dependencies
+    acquire_lock
+
+    export PGHOST PGPORT PGUSER PGDATABASE PGCONNECT_TIMEOUT="${PGCONNECT_TIMEOUT:-15}"
+
+    log_info "Starting backup v${SCRIPT_VERSION} for database '${PGDATABASE}'$( [[ "$DRY_RUN" == "1" ]] && printf ' (dry-run)')"
+
+    TMP_DIR="$(mktemp -d -- "${WORK_DIR%/}/${SCRIPT_NAME%.sh}.XXXXXXXX")" \
+        || die "Failed to create temporary directory in ${WORK_DIR}"
+
+    check_connectivity
+    check_disk_space
+
+    local timestamp safe_db base_name dump_file final_file sum_file key_base
+    timestamp="$(date -u +'%Y%m%dT%H%M%SZ')"
+    safe_db="$(sanitize_name "$PGDATABASE")"
+    base_name="${safe_db}_${timestamp}"
+    dump_file="${TMP_DIR}/${base_name}.dump"
+    key_base="$(s3_key_base)"
+
+    dump_database "$dump_file"
+    verify_dump "$dump_file"
+
+    final_file="$dump_file"
+    if [[ -n "$GPG_RECIPIENT" || -n "$GPG_PASSPHRASE_FILE" ]]; then
+        final_file="${dump_file}.gpg"
+        encrypt_file "$dump_file" "$final_file"
+    fi
+
+    sum_file="${final_file}.sha256"
+    create_checksum "$final_file" "$sum_file"
+
+    local final_size
+    final_size="$(file_size "$final_file")"
+
+    upload_backup "$final_file" "$sum_file" "$key_base"
+    rotate_backups "$key_base"
+
+    CURRENT_STEP="complete"
+    local elapsed=$(( $(date +%s) - START_EPOCH ))
+    local msg="Backup of '${PGDATABASE}' completed in ${elapsed}s ($(human_size "$final_size")) -> s3://${S3_BUCKET}/${key_base}$(basename -- "$final_file")"
+    [[ "$DRY_RUN" == "1" ]] && msg="[dry-run] ${msg}"
+    log_info "$msg"
+    notify "SUCCESS" "$msg"
+}
+
+main "$@"
