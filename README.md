@@ -78,3 +78,5 @@ under "settings and privacy"; it is stored only in their browser.
   - Ben Kuhn
   - Books not freely viewable on the Internet (nonfiction, fiction, maybe poetry)
   - Screenplays
+  - Lecture notes or transcripts (from MIT OCW, Coursera, etc)
+  - Textbooks
