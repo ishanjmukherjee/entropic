@@ -29,4 +29,14 @@ In summary, neural networks learn by making predictions, measuring how wrong the
 };
 
 // Mean surprisal of each sample, in bits per token, per scoring model.
-window.REFERENCES = [];
+window.REFERENCES = [
+  {"model": "moonshotai/Kimi-K3", "sample": "classic", "bits": 0.08, "label": "memorized classic", "phrase": "the Gettysburg Address, which it has memorized"},
+  {"model": "moonshotai/Kimi-K3", "sample": "explainer", "bits": 0.93, "label": "LLM explainer", "phrase": "an explainer written by an LLM"},
+  {"model": "moonshotai/Kimi-K3", "sample": "pitch", "bits": 3.77, "label": "human pitch", "phrase": "a short pitch written by a person"},
+  {"model": "moonshotai/Kimi-K2.6", "sample": "classic", "bits": 0.15, "label": "memorized classic", "phrase": "the Gettysburg Address, which it has memorized"},
+  {"model": "moonshotai/Kimi-K2.6", "sample": "explainer", "bits": 1.16, "label": "LLM explainer", "phrase": "an explainer written by an LLM"},
+  {"model": "moonshotai/Kimi-K2.6", "sample": "pitch", "bits": 4.08, "label": "human pitch", "phrase": "a short pitch written by a person"},
+  {"model": "deepseek-ai/DeepSeek-V4-Flash", "sample": "classic", "bits": 0.07, "label": "memorized classic", "phrase": "the Gettysburg Address, which it has memorized"},
+  {"model": "deepseek-ai/DeepSeek-V4-Flash", "sample": "explainer", "bits": 1.13, "label": "LLM explainer", "phrase": "an explainer written by an LLM"},
+  {"model": "deepseek-ai/DeepSeek-V4-Flash", "sample": "pitch", "bits": 4.28, "label": "human pitch", "phrase": "a short pitch written by a person"},
+];

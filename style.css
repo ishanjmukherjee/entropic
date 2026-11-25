@@ -106,23 +106,18 @@ button.link:hover { text-decoration-color: var(--ink); }
 .stats dd small { font-size: 13px; font-weight: 400; color: var(--soft); letter-spacing: 0; margin-left: 4px; }
 .stats div { display: flex; flex-direction: column; }
 
-.ruler { position: relative; height: 74px; margin: 0 0 2px; }
-.ruler .track {
-  position: absolute; left: 0; right: 0; top: 34px; height: 8px; border-radius: 2px;
-}
-.ruler .ref { position: absolute; top: 46px; transform: translateX(-50%); font-size: 11px; color: var(--soft); white-space: nowrap; text-align: center; line-height: 1.3; }
-.ruler .ref::before { content: ""; display: block; width: 1px; height: 6px; background: var(--soft); margin: 0 auto 2px; }
-.ruler .ref.left { transform: none; text-align: left; }
-.ruler .ref.left::before { margin-left: 0; }
-.ruler .ref.right { transform: translateX(-100%); text-align: right; }
-.ruler .ref.right::before { margin-right: 0; }
+.ruler { position: relative; padding-top: 54px; margin: 0 0 2px; }
+.ruler .track { position: absolute; left: 0; right: 0; top: 34px; height: 8px; border-radius: 2px; }
+.ruler .tick { position: absolute; top: 43px; width: 1px; height: 7px; background: var(--soft); }
+.ruler .refs { margin: 0; font-size: 11px; color: var(--soft); }
+.ruler .refs span { white-space: nowrap; }
 .ruler .you { position: absolute; top: 0; transform: translateX(-50%); font-size: 12px; font-weight: 600; white-space: nowrap; text-align: center; line-height: 1.3; }
 .ruler .you::after { content: ""; display: block; width: 2px; height: 24px; background: var(--ink); margin: 2px auto 0; }
 .ruler .you.left { transform: none; text-align: left; }
 .ruler .you.left::after { margin-left: 0; }
 .ruler .you.right { transform: translateX(-100%); text-align: right; }
 .ruler .you.right::after { margin-right: 0; }
-.verdict { margin: 8px 0 26px; color: var(--soft); max-width: 72ch; }
+.verdict { margin: 4px 0 26px; color: var(--soft); max-width: 72ch; }
 .verdict b { color: var(--ink); font-weight: 500; }
 
 .tools { margin: 0 0 12px; }
@@ -203,5 +198,4 @@ details.note p { max-width: 72ch; margin: 12px 0 0; }
   .stats dd { font-size: 22px; }
   .lists { grid-template-columns: 1fr; }
   .legend i { width: 72px; }
-  .ruler .ref { font-size: 10px; }
 }

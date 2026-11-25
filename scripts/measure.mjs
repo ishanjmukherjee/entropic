@@ -8,15 +8,17 @@ import vm from "node:vm";
 const root = new URL("..", import.meta.url);
 const read = (name) => fs.readFileSync(new URL(name, root), "utf8");
 
-const sandbox = { window: {} };
+const sandbox = { window: {}, TextDecoder };
 vm.runInNewContext(read("samples.js"), sandbox);
+vm.runInNewContext(read("score.js"), sandbox);
 const samples = sandbox.window.SAMPLES;
+const { alignTokens } = sandbox.window.Entropic;
 const models = JSON.parse(read("main.js").match(/models:\s*(\[[^\]]*\])/)[1]);
 const key = process.env.FEATHERLESS_API_KEY;
 if (!key) throw new Error("set FEATHERLESS_API_KEY");
 
 const labels = {
-  classic: ["Gettysburg Address", "the Gettysburg Address, which it has memorized"],
+  classic: ["memorized classic", "the Gettysburg Address, which it has memorized"],
   explainer: ["LLM explainer", "an explainer written by an LLM"],
   pitch: ["human pitch", "a short pitch written by a person"],
 };
@@ -39,17 +41,8 @@ async function meanBits(model, prompt) {
     }
   }
   if (!best) throw new Error(`${model}: no logprobs returned`);
-  // Walk the echoed tokens across the prompt; skip the leading special token
-  // and the one generated token after the prompt.
-  let pos = 0, sum = 0, n = 0;
-  for (let i = 0; i < best.tokens.length && pos < prompt.length; i++) {
-    const lp = best.token_logprobs[i];
-    if (i === 0 && lp == null && !prompt.startsWith(best.tokens[i])) continue;
-    pos += best.tokens[i].length;
-    if (lp != null) { sum += -lp / Math.LN2; n++; }
-  }
-  if (pos < prompt.length) throw new Error(`${model}: the prompt was not echoed in full`);
-  return sum / n;
+  const scored = alignTokens(prompt, best, 0).filter((t) => t.lp != null);
+  return scored.reduce((sum, t) => sum - t.lp / Math.LN2, 0) / scored.length;
 }
 
 const out = [];

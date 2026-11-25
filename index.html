@@ -31,7 +31,7 @@
     </nav>
   </header>
 
-  <p class="lede">Could an LLM have written your essay? Paste it in. A base model reads it one word at a time, guessing what comes next. <mark class="g">Green</mark> is what it saw coming; <mark class="r">red</mark> is what it could not have guessed.</p>
+  <p class="lede">Could an LLM have written your essay? Paste it in. A language model reads it one word at a time, guessing what comes next. <mark class="g">Green</mark> is what it saw coming; <mark class="r">red</mark> is what it could not have guessed.</p>
 
   <section id="editor" aria-label="Your text">
     <textarea id="text" spellcheck="false" autocomplete="off" placeholder="paste your essay here"></textarea>
@@ -70,16 +70,16 @@
 
   <details class="note">
     <summary>how to read this</summary>
-    <p>A base language model is a next-word predictor trained on a large slice of the public internet. For every token of your text (a word or a piece of one), we ask how much probability the model gave to the token you actually wrote, given everything before it. That probability is turned into <em>surprisal</em>: 0 bits means the model was certain, each extra bit means half as likely. A token at 10 bits was a one-in-a-thousand guess.</p>
+    <p>Underneath, a language model is a next-word predictor trained on a large slice of the public internet. For every token of your text (a word or a piece of one), we ask how much probability the model gave to the token you actually wrote, given everything before it. That probability is turned into <em>surprisal</em>: 0 bits means the model was certain, each extra bit means half as likely. A token at 10 bits was a one-in-a-thousand guess.</p>
     <p>If the page is mostly green, you are restating what the model already knows, and a reader could have gotten it by asking one. Red is where you are adding something: a claim, a detail, a turn of phrase it had no way to anticipate. Hover or tap any token to see what the model expected instead.</p>
-    <p>Caveats worth keeping in mind. Names, numbers, and typos are surprising without being insightful, so read red as "information", not "quality". Famous passages the model has memorized come out green even though a person wrote them. Later parts of a text are judged knowing the earlier parts, so a term you coined turns green once you have used it a few times. And the score depends on the model: this one is <span id="model-name"></span>, a pretrained model with no chat tuning.</p>
+    <p>Caveats worth keeping in mind. Names, numbers, and typos are surprising without being insightful, so read red as "information", not "quality". Famous passages the model has memorized come out green even though a person wrote them. Later parts of a text are judged knowing the earlier parts, so a term you coined turns green once you have used it a few times. And the score depends on the model: this one is <span id="model-name"></span>, given your text with no instructions and no chat formatting, so it acts as a plain next-word predictor. That setup was chosen by <a href="https://github.com/ishanjmukherjee/entropic/blob/main/eval/RESULTS.md" target="_blank" rel="noopener">a preregistered test</a> on recent human writing no model had seen.</p>
     <p>The idea follows Gwern's advice on <a href="https://gwern.net/llm-writing" target="_blank" rel="noopener">writing for LLMs</a>: the text worth publishing is the text a model could not have produced on its own.</p>
   </details>
 
   <details class="note">
     <summary>settings and privacy</summary>
     <p>Your text is sent from your browser straight to <a href="https://featherless.ai" target="_blank" rel="noopener">Featherless</a> for scoring and is not stored by this site. There is no server behind this page.</p>
-    <p>Scoring runs on a small shared budget. If it runs dry, or you would rather use your own, paste a Featherless API key below. It is kept only in this browser.</p>
+    <p>Scoring runs on a small shared budget, which also caps each text at about 10,000 words. If the budget runs dry, or you want longer texts, paste your own Featherless API key below. It is kept only in this browser.</p>
     <p class="keyrow">
       <label for="key">API key</label>
       <input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="using the shared key">
@@ -89,6 +89,7 @@
 </main>
 
 <div id="tip" class="tip" hidden></div>
+<script src="score.js"></script>
 <script src="samples.js"></script>
 <script src="main.js"></script>
 </body>

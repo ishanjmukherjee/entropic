@@ -1,23 +1,29 @@
 # entropic
 
 Could an LLM have written your essay? Paste text in and see which tokens a
-pretrained language model saw coming (green) and which it could not have
+language model saw coming (green) and which it could not have
 guessed (red).
 
 Live at https://ishanjmukherjee.github.io/entropic/
 
 ## How it works
 
-The page sends your text to a pretrained, non-chat model and reads back the
+The page sends your text to a language model and reads back the
 log-probability the model assigned to each token given everything before it.
 Each token is shaded by its surprisal, `-log2(p)`: 0 bits means the model was
 certain, 10 bits means a one-in-a-thousand guess. The summary reports mean
 surprisal in bits per token and how often your token was the model's first
 guess. Hovering a token shows what the model expected instead.
 
-The model is `google/gemma-4-26B-A4B` served by
-[Featherless](https://featherless.ai), with `google/gemma-4-E4B` as a smaller
-pretrained fallback when the first is at capacity.
+The text is the entire prompt: no instructions, no chat formatting. The model
+is `moonshotai/Kimi-K3` served by [Featherless](https://featherless.ai), with
+`moonshotai/Kimi-K2.6` and `deepseek-ai/DeepSeek-V4-Flash` as fallbacks when
+it is busy. These are instruction-tuned models used as plain next-token
+predictors. That choice, and the choice of no hidden prompt, came out of a
+preregistered evaluation on recent human writing; see
+[eval/RESULTS.md](eval/RESULTS.md). A pretrained model would be the natural
+fit, but the only one callable this way (`google/gemma-4-26B-A4B`) is rarely
+available, and a direct comparison against it is still owed.
 
 Two Featherless behaviours shape the request in `main.js`:
 
@@ -25,19 +31,19 @@ Two Featherless behaviours shape the request in `main.js`:
   the non-streamed response has `logprobs: null`.
 - Only some model backends honour `echo: true`, which returns log-probabilities
   for the prompt itself. With it, a whole essay is scored in one request.
-  Models whose backend ignores `echo` (the Llama, Qwen, and Mistral base models
-  at the time of writing) would need one request per token.
 
 Long texts are split into windows of about 24,000 characters, each sent with
 4,000 characters of preceding context whose scores are discarded.
 
 ## Files
 
-- `index.html`, `style.css`, `main.js`: the whole app; there is no build step
-  and no server.
+- `index.html`, `style.css`, `main.js`, `score.js`: the whole app; there is no
+  build step and no server. `score.js` holds the token alignment and windowing.
 - `samples.js`: the three sample texts and their measured reference scores.
 - `scripts/measure.mjs`: re-measures the reference scores. Run it after
   changing a sample or the model list, and paste its output into `samples.js`.
+- `eval/`: the preregistration, corpus builder, runner and results for the
+  model and prompt choice.
 
 ## Running locally
 
@@ -50,6 +56,6 @@ Then open http://localhost:8000.
 ## The API key
 
 The Featherless key in `main.js` is public by design: a static page has
-nowhere to hide it. It is a prepaid key with a small balance. Visitors can
-supply their own key under "settings and privacy"; it is stored only in their
-browser.
+nowhere to hide it. It is a prepaid key with a small balance, and texts scored
+with it are capped at 60,000 characters. Visitors can supply their own key
+under "settings and privacy"; it is stored only in their browser.

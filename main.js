@@ -1,20 +1,26 @@
 "use strict";
 
 /*
-Scoring asks a pretrained (non-chat) model for the log-probability of every
-token of the text. Featherless only returns logprobs on streamed responses,
-and only some model backends honour `echo`, which is what makes one request
-per window possible. Models are tried in order; all are pretrained checkpoints.
+Scoring asks a model for the log-probability of every token of the text, with
+no instructions and no chat formatting: the essay is the whole prompt. The
+models are instruction-tuned, but the ones listed here still predict plain
+text well when used this way (see eval/RESULTS.md), and unlike pretrained
+checkpoints they are reliably available. They are tried in order.
+
+Featherless only returns logprobs on streamed responses, and only some model
+backends honour `echo`, which is what makes one request per window possible.
 */
 const CONFIG = {
   endpoint: "https://api.featherless.ai/v1/completions",
-  models: ["google/gemma-4-26B-A4B", "google/gemma-4-E4B"],
+  models: ["moonshotai/Kimi-K3", "moonshotai/Kimi-K2.6", "deepseek-ai/DeepSeek-V4-Flash"],
   // Public on purpose: this page has no server, so the key ships to every
   // visitor. It is a prepaid key with a small balance and nothing else on it.
   key: "rc_e85cf35c1f4d17f3cf1e4fa8bde905e43e43db02fd1cee2617083bece6317ce2",
   topK: 5,
   windowChars: 24000,
   contextChars: 4000,
+  // Longest text scored per run: on the shared key, and on a visitor's own.
+  sharedMaxChars: 60000,
   maxChars: 400000,
   retryDelaysMs: [2000, 5000, 10000],
 };
@@ -22,12 +28,12 @@ const CONFIG = {
 // Surprisal (bits) at which the colour scale is fully green, neutral, fully red.
 const SCALES = {
   token: { lo: 0, mid: 4, hi: 12 },
-  sentence: { lo: 0.5, mid: 3, hi: 6.5 },
+  sentence: { lo: 0.3, mid: 2.5, hi: 6 },
 };
 const GREEN = [143, 209, 154];
 const PAPER = [255, 254, 250];
 const RED = [240, 144, 127];
-const RULER_MAX = 7;
+const RULER_MAX = 6;
 const LN2 = Math.log(2);
 
 const $ = (id) => document.getElementById(id);
@@ -116,64 +122,8 @@ async function requestLogprobs(prompt, model, key, signal) {
   return best;
 }
 
-/*
-Turns one echoed response into [{text, token, lp, top}] covering `prompt`
-from `keepFrom` onward. The response lists a leading special token (no
-logprob) and one generated token after the prompt; both are dropped.
-*/
-function alignTokens(prompt, lp, keepFrom) {
-  const out = [];
-  let pos = 0;
-  for (let i = 0; i < lp.tokens.length && pos < prompt.length; i++) {
-    const tok = lp.tokens[i];
-    const logprob = lp.token_logprobs[i];
-    if (i === 0 && logprob == null && !prompt.startsWith(tok)) continue;
-    if (!tok) continue;
-    const start = pos;
-    const end = Math.min(prompt.length, pos + tok.length);
-    pos = end;
-    if (end <= keepFrom) continue;
-    const top = lp.top_logprobs && lp.top_logprobs[i]
-      ? Object.entries(lp.top_logprobs[i]).sort((a, b) => b[1] - a[1])
-      : [];
-    out.push({
-      text: prompt.slice(Math.max(start, keepFrom), end),
-      token: tok,
-      lp: logprob == null ? null : logprob,
-      top,
-    });
-  }
-  if (pos < Math.min(prompt.length, keepFrom + 1)) throw new ApiError("the model did not return the full text", { code: "no_echo" });
-  if (pos < prompt.length) out.push({ text: prompt.slice(Math.max(pos, keepFrom)), token: "", lp: null, top: [] });
-  return out;
-}
-
-// Splits long text into windows that each carry a little preceding context.
-function planWindows(text) {
-  const W = CONFIG.windowChars, C = CONFIG.contextChars;
-  const wins = [];
-  let start = 0;
-  while (start < text.length) {
-    let end = Math.min(text.length, start + W);
-    if (end < text.length) {
-      const floor = start + Math.floor(W * 0.7);
-      const para = text.lastIndexOf("\n", end);
-      const space = text.lastIndexOf(" ", end);
-      if (para > floor) end = para; else if (space > floor) end = space;
-    }
-    let ctx = Math.max(0, start - C);
-    if (ctx > 0) {
-      const brk = text.indexOf(" ", ctx);
-      if (brk > 0 && brk < start) ctx = brk;
-    }
-    wins.push({ prompt: text.slice(ctx, end), keepFrom: start - ctx });
-    start = end;
-  }
-  return wins;
-}
-
 async function scoreText(text, key, signal, onProgress) {
-  const wins = planWindows(text);
+  const wins = Entropic.planWindows(text, CONFIG.windowChars, CONFIG.contextChars);
   let model = null;
   const tokens = [];
   for (let w = 0; w < wins.length; w++) {
@@ -187,7 +137,13 @@ async function scoreText(text, key, signal, onProgress) {
         onProgress({ window: w, windows: wins.length, model: m, attempt });
         try {
           const lp = await requestLogprobs(wins[w].prompt, m, key, signal);
-          tokens.push(...alignTokens(wins[w].prompt, lp, wins[w].keepFrom));
+          let aligned;
+          try {
+            aligned = Entropic.alignTokens(wins[w].prompt, lp, wins[w].keepFrom);
+          } catch (e) {
+            throw new ApiError(e.message, { code: "no_echo" });
+          }
+          tokens.push(...aligned);
           model = m;
           done = true;
           break outer;
@@ -348,18 +304,25 @@ function renderRuler(mean, usedModel) {
   track.style.background = gradient(SCALES.sentence, RULER_MAX);
   const kids = [track];
   const refs = (window.REFERENCES || []).filter((r) => r.model === usedModel);
+  // References are ticks under the track, named in a line below in the same
+  // left-to-right order, so labels can never collide.
+  refs.sort((a, b) => a.bits - b.bits);
   for (const r of refs) {
-    const p = pct(r.bits);
-    const m = el("div", "ref" + edge(p));
-    m.style.left = `${p}%`;
-    m.append(document.createTextNode(r.label), el("br"), document.createTextNode(r.bits.toFixed(2)));
-    kids.push(m);
+    const tick = el("div", "tick");
+    tick.style.left = `${pct(r.bits)}%`;
+    kids.push(tick);
   }
   const p = pct(mean);
   const you = el("div", "you" + edge(p), `this text ${mean.toFixed(2)}`);
   you.style.left = `${p}%`;
   kids.push(you);
   els.ruler.replaceChildren(...kids);
+  const names = el("p", "refs");
+  refs.forEach((r, i) => {
+    if (i) names.append(" \u00b7 ");
+    names.append(el("span", null, `${r.label} ${r.bits.toFixed(2)}`));
+  });
+  if (refs.length) els.ruler.append(names);
 
   els.verdict.replaceChildren();
   if (refs.length >= 2) {
@@ -528,17 +491,20 @@ async function run() {
   if (state.busy) return;
   let text = els.text.value.replace(/\r\n?/g, "\n").replace(/\s+$/, "");
   if (!text.trim()) return;
+  const ownKey = (els.key.value || "").trim();
+  const limit = ownKey ? CONFIG.maxChars : CONFIG.sharedMaxChars;
   let note = "";
-  if (text.length > CONFIG.maxChars) {
-    text = text.slice(0, CONFIG.maxChars);
-    note = ` Only the first ${CONFIG.maxChars.toLocaleString()} characters were scored.`;
+  if (text.length > limit) {
+    text = text.slice(0, limit);
+    note = ` Only the first ${limit.toLocaleString()} characters were scored`
+      + (ownKey ? "." : "; add your own key under settings for longer texts.");
   }
   store("entropic:text", text.length <= 200000 ? text : null);
   state.busy = true;
   state.abort = new AbortController();
   updateCount();
   els.score.textContent = "scoring";
-  const key = (els.key.value || "").trim() || CONFIG.key;
+  const key = ownKey || CONFIG.key;
   try {
     const { tokens, model } = await scoreText(text, key, state.abort.signal, (p) => {
       const part = p.windows > 1 ? ` part ${p.window + 1} of ${p.windows}` : "";
@@ -554,7 +520,7 @@ async function run() {
     els.editor.hidden = true;
     els.result.hidden = false;
     const fb = model !== CONFIG.models[0]
-      ? ` The usual model was busy, so this used ${shortModel(model)}, a smaller pretrained model whose scores are not comparable.` : "";
+      ? ` The usual model was busy, so this used ${shortModel(model)}; its scores run a little higher.` : "";
     setStatus(`scored by ${shortModel(model)}.${fb}${note}`);
   } catch (err) {
     if (err.name !== "AbortError") setStatus(explain(err), true);
@@ -596,14 +562,20 @@ function init() {
   els.key.addEventListener("change", () => store("entropic:key", els.key.value.trim() || null));
   els.keyClear.addEventListener("click", () => { els.key.value = ""; store("entropic:key", null); });
 
-  els.heat.addEventListener("mouseover", (e) => {
+  // A mouse shows the tooltip on hover. A tap toggles it, and the mouse
+  // events browsers synthesise after a tap are ignored.
+  let tapped = false;
+  els.heat.addEventListener("pointerdown", (e) => { tapped = e.pointerType !== "mouse"; });
+  els.heat.addEventListener("pointerover", (e) => {
+    if (e.pointerType !== "mouse") return;
     const span = e.target.closest("span[data-i]");
     if (span) showTip(span);
   });
-  els.heat.addEventListener("mouseleave", hideTip);
+  els.heat.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hideTip(); });
   els.heat.addEventListener("click", (e) => {
+    if (!tapped) return;
     const span = e.target.closest("span[data-i]");
-    if (span && span !== tipFor) showTip(span); else if (!span) hideTip();
+    if (span && span !== tipFor) showTip(span); else hideTip();
   });
   document.addEventListener("click", (e) => { if (!els.heat.contains(e.target)) hideTip(); });
   window.addEventListener("resize", hideTip);
