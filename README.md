@@ -69,3 +69,4 @@ under "settings and privacy"; it is stored only in their browser.
 - Add more authors to the baseline.
   - https://diffuse.one/
   - Claude's Constitution(s)
+  - Frontier and neolab blog posts
