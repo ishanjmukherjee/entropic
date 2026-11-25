@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: insomnia. Form: a sonnet: keep the fourteen lines and the turn; rhyme only if the rhymes surprise.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-insomnia-craft-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "The two a.m. freight shakes the glass of this\nrented room above the Greenville yard.\nOutside, a switchman's lantern crossing track—\nI count the couplings slamming, car by car,\nlike sheep that no one anywhere has counted.\n\nThe clock my father wound still barks at twelve,\nlies to me twice, and I believe it twice.\nThe radiator knocks its one cold knuckle.\nDownstairs the landlord's dog wants out, wants in,\nwants out. I know the dog. The dog is right.\n\nAt three I peel the orange on the sill,\nand all the room takes notice of the smell\nthe way I used to notice, years ago,\na phone that rang at any hour for me—\n\nand now I eat it, section after section,\nwatching the switchman walk his lantern home.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 197,
+  "completion_tokens": 170,
+  "total_tokens": 367,
+  "cost": 0.0010238,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

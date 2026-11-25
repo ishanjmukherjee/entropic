@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "bare",
+ "prompt": "Write a poem about autumn. Output only the poem, with no title.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-autumn-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "The maples loosen what they held all summer,\na slow red letting-go along the lane,\nand every gust becomes a quiet drummer\ntapping the gutters with the coming rain.\n\nThe light grows thin and amber in the morning,\nit lingers low and leaves the garden early;\nthe geese write out their long and wavering warning\nacross a sky gone pale and pearly.\n\nThe apples soften sweetly in the grass,\nthe woodsmoke drifts from chimneys down the hill,\nand frost lays down its first thin sheet of glass\non puddles where the stars lie bright and still.\n\nSo let the year undress and turn to sleep;\nthere's beauty in the things we cannot keep.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

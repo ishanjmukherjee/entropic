@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "bare",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city. Output only the lyrics.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 900,
+ "id": "song-night-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "**\"City Don't Sleep\"**\n\n**[Intro]**\nYeah\nStreetlights on, phone on ten percent\nLet's ride\n\n**[Verse 1]**\nClock hit nine, I'm lacing up the fresh pair\nText from the crew, \"We outside,\" I'll be right there\nElevator down, got the lobby like a runway\nTomorrow's a problem for somebody else's Monday\nTrain pull up, hear the rattle and the hum\nBucket drummer on the platform keeping time for everyone\nSkyline blinking like it's sending me a code\nEvery window is a story that I'll never get told\nCorner store glow, grab a water and some gum\nOld head by the door saying, \"Stay out of trouble, son\"\nI just laugh, dap him up, keep it moving\nWhole block got a soundtrack, every car bumping music\n\n**[Hook]**\nCity don't sleep, so neither do we\nNeon in the puddles, bass in the street\nFrom the rooftop down to the corner bodega\nSay we going home, but we mean later\nCity don't sleep, so neither do we\nA million little lights and they're shining on me\nIf the night's still young, then we're younger than that\nHands up high if you're feeling that\n\n**[Verse 2]**\nLine around the block, but my man know the doorman\nSlide through the side, now we're stepping on the floor, and\nDJ cut the record right back to the break\nWhole room moved together like the building had a quake\nShorty in the corner with the gold hoops laughing\nSaid she liked my jacket, now we're talking, now we're dancing\nHomie spilled his drink trying to hit a two-step\nWe're never letting that go, he's gonna hear it till his deathbed\nStrobe light flicker, catch a freeze-frame smile\nHaven't felt this weightless in a real long while\nBills in the morning, boss on my line\nBut right now the only thing I'm clocking is the time\n\n**[Hook]**\nCity don't sleep, so neither do we\nNeon in the puddles, bass in the street\nFrom the rooftop down to the corner bodega\nSay we going home, but we mean later\nCity don't sleep, so neither do we\nA million little lights and they're shining on me\nIf the night's still young, then we're younger than that\nHands up high if you're feeling that\n\n**[Bridge]**\nTwo a.m., steam rising off the grate\nHalal cart smoke, extra white sauce on the plate\nSitting on the curb like a king on a throne\nWhole crew talking loud, not a soul on their phone\nTaxi cabs sliding by like yellow shooting stars\nAnd somebody's playing saxophone between the parked cars\n\n**[Verse 3]**\nNow the sky's turning purple at the edge of the bridge\nFeet sore, voice gone, and I'd do it all again\nBakery lights on, smell the bread from the block\nNight shift heading home while the day shift clocks\nDapped up the crew, \"Text me when you're in\"\nSame time next week, we're gonna run it back again\nKey in the door as the sun starts to creep\nI love this town most when it's half asleep\n\n**[Outro]**\nCity don't sleep\nBut I think I will\nYeah\nTill the next one\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

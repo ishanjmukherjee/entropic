@@ -1,0 +1,326 @@
+-- ============================================================================
+-- Library Lending System: Schema and Operations
+-- PostgreSQL 15+
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Extensions
+-- ----------------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- ----------------------------------------------------------------------------
+-- Schema
+-- ----------------------------------------------------------------------------
+CREATE SCHEMA IF NOT EXISTS library;
+SET search_path TO library;
+
+-- ----------------------------------------------------------------------------
+-- Domain definitions
+-- ----------------------------------------------------------------------------
+CREATE DOMAIN email_address AS TEXT
+    CONSTRAINT chk_email CHECK (VALUE ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+
+CREATE DOMAIN isbn13 AS TEXT
+    CONSTRAINT chk_isbn13 CHECK (VALUE ~ '^97[89]-\d{1,5}-\d{1,7}-\d{1,7}-\d$');
+
+-- ----------------------------------------------------------------------------
+-- Tables
+-- ----------------------------------------------------------------------------
+
+-- Members / Patrons
+CREATE TABLE patrons (
+    patron_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    first_name      TEXT NOT NULL,
+    last_name       TEXT NOT NULL,
+    email           EMAIL_ADDRESS NOT NULL UNIQUE,
+    phone           TEXT,
+    address_line1   TEXT,
+    address_line2   TEXT,
+    city            TEXT,
+    state           TEXT,
+    postal_code     TEXT,
+    country         TEXT DEFAULT 'US',
+    join_date       DATE NOT NULL DEFAULT CURRENT_DATE,
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    max_checkouts   INTEGER NOT NULL DEFAULT 5,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Authors (normalised)
+CREATE TABLE authors (
+    author_id   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    first_name  TEXT NOT NULL,
+    last_name   TEXT NOT NULL,
+    birth_year  INTEGER,
+    death_year  INTEGER,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX uq_authors_name ON authors (first_name, last_name, COALESCE(birth_year, -1));
+
+-- Books
+CREATE TABLE books (
+    book_id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    isbn            ISBN13 UNIQUE,
+    title           TEXT NOT NULL,
+    publisher       TEXT,
+    publication_year INTEGER,
+    edition         TEXT,
+    dewey_decimal   TEXT,
+    language        TEXT DEFAULT 'eng',
+    total_copies    INTEGER NOT NULL DEFAULT 1
+        CONSTRAINT chk_total_copies_positive CHECK (total_copies > 0),
+    available_copies INTEGER NOT NULL DEFAULT 1
+        CONSTRAINT chk_available_copies_non_negative CHECK (available_copies >= 0),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_available_lte_total CHECK (available_copies <= total_copies)
+);
+
+-- Book-Author join table (many-to-many)
+CREATE TABLE book_authors (
+    book_id     UUID NOT NULL REFERENCES books(book_id) ON DELETE CASCADE,
+    author_id   UUID NOT NULL REFERENCES authors(author_id) ON DELETE RESTRICT,
+    sort_order  SMALLINT NOT NULL DEFAULT 1,
+    PRIMARY KEY (book_id, author_id)
+);
+
+-- Inventory (individual physical copies)
+CREATE TABLE book_copies (
+    copy_id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    book_id         UUID NOT NULL REFERENCES books(book_id) ON DELETE RESTRICT,
+    barcode         TEXT UNIQUE NOT NULL,
+    condition       TEXT NOT NULL DEFAULT 'good'
+        CONSTRAINT chk_condition CHECK (condition IN ('new', 'good', 'fair', 'poor', 'damaged', 'lost')),
+    is_reference    BOOLEAN NOT NULL DEFAULT FALSE,
+    purchase_date   DATE,
+    price           NUMERIC(10,2),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Loan periods defined per patron category / book type
+CREATE TABLE loan_policies (
+    policy_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name            TEXT NOT NULL UNIQUE,
+    max_days        INTEGER NOT NULL DEFAULT 14,
+    max_renewals    INTEGER NOT NULL DEFAULT 2,
+    grace_days      INTEGER NOT NULL DEFAULT 0,
+    fine_per_day    NUMERIC(8,2) NOT NULL DEFAULT 0.50,
+    max_fine        NUMERIC(8,2) NOT NULL DEFAULT 25.00
+);
+
+-- Every patron is assigned a policy
+ALTER TABLE patrons
+    ADD COLUMN policy_id UUID REFERENCES loan_policies(policy_id);
+
+-- Loans (checkouts)
+CREATE TABLE loans (
+    loan_id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    copy_id         UUID NOT NULL REFERENCES book_copies(copy_id) ON DELETE RESTRICT,
+    patron_id       UUID NOT NULL REFERENCES patrons(patron_id) ON DELETE RESTRICT,
+    policy_id       UUID NOT NULL REFERENCES loan_policies(policy_id),
+    checkout_date   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    due_date        TIMESTAMPTZ NOT NULL,
+    return_date     TIMESTAMPTZ,
+    renewal_count   INTEGER NOT NULL DEFAULT 0,
+    fine_accrued    NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+    fine_paid       NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_return_after_checkout CHECK (return_date IS NULL OR return_date >= checkout_date),
+    CONSTRAINT chk_renewal_count CHECK (renewal_count >= 0),
+    EXCLUDE USING gist (
+        copy_id WITH =,
+        tstzrange(checkout_date, COALESCE(return_date, 'infinity'::timestamptz), '[)') WITH &&
+    ) WHERE (return_date IS NULL) -- prevent overlapping active loans on same copy
+);
+
+-- Holds
+CREATE TABLE holds (
+    hold_id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    book_id         UUID NOT NULL REFERENCES books(book_id) ON DELETE CASCADE,
+    patron_id       UUID NOT NULL REFERENCES patrons(patron_id) ON DELETE CASCADE,
+    request_date    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expiry_date     TIMESTAMPTZ NOT NULL DEFAULT now() + INTERVAL '7 days',
+    fulfilled_date  TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Fines ledger for audit trail
+CREATE TABLE fine_transactions (
+    transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    loan_id         UUID NOT NULL REFERENCES loans(loan_id) ON DELETE RESTRICT,
+    amount          NUMERIC(10,2) NOT NULL,
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN ('accrual', 'payment', 'waiver')),
+    notes           TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ----------------------------------------------------------------------------
+-- Indexes
+-- ----------------------------------------------------------------------------
+CREATE INDEX idx_books_title       ON books USING gin (to_tsvector('english', title));
+CREATE INDEX idx_book_copies_book  ON book_copies(book_id);
+CREATE INDEX idx_loans_patron      ON loans(patron_id);
+CREATE INDEX idx_loans_copy        ON loans(copy_id);
+CREATE INDEX idx_loans_due         ON loans(due_date) WHERE return_date IS NULL;
+CREATE INDEX idx_loans_overdue     ON loans(due_date, return_date)
+    WHERE return_date IS NULL AND due_date < now();
+CREATE INDEX idx_holds_book        ON holds(book_id);
+CREATE INDEX idx_holds_patron      ON holds(patron_id);
+
+-- ----------------------------------------------------------------------------
+-- Trigger: maintain available_copies on books
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION trg_maintain_available_copies()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE books SET available_copies = available_copies - 1
+         WHERE book_id = (SELECT book_id FROM book_copies WHERE copy_id = NEW.copy_id);
+    ELSIF TG_OP = 'UPDATE' AND NEW.return_date IS NOT NULL AND OLD.return_date IS NULL THEN
+        UPDATE books SET available_copies = available_copies + 1
+         WHERE book_id = (SELECT book_id FROM book_copies WHERE copy_id = NEW.copy_id);
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_loans_maintain_copies
+    AFTER INSERT OR UPDATE OF return_date ON loans
+    FOR EACH ROW EXECUTE FUNCTION trg_maintain_available_copies();
+
+-- ----------------------------------------------------------------------------
+-- Trigger: set updated_at
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION trg_set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_patrons_updated_at BEFORE UPDATE ON patrons
+    FOR EACH ROW EXECUTE FUNCTION trg_set_updated_at();
+CREATE TRIGGER trg_books_updated_at BEFORE UPDATE ON books
+    FOR EACH ROW EXECUTE FUNCTION trg_set_updated_at();
+CREATE TRIGGER trg_book_copies_updated_at BEFORE UPDATE ON book_copies
+    FOR EACH ROW EXECUTE FUNCTION trg_set_updated_at();
+CREATE TRIGGER trg_loans_updated_at BEFORE UPDATE ON loans
+    FOR EACH ROW EXECUTE FUNCTION trg_set_updated_at();
+
+-- ============================================================================
+-- OPERATIONS
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. CHECKOUT
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION checkout_book(
+    p_patron_id UUID,
+    p_copy_id   UUID,
+    OUT o_loan_id UUID,
+    OUT o_due_date TIMESTAMPTZ,
+    OUT o_message TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_policy        loan_policies%ROWTYPE;
+    v_patron        patrons%ROWTYPE;
+    v_active_loans  INTEGER;
+    v_book_id       UUID;
+    v_available     INTEGER;
+    v_copy_cond     TEXT;
+    v_copy_ref      BOOLEAN;
+BEGIN
+    -- Fetch patron
+    SELECT * INTO v_patron FROM patrons WHERE patron_id = p_patron_id;
+    IF NOT FOUND THEN
+        o_message := 'Patron not found.';
+        RETURN;
+    END IF;
+    IF NOT v_patron.is_active THEN
+        o_message := 'Patron account is inactive.';
+        RETURN;
+    END IF;
+
+    -- Fetch copy details
+    SELECT bc.book_id, bc.condition, bc.is_reference, b.available_copies
+      INTO v_book_id, v_copy_cond, v_copy_ref, v_available
+      FROM book_copies bc
+      JOIN books b ON b.book_id = bc.book_id
+     WHERE bc.copy_id = p_copy_id;
+
+    IF NOT FOUND THEN
+        o_message := 'Copy not found.';
+        RETURN;
+    END IF;
+
+    -- Reference copies cannot be checked out
+    IF v_copy_ref THEN
+        o_message := 'Reference copies cannot be checked out.';
+        RETURN;
+    END IF;
+
+    -- Damaged or lost copies cannot be checked out
+    IF v_copy_cond IN ('damaged', 'lost') THEN
+        o_message := 'Copy is ' || v_copy_cond || ' and cannot be checked out.';
+        RETURN;
+    END IF;
+
+    -- Check availability at book level
+    IF v_available <= 0 THEN
+        o_message := 'No copies available for checkout.';
+        RETURN;
+    END IF;
+
+    -- Check active loans for this copy (should be none because of exclusion, but double-check)
+    IF EXISTS (SELECT 1 FROM loans WHERE copy_id = p_copy_id AND return_date IS NULL) THEN
+        o_message := 'Copy is already checked out.';
+        RETURN;
+    END IF;
+
+    -- Count patron's active loans
+    SELECT COUNT(*) INTO v_active_loans
+      FROM loans
+     WHERE patron_id = p_patron_id
+       AND return_date IS NULL;
+
+    IF v_active_loans >= v_patron.max_checkouts THEN
+        o_message := 'Patron has reached the maximum number of checkouts (' || v_patron.max_checkouts || ').';
+        RETURN;
+    END IF;
+
+    -- Determine policy
+    IF v_patron.policy_id IS NOT NULL THEN
+        SELECT * INTO v_policy FROM loan_policies WHERE policy_id = v_patron.policy_id;
+    ELSE
+        -- Fallback to default policy (first by name or a hard-coded default)
+        SELECT * INTO v_policy FROM loan_policies WHERE name = 'standard' LIMIT 1;
+    END IF;
+
+    IF NOT FOUND THEN
+        o_message := 'No loan policy found.';
+        RETURN;
+    END IF;
+
+    -- Create loan
+    INSERT INTO loans (copy_id, patron_id, policy_id, checkout_date, due_date)
+    VALUES (p_copy_id, p_patron_id, v_policy.policy_id, now(), now() + (v_policy.max_days || ' days')::INTERVAL)
+    RETURNING loan_id, due_date INTO o_loan_id, o_due_date;
+
+    o_message := 'Checkout successful.';
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- 2. RETURN
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION return_book(
+    p_copy_id   UUID,
+    OUT o_loan_id UUID,
+    OUT o_days_overdue INTEGER,

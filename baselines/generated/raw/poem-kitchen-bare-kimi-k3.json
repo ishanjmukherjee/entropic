@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "bare",
+ "prompt": "Write a poem about a kitchen. Output only the poem, with no title.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-kitchen-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The room remembers every spaciousness\nof flour settling on the wooden boards,\nhow morning light steepens in the kettle’s throat\nand the cold linoleum answers bare feet \nwith a shock that sharpens into routine.\n\nOlive oil shifts in its glass, \ngreen-gold, thick with afternoon,\nwhile the refrigerator hums its electric lullaby \nto the eggs, the last bruised pear, \nthe jar of something preserved in September \nthat waits like a secret behind the milk.\n\nHere, the knife separates green from stalk, \nonion from paper skin—\nsmall violences that serve as sacraments,\nthe garlic crushed until it releases \nits ghost into the heated pan \nwhere it dances, browning, \nbecoming something the body craves \nbefore the mind has named it hunger.\n\nThe oven breathes like a sleeping animal, \nwarming the palms of everyone \nwho passes through this architecture of steam \nand clatter, where conversations stick \nlike honey to the sides of glasses \nand the clock above the doorway \nlicks its lips and purrs.\n\nNothing here is theoretical.\nSalt is salt, fire is hot, water boils \nwhen it is ready, not when it is watched.\nBread rises because it is alive \nand has smelled the yeast of its own potential. \nEven the burnt edges have a flavor \nthat teaches the tongue acceptance.\n\nAnd at midnight, when the dishwasher \nsettles into its final rhythm \nand the countertops gleam like moonlit fields, \nthe room stands open, a yawning promise— \nthat tomorrow someone will come here \nwith empty hands and a willing heart, \nand leave carrying warmth \nin the bowl of their body.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 34,
+  "completion_tokens": 349,
+  "total_tokens": 383,
+  "cost": 0.005337,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

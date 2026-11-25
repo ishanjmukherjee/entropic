@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: the sea. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-sea-craft-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "The cartographer’s green lamp  \nsheds a cone of midges  \non the western channel, five fathoms  \noff the Porcupine Bank.  \nA tern folds and drops.  \n\nThe radio stays open on the trawler’s dash  \nbut nobody calls.  \nDeckhand hooks a thumbnail  \nin the zip of his oilskin  \nand it parts  \none tooth at a time.  \n\nAt ten past three  \nthe shift-haul begins.  \nMonkfish come over the rail  \nin their own black slime,  \nthe size of feed sacks,  \ngaping.  \n\nA boy hoses the deck. He trains  \nthe jet on a clot of scale  \nuntil the steel shows through.  \nTrough-deep, between the swell  \nand the hull, a boiler suit someone  \nweighted and sent down  \nopens its sleeves.  \n\nThe swell keeps its counsel  \nbeneath the bow-thrust,  \nlifts and does not break.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 180,
+  "completion_tokens": 201,
+  "total_tokens": 381,
+  "cost": 0.0009312,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

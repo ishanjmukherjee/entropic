@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: autumn. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-autumn-craft-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "The cider press behind the feed store in Norwich\nstill has last year's pulp dried to its gears.\nA man in a canvas coat works the crank,\nand the windfalls go in bruised, come out brown.\n\nFour o'clock. The school bus idles\nat the corner of Turnpike and Main,\nits exhaust stitching a seam of diesel\ninto the cold.\n\nA woman carries a ladder to her apple tree,\nclimbs it in Gardener's clogs, and picks\nthe top fruit that the deer couldn't reach.\nOne drops. She lets it lie.\n\nAt the coop, three hens have stopped laying.\nThe farmer's wife carries them by their feet\nto a stump behind the barn—\nthe axe already there, already wet.\n\nDown by the river, someone has stacked\na wall of wood so precise\nthe splitting maul leans against it\nlike a pencil at the edge of a sentence.\n\nThe cider man hands a paper cup\nto a boy on a bicycle, no money asked.\nThey both watch the foam settle.\nThe boy drinks, spits a seed into his palm,\npockets it, and pedals off\ntoward the last of the light,\none hand raised, holding nothing.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 187,
+  "completion_tokens": 258,
+  "total_tokens": 445,
+  "cost": 0.001397,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

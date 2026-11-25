@@ -1,0 +1,385 @@
+import SwiftUI
+
+// MARK: - Model
+
+struct Article: Identifiable, Codable, Equatable, Hashable {
+    let id: Int
+    let title: String
+    let summary: String?
+    let author: String?
+    let imageURL: URL?
+    let publishedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, summary, author
+        case imageURL = "image_url"
+        case publishedAt = "published_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        summary = try container.decodeIfPresent(String.self, forKey: .summary)
+        author = try container.decodeIfPresent(String.self, forKey: .author)
+        imageURL = try container.decodeIfPresent(URL.self, forKey: .imageURL)
+        // Flexible date decoding: ISO 8601 or unix timestamp.
+        if let dateString = try? container.decodeIfPresent(String.self, forKey: .publishedAt), let date = ISO8601DateFormatter.flexible.date(from: dateString) {
+            publishedAt = date
+        } else if let timestamp = try? container.decodeIfPresent(Double.self, forKey: .publishedAt) {
+            publishedAt = Date(timeIntervalSince1970: timestamp)
+        } else {
+            publishedAt = Date()
+        }
+    }
+}
+
+struct ArticleListResponse: Codable {
+    let articles: [Article]
+    let page: Int
+    let totalPages: Int
+}
+
+// MARK: - Networking
+
+enum APIError: LocalizedError {
+    case invalidURL
+    case invalidResponse
+    case server(status: Int)
+    case decoding(Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL: return "The request URL was invalid."
+        case .invalidResponse: return "The server response was invalid."
+        case .server(let status): return "Server error (status \(status))."
+        case .decoding: return "Unable to parse the server data."
+        }
+    }
+}
+
+protocol ArticleServiceProtocol {
+    func fetchArticles(page: Int) async throws -> ArticleListResponse
+}
+
+final class ArticleService: ArticleServiceProtocol {
+    private let baseURL: URL
+    private let session: URLSession
+    private let pageSize: Int
+
+    init(baseURL: URL,
+         pageSize: Int = 20,
+         session: URLSession = .shared) {
+        self.baseURL = baseURL
+        self.pageSize = pageSize
+        self.session = session
+    }
+
+    func fetchArticles(page: Int) async throws -> ArticleListResponse {
+        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            throw APIError.invalidURL
+        }
+        let existingQuery = components.queryItems ?? []
+        components.queryItems = existingQuery + [
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "per_page", value: String(pageSize))
+        ]
+        guard let url = components.url else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 15
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw error
+        }
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else {
+            throw APIError.server(status: http.statusCode)
+        }
+        do {
+            return try JSONDecoder().decode(ArticleListResponse.self, from: data)
+        } catch {
+            throw APIError.decoding(error)
+        }
+    }
+}
+
+// MARK: - View Model
+
+@MainActor
+final class ArticleListViewModel: ObservableObject {
+    enum State: Equatable {
+        case idle
+        case loading
+        case loaded(reachedEnd: Bool)
+        case failed(String)
+
+        static func == (lhs: State, rhs: State) -> Bool {
+            switch (lhs, rhs) {
+            case (.idle, .idle), (.loading, .loading): return true
+            case (.loaded(let a), .loaded(let b)): return a == b
+            case (.failed(let a), .failed(let b)): return a == b
+            default: return false
+            }
+        }
+    }
+
+    @Published private(set) var articles: [Article] = []
+    @Published private(set) var state: State = .idle
+    @Published private(set) var isLoadingMore = false
+
+    private let service: ArticleServiceProtocol
+    private var currentPage = 1
+    private var totalPages = 1
+    private var fetchTask: Task<Void, Never>?
+
+    init(service: ArticleServiceProtocol) {
+        self.service = service
+    }
+
+    deinit {
+        fetchTask?.cancel()
+    }
+
+    var canLoadMore: Bool {
+        !isLoadingMore && currentPage < totalPages
+    }
+
+    func refresh() async {
+        fetchTask?.cancel()
+        currentPage = 1
+        totalPages = 1
+        await load(reset: true)
+    }
+
+    func loadMoreIfNeeded(currentItem: Article) async {
+        guard canLoadMore, currentItem.id == articles.last?.id else { return }
+        await load(reset: false)
+    }
+
+    func retry() async {
+        await refresh()
+    }
+
+    private func load(reset: Bool) async {
+        if reset {
+            articles = []
+            state = .loading
+        } else {
+            isLoadingMore = true
+        }
+
+        do {
+            let response = try await service.fetchArticles(page: currentPage)
+            guard !Task.isCancelled else { return }
+            if reset {
+                articles = response.articles
+            } else {
+                let existingIDs = Set(articles.map(\.id))
+                let newItems = response.articles.filter { !existingIDs.contains($0.id) }
+                articles.append(contentsOf: newItems)
+            }
+            currentPage = response.page
+            totalPages = max(response.totalPages, response.page)
+            state = .loaded(reachedEnd: currentPage >= totalPages)
+            isLoadingMore = false
+        } catch {
+            guard !Task.isCancelled else { return }
+            isLoadingMore = false
+            state = .failed(error.localizedDescription)
+        }
+    }
+}
+
+// MARK: - Views
+
+struct ArticleListScreen: View {
+    @StateObject private var viewModel: ArticleListViewModel
+    @Environment(\.refresh) private var refreshAction
+
+    init(service: ArticleServiceProtocol = ArticleService(baseURL: URL(string: "https://example.com/api/articles")!)) {
+        _viewModel = StateObject(wrappedValue: ArticleListViewModel(service: service))
+    }
+
+    var body: some View {
+        NavigationStack {
+            content
+                .navigationTitle("Articles")
+                .refreshable { await viewModel.refresh() }
+                .task { await viewModel.refresh() }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch viewModel.state {
+        case .idle:
+            Color.clear
+        case .loading:
+            ProgressView("Loading articles…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .failed(let message):
+            errorView(message: message)
+        case .loaded:
+            listView
+        }
+    }
+
+    private var listView: some View {
+        Group {
+            if viewModel.articles.isEmpty {
+                ContentUnavailableView("No Articles",
+                                       systemImage: "newspaper",
+                                       description: Text("There are no articles to display right now."))
+            } else {
+                List {
+                    ForEach(viewModel.articles) { article in
+                        ArticleRow(article: article)
+                            .task {
+                                await viewModel.loadMoreIfNeeded(currentItem: article)
+                            }
+                    }
+                    if viewModel.isLoadingMore {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                        .listRowSeparator(.hidden)
+                    }
+                }
+                .listStyle(.plain)
+            }
+        }
+        .transition(.opacity)
+    }
+
+    private func errorView(message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 44))
+                .foregroundStyle(.secondary)
+            Text("Something went wrong")
+                .font(.headline)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Try Again") {
+                Task { await viewModel.retry() }
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct ArticleRow: View {
+    let article: Article
+    @State private var imagePhase: AsyncImagePhase
+
+    init(article: Article) {
+        self.article = article
+        _imagePhase = State(initialValue: .empty)
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            thumbnail
+            VStack(alignment: .leading, spacing: 6) {
+                Text(article.title)
+                    .font(.headline)
+                    .lineLimit(2)
+                if let summary = article.summary {
+                    Text(summary)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                }
+                HStack(spacing: 8) {
+                    if let author = article.author {
+                        Label(author, systemImage: "person.fill")
+                    }
+                    Spacer()
+                    Text(article.publishedAt, style: .date)
+                        .foregroundStyle(.tertiary)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var thumbnail: some View {
+        if let url = article.imageURL {
+            AsyncImage(url: url, transaction: .init(animation: .default)) { phase in
+                ZStack {
+                    Color(.systemGray5)
+                    if let image = phase.image {
+                        image.resizable().scaledToFill()
+                    } else {
+                        ProgressView()
+                    }
+                }
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+    }
+}
+
+// MARK: - Helpers
+
+private extension ISO8601DateFormatter {
+    static let flexible: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    func date(from string: String) -> Date? {
+        if let date = self.date(from: string) { return date }
+        let fallback = ISO8601DateFormatter()
+        return fallback.date(from: string)
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Content") {
+    ArticleListScreen(service: MockArticleService())
+}
+
+#Preview("Error") {
+    ArticleListScreen(service: FailingArticleService())
+}
+
+private final class MockArticleService: ArticleServiceProtocol {
+    func fetchArticles(page: Int) async throws -> ArticleListResponse {
+        try? await Task.sleep(nanoseconds: 600_000_000)
+        let articles = (0..<10).map { i in
+            Article(
+                id: (page - 1) * 10 + i,
+                title: "Sample Article \((page - 1) * 10 + i) — Page \(page)",
+                summary: "This is a sample summary used for preview purposes.",
+                author: "Jane Doe",
+                imageURL: nil,
+                publishedAt: Date()
+            )!
+        }
+        return ArticleListResponse(page: page, totalPages: 3, articles: articles)
+    }
+}
+
+private final class FailingArticleService: ArticleServiceProtocol {
+    func fetchArticles(page: Int) async throws -> ArticleListResponse {
+        throw APIError.server(status: 500)
+    }
+}

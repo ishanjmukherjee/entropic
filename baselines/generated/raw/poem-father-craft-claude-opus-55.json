@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a father's hands. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-father-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "Ten past six on Bayway Avenue, the refinery flare\nstill burning against a sky the color of dishwater,\nand he'd have the Buick's hood up before the coffee finished,\nthe feeler gauge fanned open on the fender,\neach blade stamped with its thousandths of an inch.\nHe'd slide the thirty-five between the tip and the strap\nand pull it through, feeling for drag\nthe way my mother checked a sheet for damp.\nHis left thumbnail was black, always,\nfrom a truck door in Perth Amboy, 1974.\nThe radio on the back step gave the Turnpike,\nthe Goethals, the Outerbridge, a tanker fire in Linden\nthat nobody we knew was in.\nHe wiped each plug on his undershirt\nand threaded it by hand, four turns, five,\nuntil the threads took, and only then the wrench,\na quarter turn, no more, he said, you'll strip the head.\nWhen the funeral home asked us for a photograph\nmy brother brought one of the engine.\nNobody argued. It was a good engine.\nThe gauge is in my kitchen drawer with the batteries,\nthe thirty-five blade bent a little at the tip\nwhere he pressed it, every morning,\ntoward the flare.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

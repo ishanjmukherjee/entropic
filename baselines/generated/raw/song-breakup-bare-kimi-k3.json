@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "bare",
+ "prompt": "Write the lyrics of a pop song about a breakup. Output only the lyrics.",
+ "model": "kimi-k3",
+ "max_tokens": 900,
+ "id": "song-breakup-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "(Verse 1)\nYour shadow walks beside me\nDown the busy street\nI keep looking for the timeline\nWhere we didn't miss a beat\nThe coffee's getting colder\nNow it's just one cup\nI thought that we were golden\nBut we just couldn't hold it up\n\n(Pre-Chorus)\nAnd all the words I should have spoken\nAre just echoing in the space\nOf everything we left unbroken\nThat we somehow still erased\n\n(Chorus)\nSo I'll keep dancing to the rhythm of my heart breaking\nLet the beat drop down while my world is shaking\nYou were the melody, but now you're out of key\nGoing solo to the sound of us ending\nYou're just a ghost in the top forty\nPlaying on repeat, but you're not for me\nTurn the radio up till I don't feel a thing\nDancing to the rhythm of my heart breaking\n\n(Verse 2)\nI see you in the static\nOf the midnight screen\nActing like we're still the magic\nFrom a Hollywood scene\nBut the credits started rolling\nWhen you walked out the door\nThe story we were writing\nIsn't ours anymore\n\n(Pre-Chorus)\nAnd now I'm painting on a brave face\nLike a masterpiece in the dark\nTrying to fill up all the blank space\nWhere you used to leave a mark\n\n(Chorus)\nSo I'll keep dancing to the rhythm of my heart breaking\nLet the beat drop down while my world is shaking\nYou were the melody, but now you're out of key\nGoing solo to the sound of us ending\nYou're just a ghost in the top forty\nPlaying on repeat, but you're not for me\nTurn the radio up till I don't feel a thing\nDancing to the rhythm of my heart breaking\n\n(Bridge)\nIt's a slow motion sunset\nA beautiful wreck\nKeeping the memories\nRight up on deck\nBut I'm tapping my feet\nTo a different drum\nYeah, I'm moving to a beat\nTill the feeling is numb\n\n(Chorus)\n'Cause I'll keep dancing to the rhythm of my heart breaking\nLet the bass hit hard while my soul is waking\nYou were the melody, but now you're out of key\nGoing solo to the sound of us ending\nYou're just a ghost in the top forty\nFading out fast, put the past before me\nTurn the radio up till I don't feel a thing\nDancing to the rhythm of my heart breaking\n\n(Outro)\nTo the rhythm of my heart breaking\n(Oh, the beat goes on and on)\nTo the rhythm of my heart breaking\n(Till the hurt is finally gone)",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 35,
+  "completion_tokens": 544,
+  "total_tokens": 579,
+  "cost": 0.008265,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

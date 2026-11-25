@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "bare",
+ "prompt": "Write a poem about a kitchen. Output only the poem, with no title.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-kitchen-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Here is the vessel where the day begins,\na tiled republic of simmer and steam.\nThe copper kettle on its throne of flame\nunlooses its first, ferocious, captive scream.\n\nThe window glass, a membrane to the dark,\nnow slowly images a brighter world:\nthe pot of basil on the sill awakes,\nits small green catechism leaf-unfurled.\n\nThe knife discovers, with a certain grace,\nthe hidden architecture of a pear,\nexposing, on the scarred and honest board,\na private constellation sleeping there.\n\nA bowl contains a universe of dough,\na breathing moon of yeast and patient dust.\nThe radio, in hushed and crackling tones,\nconspires with flour in a yeast-born trust.\n\nThe iron skillet holds ancestral heat,\na charred cosmology of flame and fat,\nwhere onion apparitions softly weep\ntheir vapored souls on this domestic flat.\n\nAnd in the cupboard’s dark confessional,\nthe spices keep their mysteries contained:\nthe cinnamon’s dry heat, the clove’s dark pang,\na genesis of flavors, preordained.\n\nAll chaos is subdued to ritual here,\nall hunger finds its answer or its shape.\nThe afternoon leaks honey from a spoon,\nthe evening is a star anise escape.\n\nThe day’s last act: the porcelain is stacked,\nthe surfaces are wiped of their desire.\nThe quiet furnace of the pilot light\nbends its blue thought above a violet fire.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 20,
+  "completion_tokens": 294,
+  "total_tokens": 314,
+  "cost": 0.0009728,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

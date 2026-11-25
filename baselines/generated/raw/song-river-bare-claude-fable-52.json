@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "bare",
+ "prompt": "Write the lyrics of a folk song about a river being dammed. Output only the lyrics.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 900,
+ "id": "song-river-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "**The Drowning of the Valley**\n\n*Verse 1*\nMy grandfather's house stood down by the bend,\nWhere the cottonwoods leaned on the shore,\nAnd the river ran silver from mountain to sea,\nAs it had ten thousand years before.\n\n*Verse 2*\nThen the men came with papers, the men came with plans,\nWith their transits and stakes painted red,\nSaid, \"The cities need power, the farms need the rain,\nAnd the river must work now,\" they said.\n\n*Chorus*\nOh, run, river, run, while the running is free,\nFor they're pouring the wall in the glen,\nAnd the water will rise over all that we knew,\nAnd you'll not see the ocean again.\n\n*Verse 3*\nThey bought up the orchards for pennies an acre,\nThey moved all the graves on the hill,\nAnd the church bell they carried away on a truck,\nBut I swear I can hear it there still.\n\n*Verse 4*\nThe salmon came up in the fall of the year,\nAs their mothers had taught them to do,\nAnd they beat on the concrete with silver and blood,\nBut the wall wouldn't let them come through.\n\n*Chorus*\nOh, run, river, run, while the running is free,\nFor they're pouring the wall in the glen,\nAnd the water will rise over all that we knew,\nAnd you'll not see the ocean again.\n\n*Verse 5*\nNow the lake lies as flat as a coin in the sun,\nAnd the speedboats cut circles above\nThe schoolhouse, the mill, and the old swimming hole,\nAnd the porch where my mother found love.\n\n*Verse 6*\nBut the mountains are patient, and concrete will crack,\nAnd the snow melts the same every spring,\nAnd a river remembers the way to the sea,\nLong after the dam builders' names mean a thing.\n\n*Final Chorus*\nSo sleep, river, sleep, in your bed made of stone,\nThough they've bridled and broken you then,\nFor the rain keeps on falling, the wall's growing old,\nAnd you'll run to the ocean again.\nYes, you'll run to the ocean again.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

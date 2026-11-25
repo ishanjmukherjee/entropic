@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a city bus at night. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-bus-craft-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "The 16 halts at Kedzie and Devon at 2 AM.\n\nA man sleeps against the window, his phone\nstill playing a video, sound off, the screen\npainting his cheek in blue checkers.\nNo one sits beside him. The driver\nyawns into her fist at the light.\n\nA woman counts dollar bills, licking her thumb,\nonce, twice, the same bill. Outside, the dental clinic\nis dark except for a scrolling LED sign\npromising smiles in Spanish, then English,\nthen Polish, then dark again.\n\nThree teenagers share earbuds, one wire dangling\nto the floor where a straw wrapper breathes\neach time the doors fold open. No one boards.\nThe wrapper stills. Someone has taped\na photograph of a child to the wall above the glove\nadvertisement, the edges curling, no name written.\n\nAt the back a man peels an orange in one long\nspiral, the oil catching the streetlamp through the glass.\nHe eats each wedge slowly, dropping the peel\nonto the floor beside his boot. The scent\nreaches the woman with the bills. She looks up,\nlaughs once, returns to counting.\n\nThe bus turns west on Peterson. Somewhere\na dog barks at the air brakes. The sleeping man's\nphone dies. His face goes out.\nThe orange man finishes, wipes his fingers\non his jeans, sits with his hands open\nin his lap, palms up, as if waiting\nfor rain, or nothing, or the next thing.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 189,
+  "completion_tokens": 315,
+  "total_tokens": 504,
+  "cost": 0.0012222,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

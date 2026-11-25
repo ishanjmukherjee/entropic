@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a father's hands. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-father-craft-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Galveston, 1987. Six a.m.\n\nThe ferry horn sounds. My father\nrubs the steering wheel with his thumb,\nback and forth, back and forth,\nthe vinyl worn to cloth.\n\nHis hands hold the paper sack\nfrom the donut shop on Seawall Boulevard,\ngrease darkening the white\nwhere his fingers press.\n\nA scar runs the valley\nbetween thumb and wrist,\na gill from the table saw\nin the garage in Houston\nwhere I was not allowed.\n\nNow he peels the orange\nhe bought for me,\nthe peel coming off in one piece,\nthe oil shining his nails.\n\nHe separates the sections,\narranges them on the brown bag,\ncounts them, nudges one closer.\n\nThe ferry lists. He steadies the sack\nwith the hand that holds his coffee,\nthe rim of the cup chipped\nwhere his lip will find it.\n\nI take the orange. He watches\nthe water, the tankers\naligned for the harbor,\ntheir hulls the red of old brick.\n\nHis fingers drum the wheel again.\nThe horn sounds back,\nfrom somewhere we cannot see.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 187,
+  "completion_tokens": 230,
+  "total_tokens": 417,
+  "cost": 0.0009316,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

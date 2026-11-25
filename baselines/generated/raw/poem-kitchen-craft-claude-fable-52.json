@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a kitchen. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-kitchen-craft-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "Ten to five on Lake Avenue, Duluth,\nand the window over the sink is black\nexcept where the lift bridge holds its two red lights.\nShe fills the kettle from the cold tap,\nsets it on the back burner, the one that still catches.\nThe matchbox says Diamond. Three left.\n\nOn the table: his thermos with the lid off,\na pencil worn to the ferrule, the gas bill\nwith a phone number on the back in her hand.\nShe rinses the thermos though it is clean.\nShe shakes kibble into the steel bowl by the door.\nThe dog has been buried since March\nunder the lilac, where the ground thawed first.\n\nA boat sounds for the bridge, one long, two short,\nand the bridge sounds back.\nThe kettle starts its ticking.\nShe takes down two cups, puts one back,\ntakes it down again and stands it\nupside down on the drainboard.\n\nOut on the water the freighter's deck lights\nslide across the window frame, a thousand feet of them,\ntaking as long as the kettle takes.\nFrost on the inside of the glass.\nThe kibble in the bowl, the steam\nreaching the cold pane and stopping there.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

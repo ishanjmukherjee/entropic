@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "bare",
+ "prompt": "Write a villanelle about forgetting. Output only the poem, with no title.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-forgetting-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "The name I knew dissolves like morning frost,\nEach syllable I chase slips through my hand;\nSo much is lost, and still so much is lost.\n\nI walk the rooms where memory once crossed,\nA stranger now in some familiar land;\nThe name I knew dissolves like morning frost.\n\nPhotographs grow yellow, faces ghosted,\nTheir voices fading into silver sand;\nSo much is lost, and still so much is lost.\n\nI hold a key whose lock has long been tossed,\nA letter signed by someone soft and unplanned;\nThe name I knew dissolves like morning frost.\n\nPerhaps forgetting is a gentle cost\nThe mind bestows, a mercy kindly planned;\nSo much is lost, and still so much is lost.\n\nAt dusk I sit and mourn what I have lost,\nThen wake to find I can't quite understand—\nThe name I knew dissolves like morning frost,\nSo much is lost, and still so much is lost.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 29,
+  "completion_tokens": 226,
+  "total_tokens": 255,
+  "cost": 0.001035,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

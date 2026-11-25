@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "craft",
+ "prompt": "Write the lyrics of a country song about leaving a small town.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 900,
+ "id": "song-town-craft-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Pawned the class ring Daddy bought at Zales in tenth grade\nAt a strip-mall shop beside the laundrymat on Crayton Road\nThe man weighed it on his palm like a verdict\nSaid twenty dollars, and I let it go\nNow the tan line’s fading underneath my knuckle\nLike the whistle of the freight train I don’t chase no more\n\nThere’s always a reason to stay till the reason is gone\n\nBorrowed Amy’s Pontiac and drove it through the car wash twice\nJust to watch the soap curl white across the windshield of something not mine\nShe’d painted her initials in the dust on the dashboard\nA.M.L. inside a lopsided heart\nI left it there three summers, then I wiped it clean with my sleeve\nNow the radio’s searching between the stations for a signal I believe\n\nThere’s always a reason to stay till the reason is gone\n\nMrs. Haddad’s porch light is still on a timer\nClicking on at six for a husband who’s four years dead\nI sat beside her at the bake sale, not buying, not speaking\nShe touched my wrist and offered me the cinnamon bread\nThe sky over the grain elevator is purple and heavy\nAnd nothing bad’s happened yet, but nothing good’s happened yet\n\nThere’s always a reason to stay till the reason is gone\n\nCounty line sign riddled with birdshot\nI didn’t slow down enough to read the population count\nMy backseat holds a duffel and a coffee can of change\nAnd the map on my phone is just a bright blue emptiness\nBut the rearview holds the water tower’s faded welcome\nShrinking to a thumbprint, then to nothing I can name",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 139,
+  "completion_tokens": 369,
+  "total_tokens": 508,
+  "cost": 0.0014032,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a kitchen. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-kitchen-craft-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Provincetown, 6 a.m.\n\nThe coffeemaker gargles its last water.\nI stand at the window watching a man\nwalk two leashed terriers past the house.\nHe does not look up.\n\nThe linoleum has a crack near the stove\nwhere a cast-iron trivet fell last winter.\nI leave it. My neighbor's rooster insists\nthe day is elsewhere.\n\nOn the counter, a cantaloupe\nwaits for the knife. I quarter it,\nscoop seeds into the disposal,\nremember the hardware store closed\nlast month for good, its nails\nnow sold to strangers.\n\nThe oldest drawer sticks.\nInside: a rubber band around napkins,\na P-touch label maker, dead batteries,\na photograph of someone standing\nin this same kitchen, wearing\nan apron I threw out years ago.\n\nThe man returns without the dogs.\n\nI save the cantaloupe rind\nfor my sister's rabbit. The sun\nfinds the faucet's nickel stain,\ndims, goes on.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 186,
+  "completion_tokens": 211,
+  "total_tokens": 397,
+  "cost": 0.0008662,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

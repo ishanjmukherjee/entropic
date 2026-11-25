@@ -1,0 +1,25 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-funeral",
+ "style": "bare",
+ "prompt": "Write a scene for a stage play in which two estranged brothers meet at their father's funeral. About 700 words. Output only the script.",
+ "model": "kimi-k2.6",
+ "max_tokens": 1500,
+ "id": "play-funeral-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "**THE INHERITANCE**\n\n*A simple chapel anteroom. Two folding chairs. MARCUS, 45, sits in one, staring at his phone. DEREK, 48, enters, loosening his tie. He stops when he sees his brother.*\n\n---\n\n**DEREK:** Didn't think you'd make it.\n\n**MARCUS:** *(not looking up)* Flight got in this morning.\n\n**DEREK:** That's not what I meant.\n\n*MARCUS finally pockets the phone. Silence.*\n\n**DEREK:** You look tired.\n\n**MARCUS:** You look old.\n\n**DEREK:** *(almost smiling)* Same Marcus. Some things don't change.\n\n**MARCUS:** Some things do. You wear suits now.\n\n**DEREK:** Funeral, Marcus.\n\n**MARCUS:** You wore them to the hospital too. Every photo Mom sent—\n\n**DEREK:** Don't.\n\n**MARCUS:** —you in a suit. Standing there like—\n\n**DEREK:** I said *don't.*\n\n*MARCUS rises, moves to the window.*\n\n**MARCUS:** Forty-three people out there. I counted.\n\n**DEREK:** You always did count.\n\n**MARCUS:** Old ladies from his factory job. Neighbors. Where's everyone from his *life*?\n\n**DEREK:** We're his life.\n\n**MARCUS:** *(bitter laugh)* \"We.\"\n\n*DEREK sits heavily in the second chair.*\n\n**DEREK:** You could have come sooner.\n\n**MARCUS:** You said that on the phone. October. \"Come sooner.\"\n\n**DEREK:** You didn't come at all.\n\n**MARCUS:** I sent checks.\n\n**DEREK:** Checks.\n\n**MARCUS:** Large checks.\n\n**DEREK:** *(standing)* HE WANTED YOU, NOT YOUR MONEY. He asked for you. \"Where's Marcus?\" Every goddamn day, Marcus. \"Where's my boy?\"\n\n**MARCUS:** *(quietly)* I was busy.\n\n**DEREK:** Busy.\n\n**MARCUS:** Company going public. Eighty-hour weeks.\n\n**DEREK:** Eighty-hour weeks. *(almost spit)* I changed his diapers, Marcus. I fed him spoonfuls of applesauce while he forgot my name. Where were your eighty hours then?\n\n**MARCUS:** YOU CHOSE TO STAY.\n\n**DEREK:** Someone had to!\n\n**MARCUS:** AND I CHOSE TO GO. We both made choices, Derek. You don't get to be the martyr just because mine paid better.\n\n*A long silence. DEREK moves toward the door, stops.*\n\n**DEREK:** He kept your first chess trophy on the mantle. The little plastic one. Not the state championship—that went in a box. The cheap one. You were seven. He said that was the day he knew you'd be brilliant.\n\n**MARCUS:** Derek—\n\n**DEREK:** Don't. Don't do that voice. That \"let's be civilized\" voice you use when clients cry. I heard it for two years on the phone. \"Let's be practical, Derek.\" \"Have you considered a nursing home, Derek.\" Practical. *(beat)* He hid your letters, you know. Under his pillow. The three you sent. Wore them soft as cloth.\n\n*MARCUS turns fully to the window. His shoulders move slightly.*\n\n**MARCUS:** *(measured)* I have a flight.\n\n**DEREK:** Of course.\n\n**MARCUS:** Tonight. Singapore. Deal was supposed to close—\n\n**DEREK:** Go, then.\n\n**MARCUS:** The lawyers will handle the estate. I'll take nothing. Whatever he left, it's yours.\n\n**DEREK:** He left chess sets. Fourteen of them. Wooden ones he carved himself after he retired. You remember he used to carve?\n\n**MARCUS:** No.\n\n**DEREK:** No. You wouldn't. *(moving toward him)* He left you the whale.\n\n**MARCUS:** *(still not turning)* What?\n\n**DEREK:** The scrimshaw. The one Grandfather gave him. *(beat)* He never let anyone touch it. \"This goes to Marcus,\" he said. Two weeks ago, lucid hour. \"The whale goes to Marcus.\"\n\n*MARCUS finally turns. His face is wet.*\n\n**MARCUS:** I don't deserve—\n\n**DEREK:** No. You don't.\n\n**MARCUS:** Then why?\n\n**DEREK:** Because he decided you did. *(moving to the door)* That's all I know.\n\n*He exits. MARCUS stands alone. He touches one of the folding chairs, sits where DEREK sat. He holds his face in his hands. After a moment, he reaches into his pocket, pulls out his phone, looks at it. He sets it on the chair beside him, screen-down. He does not move. Blackout.*",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 38,
+  "completion_tokens": 1040,
+  "total_tokens": 1078,
+  "cost": 0.0035664,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

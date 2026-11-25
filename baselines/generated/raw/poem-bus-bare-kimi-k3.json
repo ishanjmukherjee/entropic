@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "bare",
+ "prompt": "Write a poem about a city bus at night. Output only the poem, with no title.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-bus-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The city bus at midnight exhales its brakes,\na tired sigh of air and rubber,\nits windows glowing like aquarium glass\nwhere twenty strangers float\nin temporary suspension.\n\nBlue light flickers on empty faces—\nthe night nurse texting her mother,\nthe dishwasher studying his hands,\nthe insomniac counting stops\nuntil home might feel possible.\n\nAt every corner, the doors gasp open,\nswallowing someone new into the warmth,\nvending machine hum and plastic seats\nthat remember thousands of backs,\nthe center aisle a runway for\nswaying ballet of the standing.\n\nThe driver negotiates the dark\nin the mirror's narrow theater,\nwatching lives embark and dissolve,\nhis hands steady on the wheel\nthat steers through wet asphalt\nreflecting streetlights like fallen stars.\n\nSomeone is always leaving,\nsomeone just arrived,\nand in between, the bus moves\nthrough the city's overnight pulse,\ncarrying the weightless burden\nof human silence and diesel dreams.\n\nIt knows every pothole by name,\nevery bus stop's lonely bench,\nhow to cradle the night shift\nand the dancers and the ones\nwho have nowhere else to be awake,\ndelivering them gently\ninto the thin gray promise\nof another day.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 37,
+  "completion_tokens": 259,
+  "total_tokens": 296,
+  "cost": 0.003996,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

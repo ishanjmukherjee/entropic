@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: autumn. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-autumn-craft-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "Four-forty at Canal Park, and the lift bridge\nis going up for the Paul R. Tregurtha,\na thousand feet of ore boat\nsliding between the piers, slow as a wall.\n\nMy father's thermos sits on the bench beside me,\ngreen Stanley, the dent in its shoulder\nfrom the day it fell off the roof of the Buick.\nI unscrew the cup. The coffee is his recipe,\nwhich is to say too much of it, and boiled.\n\nUp the hill the maples along Skyline have let go\nall at once, the way a crowd leaves a hockey game,\nand the gutters on Superior Street run red and yellow\ndown to the storm drains.\n\nA boy on the pier counts the deckhands out loud.\nHe gets to four. One of them waves a glove.\nThe boat answers the bridge: one long, two short.\n\nLast week I found a wasp asleep inside the cup,\nfolded into the thread of the lid,\nand carried it out to the porch rail on a spoon.\n\nNow the gulls lift off the breakwater light.\nThe bridge comes down. Cars start their engines.\nThe steam goes sideways off the cup\ntoward Wisconsin, and a leaf, an ash leaf,\nhas stuck itself to the wet ring on the slat.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

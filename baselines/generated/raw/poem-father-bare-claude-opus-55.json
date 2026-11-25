@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "bare",
+ "prompt": "Write a poem about a father's hands. Output only the poem, with no title.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-father-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "They were never soft, those hands,\nnot even when they cradled me,\na newborn weight he balanced\nlike a cup filled to the brim.\n\nI learned the map of them by heart:\nthe white scar where a chisel slipped,\nthe thumbnail, split and ridged,\nthe knuckles swollen up like knots in pine.\n\nThey smelled of motor oil and soap,\nof cut grass, coffee, cold December air.\nThey knew the language of a stubborn bolt,\nthe patient art of coaxing seeds to rise.\n\nI remember them on the steering wheel,\nten and two, steady through the rain,\nand later, guiding mine across the dash:\n*easy now, just feel the road.*\n\nThey never said the things he couldn't say.\nInstead they fixed the hinge, the leaking pipe,\nthe bicycle chain, the broken kite,\nthe porch step I had told him nothing of.\n\nNow they rest on the blanket's edge,\nthin-skinned, spotted, trembling slightly,\nand I hold one the way he held me once,\ncareful, as if it might spill.\n\nAnd I see my own hand wrapped in his,\nthe same square palm, the same blunt fingers,\nand I understand at last\nwhat he was building all those years.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

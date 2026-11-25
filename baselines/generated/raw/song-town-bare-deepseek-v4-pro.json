@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "bare",
+ "prompt": "Write the lyrics of a country song about leaving a small town. Output only the lyrics.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 900,
+ "id": "song-town-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "(Verse 1)\nMain Street’s rollin’ up the sidewalk, barely half-past nine\nSame old brick, same old clock, tickin’ off the time\nThe water tower’s shadow stretches long across the grain\nAnd every sunrise looks the same from this kitchen window pane\nGot a tank full of gas and a heart full of doubt\nThat rearview mirror’s callin’ and it’s time I figured out\n\n(Chorus)\nSo I’m leavin’ this small town, kickin’ off the dust\nBefore I set down roots and my dreams all turn to rust\nGonna chase that broken white line underneath the stars\nMaybe find out who I am somewhere that’s too far\nFor the rumor mill and Friday night lights\nI’m leavin’ this small town behind\n\n(Verse 2)\nDaddy worked the graveyard shift, his daddy did the same\nA steady job’s a blessin’, you don't quit to find your name\nMama’s got her garden and her circle of friends\nSwears there’s no world better just around the bend\nBut this map in my lap has got a worn-out crease\nPointin’ me to somewhere I can finally find some peace\n\n(Chorus)\nYeah, I’m leavin’ this small town, kickin’ off the dust\nBefore I set down roots and my dreams all turn to rust\nGonna chase that broken white line underneath the stars\nMaybe find out who I am somewhere that’s too far\nFor the gossip chain and “bless your hearts”\nI’m leavin’ this small town behind\n\n(Bridge)\nAnd I know they’ll talk about it at the diner over pie\nSay I’m just a restless dreamer with a little too much sky\nIn my eyes and in my blood, a wild and wayward streak\nBut the only thing that’s hurtin’ worse than goin’ is the thought of never leavin’ at my peak\n\n(Guitar Solo)\n\n(Chorus)\nSo I’m leavin’ this small town, kickin’ off the dust\nBefore these blacktop roots grow deep and bury all my trust\nGonna chase that broken white line underneath the stars\nMaybe find out who I am somewhere that’s too far\nFor a headstone name that’s been long engraved\nI’m leavin’ this small town behind\n\n(Outro)\nYeah, Main Street’s dead and silent now\nThere ain’t a single soul around\nJust a stranger and a Chevy slowin’ down\nAnd it feels like… leavin’ this small town\nFeels like leavin’ this small town.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 22,
+  "completion_tokens": 566,
+  "total_tokens": 588,
+  "cost": 0.0018464,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

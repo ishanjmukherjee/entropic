@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: insomnia. Form: a sonnet: keep the fourteen lines and the turn; rhyme only if the rhymes surprise.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-insomnia-craft-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "At 3 a.m. I walk to the kitchen and open the fridge  \nnot for food but for the light the small bulb still holds.  \nI look at the eggs in their cardboard their quiet speckled weight  \nand close the door and open it again to watch the light come on.  \nThe kettle has not boiled the cups hang unmoving  \nthe house holds its breath like something that has forgotten itself.  \nI've counted the cracks in the ceiling above my bed  \nthey number eleven though one might be a shadow.  \nI take an orange from the bowl and roll it in my palm  \nthe pores catch my thumb like punctuation I cannot read.  \nSomewhere a car passes and the window briefly glows  \nthen goes back to the color of a tooth.  \nI put the orange back knowing in an hour the alarm  \nwill ring and the eggs will still be there.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 204,
+  "completion_tokens": 185,
+  "total_tokens": 389,
+  "cost": 0.003387,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

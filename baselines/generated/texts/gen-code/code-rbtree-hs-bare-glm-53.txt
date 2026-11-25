@@ -1,0 +1,118 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- | A persistent (purely functional) red-black tree implementing an
+-- ordered set of elements.  All operations are total and persistent:
+-- no operation modifies or invalidates existing trees.
+--
+-- Invariants maintained by this implementation:
+--
+--   * Red-black invariant: a red node never has a red child.
+--   * Black-height invariant: every path from a node to a leaf
+--     (empty subtree) contains the same number of black nodes.
+--   * Ordering invariant: for every node with element @e@, all
+--     elements in the left subtree are @< e@ and all elements in
+--     the right subtree are @> e@ (duplicates are discarded).
+--
+-- The delete operation is intentionally omitted per the required
+-- interface; insert restores the invariants using the classic
+-- Okasaki rebalancing scheme.
+module Data.RBTree
+    ( RBTree
+    , empty
+    , null
+    , singleton
+    , insert
+    , member
+    , toList
+    , fromList
+    , size
+    ) where
+
+import Prelude hiding (null)
+import qualified Prelude
+
+-- | A red-black tree over elements of type @a@.
+data RBTree a
+    = E                          -- ^ Empty (black) leaf sentinel.
+    | B (RBTree a) a (RBTree a)  -- ^ Black node.
+    | R (RBTree a) a (RBTree a)  -- ^ Red node.
+    deriving (Eq, Show)
+
+-- | /O(1)/. The empty tree.
+empty :: RBTree a
+empty = E
+
+-- | /O(1)/. Is the tree empty?
+null :: RBTree a -> Bool
+null E = True
+null _ = False
+
+-- | /O(1)/. A tree with a single element.
+singleton :: a -> RBTree a
+singleton x = B E x E
+
+-- | /O(log n)/. Insert an element into the tree.  If the element is
+-- already present, the original tree is returned unchanged.
+-- Insertion is persistent: the input tree remains valid.
+insert :: Ord a => a -> RBTree a -> RBTree a
+insert x t =
+    case ins t of
+        -- Reblacken the root to preserve the black-height invariant.
+        R l y r -> B l y r
+        t'      -> t'
+  where
+    ins E = R E x E
+    ins (B l y r) =
+        case compare x y of
+            LT -> balance (ins l) y r
+            GT -> balance l y (ins r)
+            EQ -> B l y r
+    ins (R l y r) =
+        case compare x y of
+            LT -> R (ins l) y r
+            GT -> R l y (ins r)
+            EQ -> R l y r
+
+    -- Okasaki's balance: repair a possible red-red violation introduced
+    -- by 'ins' at a black node.  Pattern matching on the four shapes that
+    -- can host a violation keeps the common case (no violation) cheap.
+    balance :: RBTree a -> a -> RBTree a -> RBTree a
+    balance (R a y (R b z c)) x d = R (B a y b) z (B c x d)
+    balance (R (R a y b) z c) x d = R (B a y b) z (B c x d)
+    balance a y (R (R b z c) x d) = R (B a y b) z (B c x d)
+    balance a y (R b z (R c x d)) = R (B a y b) z (B c x d)
+    balance l y r = B l y r
+
+-- | /O(log n)/. Is the element a member of the tree?
+member :: Ord a => a -> RBTree a -> Bool
+member _ E = False
+member x (B l y r) =
+    case compare x y of
+        LT -> member x l
+        GT -> member x r
+        EQ -> True
+member x (R l y r) =
+    case compare x y of
+        LT -> member x l
+        GT -> member x r
+        EQ -> True
+
+-- | /O(n)/. Convert the tree to an ascending list of its elements.
+-- Implemented iteratively (CPS-free) so it runs in constant stack
+-- space and linear heap space.
+toList :: RBTree a -> [a]
+toList = go []
+  where
+    go acc E = acc
+    go acc (B l x r) = go (x : go acc r) l
+    go acc (R l x r) = go (x : go acc r) l
+
+-- | /O(n log n)/. Build a tree from a list of elements.
+fromList :: Ord a => [a] -> RBTree a
+fromList = foldr insert empty
+
+-- | /O(n)/. The number of elements in the tree.
+size :: RBTree a -> Int
+size E = 0
+size (B l _ r) = 1 + size l + size r
+size (R l _ r) = 1 + size l + size r

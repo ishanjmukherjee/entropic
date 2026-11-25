@@ -1,0 +1,211 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from typing import Tuple, Optional
+
+class NBodySimulation:
+    """
+    N-body gravitational simulation using leapfrog integration.
+
+    Implements a symplectic integrator for long-term stability in orbital mechanics.
+    """
+
+    def __init__(self,
+                 masses: np.ndarray,
+                 positions: np.ndarray,
+                 velocities: np.ndarray,
+                 G: float = 6.67430e-11):
+        """
+        Initialize the N-body simulation.
+
+        Args:
+            masses: Array of masses (kg)
+            positions: Initial positions (m) - shape (N, 3)
+            velocities: Initial velocities (m/s) - shape (N, 3)
+            G: Gravitational constant (default: SI units)
+        """
+        self.G = G
+        self.masses = np.array(masses)
+        self.positions = np.array(positions, dtype=float)
+        self.velocities = np.array(velocities, dtype=float)
+        self.accelerations = np.zeros_like(self.positions)
+
+        # Validate input dimensions
+        N = len(masses)
+        if positions.shape != (N, 3) or velocities.shape != (N, 3):
+            raise ValueError("Positions and velocities must have shape (N, 3)")
+
+        # Calculate initial accelerations
+        self._calculate_accelerations()
+
+    def _calculate_accelerations(self) -> None:
+        """Calculate gravitational accelerations between all bodies."""
+        N = len(self.masses)
+        self.accelerations.fill(0.0)
+
+        for i in range(N):
+            for j in range(N):
+                if i != j:
+                    r_vec = self.positions[j] - self.positions[i]
+                    r_squared = np.sum(r_vec**2)
+
+                    # Avoid division by zero and numerical instability
+                    if r_squared > 1e-10:
+                        r_mag = np.sqrt(r_squared)
+                        acceleration_mag = self.G * self.masses[j] / r_squared
+                        self.accelerations[i] += acceleration_mag * r_vec / r_mag
+
+    def _leapfrog_step(self, dt: float) -> None:
+        """
+        Perform one leapfrog integration step.
+
+        Args:
+            dt: Time step (seconds)
+        """
+        # Update velocities by half step
+        self.velocities += 0.5 * self.accelerations * dt
+
+        # Update positions by full step
+        self.positions += self.velocities * dt
+
+        # Recalculate accelerations at new positions
+        self._calculate_accelerations()
+
+        # Complete velocity update with new accelerations
+        self.velocities += 0.5 * self.accelerations * dt
+
+    def run_simulation(self,
+                      dt: float,
+                      steps: int,
+                      save_interval: int = 1) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Run the N-body simulation.
+
+        Args:
+            dt: Time step size (seconds)
+            steps: Number of integration steps
+            save_interval: Save state every nth step
+
+        Returns:
+            Tuple of (positions_history, velocities_history)
+        """
+        save_count = steps // save_interval + 1
+        N = len(self.masses)
+
+        positions_history = np.zeros((save_count, N, 3))
+        velocities_history = np.zeros((save_count, N, 3))
+
+        # Store initial conditions
+        positions_history[0] = self.positions.copy()
+        velocities_history[0] = self.velocities.copy()
+
+        save_index = 1
+        for step in range(steps):
+            self._leapfrog_step(dt)
+
+            if (step + 1) % save_interval == 0 and save_index < save_count:
+                positions_history[save_index] = self.positions.copy()
+                velocities_history[save_index] = self.velocities.copy()
+                save_index += 1
+
+        return positions_history[:save_index], velocities_history[:save_index]
+
+def create_solar_system() -> NBodySimulation:
+    """
+    Create a simplified solar system model with Sun, Earth, and Jupiter.
+
+    Returns:
+        NBodySimulation instance with solar system parameters
+    """
+    # Astronomical unit and solar mass constants
+    AU = 1.496e11  # meters
+    M_SUN = 1.989e30  # kg
+    M_EARTH = 5.972e24  # kg
+    M_JUPITER = 1.898e27  # kg
+
+    # Orbital velocities (circular orbit approximation)
+    v_earth = 29.78e3  # m/s
+    v_jupiter = 13.07e3  # m/s
+
+    masses = np.array([M_SUN, M_EARTH, M_JUPITER])
+
+    positions = np.array([
+        [0.0, 0.0, 0.0],           # Sun at origin
+        [AU, 0.0, 0.0],           # Earth at 1 AU
+        [0.0, 5.2 * AU, 0.0]      # Jupiter at 5.2 AU
+    ])
+
+    velocities = np.array([
+        [0.0, 0.0, 0.0],          # Sun stationary
+        [0.0, v_earth, 0.0],     # Earth moving perpendicular to position
+        [-v_jupiter, 0.0, 0.0]   # Jupiter moving perpendicular to position
+    ])
+
+    return NBodySimulation(masses, positions, velocities)
+
+def plot_orbits(positions_history: np.ndarray,
+               output_file: Optional[str] = None) -> None:
+    """
+    Plot the orbital trajectories.
+
+    Args:
+        positions_history: Position data from simulation
+        output_file: Optional filename to save plot
+    """
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Colors for different bodies
+    colors = ['yellow', 'blue', 'orange']
+    labels = ['Sun', 'Earth', 'Jupiter']
+
+    N_bodies = positions_history.shape[1]
+
+    for i in range(N_bodies):
+        x = positions_history[:, i, 0] / 1.496e11  # Convert to AU
+        y = positions_history[:, i, 1] / 1.496e11
+        z = positions_history[:, i, 2] / 1.496e11
+
+        ax.plot(x, y, z, color=colors[i % len(colors)], label=labels[i])
+        ax.scatter(x[0], y[0], z[0], color=colors[i % len(colors)], s=50)
+
+    ax.set_xlabel('X (AU)')
+    ax.set_ylabel('Y (AU)')
+    ax.set_zlabel('Z (AU)')
+    ax.set_title('N-Body Gravitational Simulation')
+    ax.legend()
+
+    if output_file:
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    else:
+        plt.show()
+
+def main():
+    """Main function to run the N-body simulation."""
+    # Create solar system simulation
+    sim = create_solar_system()
+
+    # Simulation parameters
+    dt = 3600 * 24  # 1 day time step
+    steps = 365 * 5  # 5 years of simulation
+    save_interval = 10  # Save every 10 steps
+
+    print("Running N-body simulation...")
+    print(f"Time step: {dt/3600/24:.1f} days")
+    print(f"Total duration: {steps*dt/3600/24/365:.1f} years")
+    print(f"Saving every {save_interval} steps")
+
+    # Run simulation
+    positions_history, velocities_history = sim.run_simulation(
+        dt=dt,
+        steps=steps,
+        save_interval=save_interval
+    )
+
+    print(f"Simulation complete!")
+    print(f"Saved {len(positions_history)} time snapshots")
+
+    # Plot results
+    plot_orbits(positions_history)
+
+if __name__ == "__main__":
+    main()

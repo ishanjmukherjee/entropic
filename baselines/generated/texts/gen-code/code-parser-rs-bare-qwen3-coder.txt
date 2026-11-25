@@ -1,0 +1,414 @@
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Token {
+    Number(f64),
+    Identifier(String),
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Power,
+    LeftParen,
+    RightParen,
+    Assignment,
+    Eof,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expr {
+    Number(f64),
+    Variable(String),
+    Binary {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
+    Assignment {
+        variable: String,
+        value: Box<Expr>,
+    },
+}
+
+#[derive(Debug)]
+pub struct Lexer {
+    input: Vec<char>,
+    position: usize,
+}
+
+impl Lexer {
+    pub fn new(input: &str) -> Self {
+        Lexer {
+            input: input.chars().collect(),
+            position: 0,
+        }
+    }
+
+    fn current_char(&self) -> Option<char> {
+        self.input.get(self.position).copied()
+    }
+
+    fn advance(&mut self) {
+        self.position += 1;
+    }
+
+    fn skip_whitespace(&mut self) {
+        while let Some(ch) = self.current_char() {
+            if ch.is_whitespace() {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn read_number(&mut self) -> f64 {
+        let start = self.position;
+        while let Some(ch) = self.current_char() {
+            if ch.is_ascii_digit() || ch == '.' {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+        let number_str: String = self.input[start..self.position].iter().collect();
+        number_str.parse().unwrap_or(0.0)
+    }
+
+    fn read_identifier(&mut self) -> String {
+        let start = self.position;
+        while let Some(ch) = self.current_char() {
+            if ch.is_alphanumeric() || ch == '_' {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+        self.input[start..self.position].iter().collect()
+    }
+
+    pub fn next_token(&mut self) -> Token {
+        self.skip_whitespace();
+
+        match self.current_char() {
+            Some('+') => {
+                self.advance();
+                Token::Plus
+            }
+            Some('-') => {
+                self.advance();
+                Token::Minus
+            }
+            Some('*') => {
+                self.advance();
+                if self.current_char() == Some('*') {
+                    self.advance();
+                    Token::Power
+                } else {
+                    Token::Multiply
+                }
+            }
+            Some('/') => {
+                self.advance();
+                Token::Divide
+            }
+            Some('(') => {
+                self.advance();
+                Token::LeftParen
+            }
+            Some(')') => {
+                self.advance();
+                Token::RightParen
+            }
+            Some('=') => {
+                self.advance();
+                Token::Assignment
+            }
+            Some(ch) if ch.is_ascii_digit() => {
+                Token::Number(self.read_number())
+            }
+            Some(ch) if ch.is_alphabetic() || ch == '_' => {
+                let identifier = self.read_identifier();
+                Token::Identifier(identifier)
+            }
+            None => Token::Eof,
+            Some(ch) => panic!("Unexpected character: {}", ch),
+        }
+    }
+
+    pub fn tokenize(&mut self) -> Vec<Token> {
+        let mut tokens = Vec::new();
+        loop {
+            let token = self.next_token();
+            if token == Token::Eof {
+                tokens.push(token);
+                break;
+            }
+            tokens.push(token);
+        }
+        tokens
+    }
+}
+
+#[derive(Debug)]
+pub struct Parser {
+    tokens: Vec<Token>,
+    position: usize,
+}
+
+impl Parser {
+    pub fn new(tokens: Vec<Token>) -> Self {
+        Parser { tokens, position: 0 }
+    }
+
+    fn current_token(&self) -> &Token {
+        &self.tokens[self.position]
+    }
+
+    fn advance(&mut self) {
+        if self.position < self.tokens.len() - 1 {
+            self.position += 1;
+        }
+    }
+
+    fn expect(&mut self, expected: &Token) -> Result<(), String> {
+        if self.current_token() == expected {
+            self.advance();
+            Ok(())
+        } else {
+            Err(format!("Expected {:?}, found {:?}", expected, self.current_token()))
+        }
+    }
+
+    pub fn parse(&mut self) -> Result<Expr, String> {
+        self.parse_assignment()
+    }
+
+    fn parse_assignment(&mut self) -> Result<Expr, String> {
+        let expr = self.parse_expression()?;
+
+        if self.current_token() == &Token::Assignment {
+            self.advance();
+
+            match expr {
+                Expr::Variable(name) => {
+                    let value = self.parse_assignment()?;
+                    Ok(Expr::Assignment {
+                        variable: name,
+                        value: Box::new(value),
+                    })
+                }
+                _ => Err("Left side of assignment must be a variable".to_string()),
+            }
+        } else {
+            Ok(expr)
+        }
+    }
+
+    fn parse_expression(&mut self) -> Result<Expr, String> {
+        self.parse_term()
+    }
+
+    fn parse_term(&mut self) -> Result<Expr, String> {
+        let mut left = self.parse_factor()?;
+
+        while matches!(self.current_token(), Token::Plus | Token::Minus) {
+            let operator = self.current_token().clone();
+            self.advance();
+            let right = self.parse_factor()?;
+            left = Expr::Binary {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(left)
+    }
+
+    fn parse_factor(&mut self) -> Result<Expr, String> {
+        let mut left = self.parse_power()?;
+
+        while matches!(self.current_token(), Token::Multiply | Token::Divide) {
+            let operator = self.current_token().clone();
+            self.advance();
+            let right = self.parse_power()?;
+            left = Expr::Binary {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(left)
+    }
+
+    fn parse_power(&mut self) -> Result<Expr, String> {
+        let base = self.parse_unary()?;
+
+        if self.current_token() == &Token::Power {
+            self.advance();
+            let exponent = self.parse_power()?;
+            Ok(Expr::Binary {
+                left: Box::new(base),
+                operator: Token::Power,
+                right: Box::new(exponent),
+            })
+        } else {
+            Ok(base)
+        }
+    }
+
+    fn parse_unary(&mut self) -> Result<Expr, String> {
+        match self.current_token() {
+            Token::Minus => {
+                self.advance();
+                let expr = self.parse_unary()?;
+                Ok(Expr::Binary {
+                    left: Box::new(Expr::Number(0.0)),
+                    operator: Token::Minus,
+                    right: Box::new(expr),
+                })
+            }
+            _ => self.parse_primary(),
+        }
+    }
+
+    fn parse_primary(&mut self) -> Result<Expr, String> {
+        match self.current_token() {
+            Token::Number(n) => {
+                let num = *n;
+                self.advance();
+                Ok(Expr::Number(num))
+            }
+            Token::Identifier(name) => {
+                let var_name = name.clone();
+                self.advance();
+                Ok(Expr::Variable(var_name))
+            }
+            Token::LeftParen => {
+                self.advance();
+                let expr = self.parse_expression()?;
+                self.expect(&Token::RightParen)?;
+                Ok(expr)
+            }
+            _ => Err(format!("Unexpected token: {:?}", self.current_token())),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lexer_numbers() {
+        let mut lexer = Lexer::new("3.14");
+        assert_eq!(lexer.next_token(), Token::Number(3.14));
+        assert_eq!(lexer.next_token(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_operators() {
+        let mut lexer = Lexer::new("+ - * / ** ( ) =");
+        assert_eq!(lexer.next_token(), Token::Plus);
+        assert_eq!(lexer.next_token(), Token::Minus);
+        assert_eq!(lexer.next_token(), Token::Multiply);
+        assert_eq!(lexer.next_token(), Token::Divide);
+        assert_eq!(lexer.next_token(), Token::Power);
+        assert_eq!(lexer.next_token(), Token::LeftParen);
+        assert_eq!(lexer.next_token(), Token::RightParen);
+        assert_eq!(lexer.next_token(), Token::Assignment);
+        assert_eq!(lexer.next_token(), Token::Eof);
+    }
+
+    #[test]
+    fn test_lexer_identifiers() {
+        let mut lexer = Lexer::new("x variable_name");
+        assert_eq!(lexer.next_token(), Token::Identifier("x".to_string()));
+        assert_eq!(lexer.next_token(), Token::Identifier("variable_name".to_string()));
+        assert_eq!(lexer.next_token(), Token::Eof);
+    }
+
+    #[test]
+    fn test_parser_simple_number() {
+        let tokens = vec![Token::Number(42.0), Token::Eof];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse().unwrap();
+        assert_eq!(result, Expr::Number(42.0));
+    }
+
+    #[test]
+    fn test_parser_simple_variable() {
+        let tokens = vec![Token::Identifier("x".to_string()), Token::Eof];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse().unwrap();
+        assert_eq!(result, Expr::Variable("x".to_string()));
+    }
+
+    #[test]
+    fn test_parser_addition() {
+        let tokens = vec![
+            Token::Number(1.0),
+            Token::Plus,
+            Token::Number(2.0),
+            Token::Eof,
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse().unwrap();
+        assert_eq!(
+            result,
+            Expr::Binary {
+                left: Box::new(Expr::Number(1.0)),
+                operator: Token::Plus,
+                right: Box::new(Expr::Number(2.0)),
+            }
+        );
+    }
+
+    #[test]
+    fn test_parser_complex_expression() {
+        let tokens = vec![
+            Token::Number(1.0),
+            Token::Plus,
+            Token::Number(2.0),
+            Token::Multiply,
+            Token::Number(3.0),
+            Token::Eof,
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse().unwrap();
+        // Should parse as 1 + (2 * 3) due to precedence
+        assert_eq!(
+            result,
+            Expr::Binary {
+                left: Box::new(Expr::Number(1.0)),
+                operator: Token::Plus,
+                right: Box::new(Expr::Binary {
+                    left: Box::new(Expr::Number(2.0)),
+                    operator: Token::Multiply,
+                    right: Box::new(Expr::Number(3.0)),
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn test_parser_assignment() {
+        let tokens = vec![
+            Token::Identifier("x".to_string()),
+            Token::Assignment,
+            Token::Number(42.0),
+            Token::Eof,
+        ];
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse().unwrap();
+        assert_eq!(
+            result,
+            Expr::Assignment {
+                variable: "x".to_string(),
+                value: Box::new(Expr::Number(42.0)),
+            }
+        );
+    }
+}

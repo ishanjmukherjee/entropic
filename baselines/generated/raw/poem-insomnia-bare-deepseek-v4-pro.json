@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "bare",
+ "prompt": "Write a sonnet about insomnia. Output only the poem, with no title.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-insomnia-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "This bed, a rack where weary limbs are stretched,\nThe ceiling's blank canvas begins to paint\nWith phantom worries, shadow-forms half-fetched,\nThe whispered verdict of a nameless saint.\nI chase the tail of sleep around the room,\nIt flickers in the static of my mind,\nA distant drumming prophesying doom\nTo which the ticking clock is deaf and blind.\nThe hours fall like soldiers in a war\nNo one remembers starting; dark, still dark\nBecomes a texture never felt before,\nA smothering and seamless, heavy ark.\nAt last, a grey and gritty light leaks through.\nThe world awakes to start the day anew.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 20,
+  "completion_tokens": 138,
+  "total_tokens": 158,
+  "cost": 0.0004736,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

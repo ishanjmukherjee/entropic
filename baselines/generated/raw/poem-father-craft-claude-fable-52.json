@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a father's hands. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-father-craft-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "Quarter to six at Gariahat, the tube lights still on,\nmy father lifts a hilsa by the gills\nand presses its belly with his thumb\nthe way he presses a mango, or my forehead for fever.\nThe fishmonger says twelve hundred.\nMy father says nothing and puts the fish down.\n\nHis nails are cut square with a blade, not a clipper.\nThe left thumbnail grew back ridged\nafter a tram door on Rashbehari Avenue,\nand he uses it now to open envelopes.\n\nHe picks the fish up again. Eleven hundred.\nThe boti stands upright between the monger's feet\nand the fish goes onto it, head first,\nscales flying up onto my father's wrist, his watch,\nthe hair on his forearm.\nHe does not brush them off.\n\nHe has never once eaten hilsa. The bones, he says.\n\nHe counts notes out of a folded handkerchief,\nwetting a finger for each,\ntakes the parcel, the newspaper already going dark,\nand hooks its jute string over two fingers.\nWith the other hand he finds the back of my collar\nand steers me down the wet lane between baskets,\none scale on his knuckle\nshowing white each time we pass under a light.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

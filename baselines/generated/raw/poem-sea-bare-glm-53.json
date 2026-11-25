@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "bare",
+ "prompt": "Write a poem about the sea. Output only the poem, with no title.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-sea-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "The sea remembers what the sky forgets,\neach wave a breath the ocean takes in sleep.\nIt carries salt and secrets in its depths,\nand cradles all the ships it means to keep.\n\nBy morning light it shimmers, green and gold,\na restless mirror for the wandering sun;\nby night it turns to ink, both deep and cold,\nits darkness holding stars that have come undone.\n\nI walk the shore and listen to its speech—\na language older than the first man's word,\nof tides that rise and fall beyond our reach,\nand storms that howl at everything they've stirred.\n\nThe sea gives nothing back but what itborrowed:\n\nI'll patch that line—\n\nThe sea gives nothing back but what it took,\nyet still we come, drawn to its wide blue door,\nto watch the water write upon the rock\nand read the waves forever, evermore.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 28,
+  "completion_tokens": 182,
+  "total_tokens": 210,
+  "cost": 0.00084,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

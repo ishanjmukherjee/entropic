@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: insomnia. Form: a sonnet: keep the fourteen lines and the turn; rhyme only if the rhymes surprise.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-insomnia-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "At ten past four the ore boat clears Two Harbors\nand sounds once, long, for nobody on the pier.\nI count the cars that shunt along the trestle\nby the clank that runs the length of them to here.\nThe glass of water I poured at midnight stands\non the sill, a film of dust across the top.\nDown in the basement the furnace catches, holds,\nand quits, a man on the stairs who changes his mind.\nMy father loaded taconite thirty winters\non graveyard, and slept at noon with a sock across his eyes\nwhile my mother ran the vacuum round the bed.\nI lie on his side now. The lake goes gray.\nA gull comes down on the hood of the Buick and walks\nthe length of it, setting its feet in the frost.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

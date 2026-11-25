@@ -1,0 +1,381 @@
+/*
+ * lru_cache.c - Thread-safe LRU cache with O(1) get/put operations.
+ *
+ * Implementation: doubly linked list for recency ordering (head = most
+ * recently used), open-addressing hash table with linear probing for
+ * O(1) key lookup. Capacity-bounded with eviction of the LRU entry.
+ *
+ * Notes:
+ *  - Keys must be unique byte sequences compared with memcmp.
+ *  - All entries are heap-allocated; key/value data is copied in.
+ *  - Thread safety via a single pthread mutex.
+ */
+
+#include "lru_cache.h"
+
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* ------------------------------------------------------------------ */
+/* Internal structures                                                 */
+/* ------------------------------------------------------------------ */
+
+typedef struct Entry {
+    struct Entry *prev;   /* toward MRU */
+    struct Entry *next;   /* toward LRU */
+    lru_key_t     key;
+    lru_value_t   value;
+    size_t        slot;   /* hash table slot this entry occupies */
+} Entry;
+
+struct LruCache {
+    size_t          capacity;
+    size_t          size;
+    size_t          table_mask;     /* table_size - 1; table_size is power of 2 */
+    Entry         **table;          /* open-addressing slots, NULL = empty */
+    Entry          *head;           /* most recently used */
+    Entry          *tail;           /* least recently used */
+    lru_evict_cb    evict_cb;
+    void           *evict_arg;
+    pthread_mutex_t lock;
+};
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+/* FNV-1a hash. */
+static size_t hash_bytes(const uint8_t *data, size_t len)
+{
+    size_t h = 1469598103934665603ULL; /* FNV offset basis */
+    for (size_t i = 0; i < len; i++) {
+        h ^= data[i];
+        h *= 1099511628211ULL; /* FNV prime */
+    }
+    return h;
+}
+
+static int keys_equal(const lru_key_t *a, const lru_key_t *b)
+{
+    return a->len == b->len && memcmp(a->data, b->data, a->len) == 0;
+}
+
+/*
+ * Choose table size: next power of two >= 2 * capacity, minimum 16.
+ * Load factor is kept <= 0.5 so linear probing stays fast.
+ */
+static size_t table_size_for(size_t capacity)
+{
+    size_t n = 16;
+    while (n < capacity * 2) {
+        n <<= 1;
+        if (n == 0) return 0; /* overflow guard */
+    }
+    return n;
+}
+
+/* Detach an entry from the recency list. */
+static void list_unlink(LruCache *c, Entry *e)
+{
+    if (e->prev) e->prev->next = e->next; else c->head = e->next;
+    if (e->next) e->next->prev = e->prev; else c->tail = e->prev;
+    e->prev = e->next = NULL;
+}
+
+/* Insert an entry at the head (most recently used position). */
+static void list_push_front(LruCache *c, Entry *e)
+{
+    e->prev = NULL;
+    e->next = c->head;
+    if (c->head) c->head->prev = e;
+    c->head = e;
+    if (!c->tail) c->tail = e;
+}
+
+static void move_to_front(LruCache *c, Entry *e)
+{
+    if (c->head == e) return;
+    list_unlink(c, e);
+    list_push_front(c, e);
+}
+
+/* Remove an entry from the hash table (tombstone-free linear-probe delete
+ * using backward-shift deletion). Caller must not hold entry afterwards. */
+static int table_remove(LruCache *c, const lru_key_t *key, size_t hash)
+{
+    size_t i = hash & c->table_mask;
+    for (;;) {
+        Entry *e = c->table[i];
+        if (!e) return -1; /* not found */
+        if (keys_equal(&e->key, key)) break;
+        i = (i + 1) & c->table_mask;
+    }
+
+    /* Backward-shift deletion to preserve probe chains. */
+    size_t j = i;
+    for (;;) {
+        j = (j + 1) & c->table_mask;
+        Entry *e = c->table[j];
+        if (!e) break;
+        size_t ideal = hash_bytes(e->key.data, e->key.len) & c->table_mask;
+        /* Can e's ideal slot be reached from i without wrapping past j? */
+        if ((j > i && (ideal <= i || ideal > j)) ||
+            (j < i && (ideal <= i && ideal > j))) {
+            c->table[i] = c->table[j];
+            c->table[i]->slot = i;
+            i = j;
+        }
+    }
+    c->table[i] = NULL;
+    return 0;
+}
+
+/* Find the table slot containing key, or -1 (as size_t SIZE_MAX). */
+static size_t table_find_slot(const LruCache *c, const lru_key_t *key,
+                              size_t hash)
+{
+    size_t i = hash & c->table_mask;
+    for (;;) {
+        Entry *e = c->table[i];
+        if (!e) return (size_t)-1;
+        if (keys_equal(&e->key, key)) return i;
+        i = (i + 1) & c->table_mask;
+    }
+}
+
+/* Free an entry, optionally delivering it to the eviction callback. */
+static void destroy_entry(LruCache *c, Entry *e, int evicted)
+{
+    if (evicted && c->evict_cb)
+        c->evict_cb(&e->key, &e->value, c->evict_arg);
+    free((void *)e->key.data);
+    free((void *)e->value.data);
+    free(e);
+}
+
+/* Evict the least recently used entry. Cache must be non-empty. */
+static void evict_lru(LruCache *c)
+{
+    Entry *victim = c->tail;
+    list_unlink(c, victim);
+    table_remove(c, &victim->key,
+                 hash_bytes(victim->key.data, victim->key.len));
+    c->size--;
+    destroy_entry(c, victim, 1 /* evicted */);
+}
+
+/* ------------------------------------------------------------------ */
+/* Public API                                                          */
+/* ------------------------------------------------------------------ */
+
+LruCache *lru_cache_create(size_t capacity, lru_evict_cb cb, void *cb_arg)
+{
+    if (capacity == 0) return NULL;
+
+    size_t table_size = table_size_for(capacity);
+    if (table_size == 0) return NULL;
+
+    LruCache *c = calloc(1, sizeof(*c));
+    if (!c) return NULL;
+
+    c->table = calloc(table_size, sizeof(*c->table));
+    if (!c->table) {
+        free(c);
+        return NULL;
+    }
+
+    c->capacity   = capacity;
+    c->table_mask = table_size - 1;
+    c->evict_cb   = cb;
+    c->evict_arg  = cb_arg;
+
+    if (pthread_mutex_init(&c->lock, NULL) != 0) {
+        free(c->table);
+        free(c);
+        return NULL;
+    }
+    return c;
+}
+
+void lru_cache_destroy(LruCache *c)
+{
+    if (!c) return;
+    pthread_mutex_lock(&c->lock);
+    Entry *e = c->head;
+    while (e) {
+        Entry *next = e->next;
+        destroy_entry(c, e, 0 /* caller-initiated teardown */);
+        e = next;
+    }
+    pthread_mutex_unlock(&c->lock);
+    pthread_mutex_destroy(&c->lock);
+    free(c->table);
+    free(c);
+}
+
+int lru_cache_get(LruCache *c, const void *key, size_t key_len,
+                  lru_value_t *out)
+{
+    if (!c || !key || key_len == 0) return -1;
+
+    lru_key_t k = { (const uint8_t *)key, key_len };
+    size_t hash = hash_bytes(k.data, k.len);
+
+    pthread_mutex_lock(&c->lock);
+
+    size_t slot = table_find_slot(c, &k, hash);
+    if (slot == (size_t)-1) {
+        pthread_mutex_unlock(&c->lock);
+        return -1; /* miss */
+    }
+
+    Entry *e = c->table[slot];
+    move_to_front(c, e);
+
+    int rc = 0;
+    if (out) {
+        out->data = malloc(e->value.len);
+        if (!out->data) {
+            rc = -1; /* entry still returned as a hit; OOM on copy only */
+        } else {
+            memcpy((void *)out->data, e->value.data, e->value.len);
+            out->len = e->value.len;
+        }
+    }
+
+    pthread_mutex_unlock(&c->lock);
+    return rc == 0 ? 0 : -1;
+}
+
+int lru_cache_put(LruCache *c, const void *key, size_t key_len,
+                  const void *value, size_t value_len)
+{
+    if (!c || !key || key_len == 0) return -1;
+
+    pthread_mutex_lock(&c->lock);
+
+    lru_key_t k = { (const uint8_t *)key, key_len };
+    size_t hash = hash_bytes(k.data, k.len);
+
+    /* Existing entry: overwrite value and refresh recency. */
+    size_t slot = table_find_slot(c, &k, hash);
+    if (slot != (size_t)-1) {
+        Entry *e = c->table[slot];
+        void *new_val = NULL;
+        if (value && value_len) {
+            new_val = malloc(value_len);
+            if (!new_val) {
+                pthread_mutex_unlock(&c->lock);
+                return -1;
+            }
+            memcpy(new_val, value, value_len);
+        }
+        free((void *)e->value.data);
+        e->value.data = new_val;
+        e->value.len  = value_len;
+        move_to_front(c, e);
+        pthread_mutex_unlock(&c->lock);
+        return 0;
+    }
+
+    /* New entry: evict first if full so insertion always has room. */
+    if (c->size >= c->capacity)
+        evict_lru(c);
+
+    Entry *e = calloc(1, sizeof(*e));
+    uint8_t *key_copy = malloc(key_len);
+    if (!e || !key_copy) {
+        free(e);
+        free(key_copy);
+        pthread_mutex_unlock(&c->lock);
+        return -1;
+    }
+    memcpy(key_copy, key, key_len);
+    e->key.data = key_copy;
+    e->key.len  = key_len;
+
+    if (value && value_len) {
+        uint8_t *val_copy = malloc(value_len);
+        if (!val_copy) {
+            free((void *)e->key.data);
+            free(e);
+            pthread_mutex_unlock(&c->lock);
+            return -1;
+        }
+        memcpy(val_copy, value, value_len);
+        e->value.data = val_copy;
+        e->value.len  = value_len;
+    } else {
+        e->value.data = NULL;
+        e->value.len  = 0;
+    }
+
+    /* Insert into table (a free slot is guaranteed: load < 1). */
+    size_t i = hash & c->table_mask;
+    while (c->table[i])
+        i = (i + 1) & c->table_mask;
+    c->table[i] = e;
+    e->slot = i;
+
+    list_push_front(c, e);
+    c->size++;
+
+    pthread_mutex_unlock(&c->lock);
+    return 0;
+}
+
+int lru_cache_delete(LruCache *c, const void *key, size_t key_len)
+{
+    if (!c || !key || key_len == 0) return -1;
+
+    pthread_mutex_lock(&c->lock);
+
+    lru_key_t k = { (const uint8_t *)key, key_len };
+    size_t hash = hash_bytes(k.data, k.len);
+
+    size_t slot = table_find_slot(c, &k, hash);
+    if (slot == (size_t)-1) {
+        pthread_mutex_unlock(&c->lock);
+        return -1; /* not present */
+    }
+
+    Entry *e = c->table[slot];
+    list_unlink(c, e);
+    table_remove(c, &k, hash);
+    c->size--;
+    destroy_entry(c, e, 0 /* explicit delete, not eviction */);
+
+    pthread_mutex_unlock(&c->lock);
+    return 0;
+}
+
+size_t lru_cache_size(const LruCache *c)
+{
+    if (!c) return 0;
+    pthread_mutex_lock((pthread_mutex_t *)&c->lock);
+    size_t n = c->size;
+    pthread_mutex_unlock((pthread_mutex_t *)&c->lock);
+    return n;
+}
+
+size_t lru_cache_capacity(const LruCache *c)
+{
+    return c ? c->capacity : 0;
+}
+
+void lru_cache_clear(LruCache *c)
+{
+    if (!c) return;
+    pthread_mutex_lock(&c->lock);
+    Entry *e = c->head;
+    while (e) {
+        Entry *next = e->next;
+        destroy_entry(c, e, 0);
+        e = next;
+    }
+    memset(c->table, 0, (c->table_mask + 1) * sizeof(*c->table));
+    c->head = c->tail = NULL;
+    c->size = 0;
+    pthread_mutex_unlock(&c->lock);
+}

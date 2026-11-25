@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "bare",
+ "prompt": "Write a poem about a father's hands. Output only the poem, with no title.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-father-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Calloused maps of who he was,\nthe lines deep-trenched with what he did:\ndawn grease, fence posts, a daughter's\ntricycle trued and trued again.\n\nWinter split them at the knuckles.\nHe'd wince, not stop, the wood\nstacked higher than my childhood.\n\nThose same hands, gentle\nas moths at my fevered neck,\nor holding a fish just released.\n\nNow when I lift anything\nheavy, something in them\nremembers him. The weight\nnot less. Only known.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 26,
+  "completion_tokens": 114,
+  "total_tokens": 140,
+  "cost": 0.0004084,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

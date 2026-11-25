@@ -1,0 +1,331 @@
+#!/usr/bin/env python3
+"""
+Sales Forecasting with Seasonal Decomposition
+----------------------------------------------
+Loads a daily sales CSV, cleans the data, and fits a seasonal forecasting model
+using statsmodels' seasonal decomposition and SARIMA.
+
+Expected CSV format:
+    date,sales
+    2023-01-01,100.50
+    2023-01-02,200.00
+    ...
+
+Usage:
+    python sales_forecast.py sales.csv
+"""
+
+import sys
+import warnings
+from pathlib import Path
+from typing import Tuple, Optional
+
+import numpy as np
+import pandas as pd
+from pandas.tseries.frequencies import to_offset
+import statsmodels.api as sm
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tsa.stattools import adfuller
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+DATE_COLUMN = "date"
+SALES_COLUMN = "sales"
+TEST_SIZE = 30  # Number of days to hold out for evaluation
+FORECAST_PERIOD = 7  # Days to forecast beyond the data
+MIN_TRAIN_SIZE = 60  # Minimum observations required for fitting
+SEASONAL_PERIOD = 7  # Default weekly seasonality (will be auto-detected if possible)
+
+# ---------------------------------------------------------------------------
+# Helper functions
+# ---------------------------------------------------------------------------
+def load_and_clean(filepath: str) -> pd.DataFrame:
+    """
+    Load the CSV file, parse dates, and perform data cleaning.
+
+    Steps:
+        - Parse the date column as datetime.
+        - Drop duplicates.
+        - Sort by date.
+        - Set date as index.
+        - Ensure numeric sales column; coerce errors to NaN and drop them.
+        - Fill missing dates with forward fill and interpolate remaining gaps.
+        - Detect and handle outliers using IQR method.
+    """
+    if not Path(filepath).is_file():
+        raise FileNotFoundError(f"File not found: {filepath}")
+
+    df = pd.read_csv(filepath, parse_dates=[DATE_COLUMN])
+
+    # Standardize column names (strip whitespace, lowercase)
+    df.columns = [col.strip().lower() for col in df.columns]
+    date_col = DATE_COLUMN
+    sales_col = SALES_COLUMN
+
+    if date_col not in df.columns or sales_col not in df.columns:
+        raise ValueError(
+            f"CSV must contain columns '{DATE_COLUMN}' and '{SALES_COLUMN}'. "
+            f"Found columns: {list(df.columns)}"
+        )
+
+    # Drop duplicates
+    df = df.drop_duplicates(subset=[date_col])
+
+    # Sort by date
+    df = df.sort_values(by=date_col)
+
+    # Set date as index
+    df = df.set_index(date_col)
+
+    # Convert sales to numeric, coercing errors
+    df[sales_col] = pd.to_numeric(df[sales_col], errors="coerce")
+
+    # Remove rows with NaN sales
+    initial_len = len(df)
+    df = df.dropna(subset=[sales_col])
+    dropped_nan = initial_len - len(df)
+    if dropped_nan > 0:
+        print(f"Dropped {dropped_nan} rows with non‑numeric sales values.")
+
+    # Ensure we have a complete daily date range
+    full_date_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq="D")
+    df = df.reindex(full_date_range)
+
+    # Fill missing sales: forward fill first, then linear interpolation for remaining gaps
+    df[sales_col] = df[sales_col].ffill()
+    df[sales_col] = df[sales_col].interpolate(method="linear", limit_direction="both")
+
+    # Outlier detection using IQR
+    q1 = df[sales_col].quantile(0.25)
+    q3 = df[sales_col].quantile(0.75)
+    iqr = q3 - q1
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+    outlier_mask = (df[sales_col] < lower_bound) | (df[sales_col] > upper_bound)
+    num_outliers = outlier_mask.sum()
+    if num_outliers > 0:
+        print(f"Capping {num_outliers} outliers to IQR bounds.")
+        df.loc[df[sales_col] < lower_bound, sales_col] = lower_bound
+        df.loc[df[sales_col] > upper_bound, sales_col] = upper_bound
+
+    # Ensure non‑negative sales
+    df[sales_col] = df[sales_col].clip(lower=0)
+
+    return df
+
+
+def check_stationarity(series: pd.Series, alpha: float = 0.05) -> Tuple[bool, float]:
+    """
+    Perform Augmented Dickey‑Fuller test and return (is_stationary, p_value).
+    """
+    test_result = adfuller(series.dropna(), autolag="AIC")
+    p_value = test_result[1]
+    is_stationary = p_value < alpha
+    return is_stationary, p_value
+
+
+def determine_seasonal_period(data: pd.Series) -> int:
+    """
+    Heuristic to determine the seasonal period from the data index.
+    Returns 7 for daily data (weekly seasonality), 1 for others.
+    """
+    if isinstance(data.index, pd.DatetimeIndex) and len(data.index) >= 2:
+        freq = pd.infer_freq(data.index)
+        if freq is None:
+            # Try to guess from index difference
+            try:
+                delta = (data.index[1] - data.index[0])
+                if delta == pd.Timedelta(days=1):
+                    return 7
+            except Exception:
+                pass
+        elif freq in ("D", "B"):
+            return 7
+    return 7  # Default weekly
+
+
+def train_test_split(
+    df: pd.DataFrame, test_size: int
+) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
+    """
+    Split the sales series into train and test sets.
+    Returns train_series, test_series, train_dates, test_dates.
+    """
+    series = df[SALES_COLUMN]
+    cutoff = len(series) - test_size
+    train = series.iloc[:cutoff]
+    test = series.iloc[cutoff:]
+    return train, test, train.index, test.index
+
+
+def evaluate_forecast(
+    actual: np.ndarray, predicted: np.ndarray
+) -> dict:
+    """
+    Compute MAE, RMSE, MAPE, and R² for actual vs predicted.
+    Returns a dictionary of metrics.
+    """
+    mask = ~np.isnan(actual) & ~np.isnan(predicted)
+    actual = actual[mask]
+    predicted = predicted[mask]
+
+    if len(actual) == 0:
+        return {"mae": np.nan, "rmse": np.nan, "mape": np.nan, "r2": np.nan}
+
+    mae = mean_absolute_error(actual, predicted)
+    rmse = np.sqrt(mean_squared_error(actual, predicted))
+    # Mean Absolute Percentage Error (MAPE) – avoid division by zero
+    mape = np.mean(np.abs((actual - predicted) / np.where(actual == 0, np.nan, actual))) * 100
+    r2 = r2_score(actual, predicted)
+
+    return {"mae": mae, "rmse": rmse, "mape": mape, "r2": r2}
+
+
+def fit_sarima(
+    train: pd.Series, seasonal_period: int
+) -> Optional[SARIMAX]:
+    """
+    Fit a SARIMA model with automatic order selection using a grid search
+    over a limited set of (p, d, q, P, D, Q) parameters.
+    """
+    try:
+        # Automatic order selection using a simple grid of common parameters
+        best_aic = np.inf
+        best_order = (1, 1, 1)
+        best_seasonal_order = (1, 1, 1, seasonal_period)
+
+        # Limited grid for demonstration; a production system would use auto_arima
+        # or a more extensive grid.
+        p_range = range(0, 3)
+        d_range = range(0, 2)
+        q_range = range(0, 3)
+        seasonal_p_range = range(0, 2)
+        seasonal_d_range = range(0, 2)
+        seasonal_q_range = range(0, 2)
+
+        for p in p_range:
+            for d in d_range:
+                for q in q_range:
+                    for P in seasonal_p_range:
+                        for D in seasonal_d_range:
+                            for Q in seasonal_q_range:
+                                try:
+                                    model = SARIMAX(
+                                        train,
+                                        order=(p, d, q),
+                                        seasonal_order=(P, D, Q, seasonal_period),
+                                        enforce_stationarity=False,
+                                        enforce_invertibility=False,
+                                    )
+                                    result = model.fit(disp=False, maxiter=200)
+                                    if result.aic < best_aic:
+                                        best_aic = result.aic
+                                        best_order = (p, d, q)
+                                        best_seasonal_order = (P, D, Q, seasonal_period)
+                                except Exception:
+                                    continue
+
+        print(f"\nBest SARIMA order: {best_order}  seasonal: {best_seasonal_order}  AIC: {best_aic:.2f}")
+
+        # Fit the best model
+        final_model = SARIMAX(
+            train,
+            order=best_order,
+            seasonal_order=best_seasonal_order,
+            enforce_stationarity=False,
+            enforce_invertibility=False,
+        )
+        final_result = final_model.fit(disp=False, maxiter=200)
+        return final_result
+
+    except Exception as e:
+        print(f"SARIMA fitting failed: {e}")
+        return None
+
+
+def generate_forecast(
+    model_result, forecast_horizon: int
+) -> pd.Series:
+    """
+    Generate forecasts along with prediction intervals.
+    """
+    forecast_obj = model_result.get_forecast(steps=forecast_horizon)
+    forecast_values = forecast_obj.predicted_mean
+    return forecast_values
+
+
+# ---------------------------------------------------------------------------
+# Main forecasting pipeline
+# ---------------------------------------------------------------------------
+def main(filepath: str) -> None:
+    print(f"Loading sales data from: {filepath}")
+
+    # 1. Load and clean
+    df = load_and_clean(filepath)
+    print(f"Cleaned data shape: {df.shape}")
+    print(f"Date range: {df.index.min().date()} to {df.index.max().date()}")
+
+    if len(df) < MIN_TRAIN_SIZE:
+        print(f"Not enough data after cleaning. Need at least {MIN_TRAIN_SIZE} observations, got {len(df)}.")
+        sys.exit(1)
+
+    # 2. Determine seasonal period
+    seasonal_period = determine_seasonal_period(df[SALES_COLUMN])
+    print(f"Seasonal period set to {seasonal_period} days (weekly).")
+
+    # 3. Train‑test split
+    train, test, train_dates, test_dates = train_test_split(df, TEST_SIZE)
+
+    print(f"\nTrain size: {len(train)} ({train_dates[0].date()} – {train_dates[-1].date()})")
+    print(f"Test size : {len(test)}  ({test_dates[0].date()} – {test_dates[-1].date()})")
+
+    # 4. Stationarity check
+    is_stationary, p_value = check_stationarity(train)
+    print(f"\nADF test on training data:")
+    print(f"  p‑value      = {p_value:.4f}")
+    print(f"  Stationary   = {is_stationary} {'(differencing will be applied)' if not is_stationary else ''}")
+
+    # 5. Seasonal decomposition (for insight)
+    try:
+        decomp = seasonal_decompose(
+            train,
+            model="additive",
+            period=seasonal_period,
+            extrapolate_trend="freq",
+        )
+        print("\nSeasonal decomposition completed (additive).")
+    except Exception as e:
+        print(f"Seasonal decomposition skipped: {e}")
+
+    # 6. Fit SARIMA model
+    print("\nFitting SARIMA model (this may take a moment)...")
+    model_result = fit_sarima(train, seasonal_period)
+
+    if model_result is None:
+        print("Model fitting failed. Exiting.")
+        sys.exit(1)
+
+    # Print model summary (abbreviated)
+    print(model_result.summary())
+
+    # 7. Evaluate on test set
+    if len(test) > 0:
+        # In‑sample forecast for the test period length
+        test_forecast = model_result.get_forecast(steps=len(test))
+        test_pred = test_forecast.predicted_mean
+
+        metrics = evaluate_forecast(test.values, test_pred.values)
+
+        print("\n" + "=" * 60)
+        print("              TEST SET EVALUATION")
+        print("=" * 60)
+        print(f"  MAE  : {metrics['mae']:.2f}")
+        print(f"  RMSE : {metrics['rmse']:.2f}")
+        print(f"  MAPE : {metrics['mape']:.2f}%")
+        print(f"  R²   : {metrics['r2']:.4f}")

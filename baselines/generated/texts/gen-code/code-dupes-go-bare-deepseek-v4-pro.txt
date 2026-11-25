@@ -1,0 +1,184 @@
+package main
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"sync"
+)
+
+func main() {
+	flag.Usage = usage
+	minSize := flag.Int64("min-size", 0, "minimum file size in bytes to consider")
+	workers := flag.Int("workers", runtime.NumCPU(), "number of parallel hashing workers")
+	verbose := flag.Bool("v", false, "verbose output while scanning")
+	flag.Parse()
+
+	roots := flag.Args()
+	if len(roots) == 0 {
+		roots = []string{"."}
+	}
+
+	paths := walk(roots, *minSize, *verbose)
+	if len(paths) == 0 {
+		return
+	}
+
+	hashes := hashFiles(paths, *workers, *verbose)
+	groups := groupByHash(hashes)
+	printDuplicates(groups)
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage: %s [flags] [directory...]\n", filepath.Base(os.Args[0]))
+	fmt.Fprintf(os.Stderr, "Find duplicate files by SHA-256 content hash.\n\n")
+	fmt.Fprintf(os.Stderr, "Flags:\n")
+	flag.PrintDefaults()
+}
+
+// walk recursively collects all regular file paths under the provided roots.
+// Files smaller than minSize bytes are skipped.
+func walk(roots []string, minSize int64, verbose bool) []string {
+	var paths []string
+	for _, root := range roots {
+		_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "warning: %s: %v\n", path, err)
+				return nil
+			}
+			if !d.Type().IsRegular() {
+				return nil
+			}
+			info, err := d.Info()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "warning: %s: %v\n", path, err)
+				return nil
+			}
+			if info.Size() < minSize {
+				return nil
+			}
+			paths = append(paths, path)
+			return nil
+		})
+	}
+	if verbose {
+		fmt.Fprintf(os.Stderr, "Scanned %d files (min size %d bytes)\n", len(paths), minSize)
+	}
+	return paths
+}
+
+// fileHash holds the result of hashing a single file.
+type fileHash struct {
+	Path string
+	Hash string // hex-encoded SHA-256
+	Err  error
+}
+
+// hashFiles hashes files concurrently and returns a slice of results.
+func hashFiles(paths []string, workers int, verbose bool) []fileHash {
+	queue := make(chan string, len(paths))
+	results := make(chan fileHash, len(paths))
+	var wg sync.WaitGroup
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for p := range queue {
+				results <- hashFile(p)
+			}
+		}()
+	}
+
+	for _, p := range paths {
+		queue <- p
+	}
+	close(queue)
+	wg.Wait()
+	close(results)
+
+	var out []fileHash
+	for r := range results {
+		out = append(out, r)
+	}
+	if verbose {
+		fmt.Fprintf(os.Stderr, "Hashed %d files using %d workers\n", len(out), workers)
+	}
+	return out
+}
+
+// hashFile computes the SHA-256 digest of a file's contents.
+func hashFile(path string) fileHash {
+	f, err := os.Open(path)
+	if err != nil {
+		return fileHash{Path: path, Err: err}
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return fileHash{Path: path, Err: err}
+	}
+	return fileHash{Path: path, Hash: hex.EncodeToString(h.Sum(nil))}
+}
+
+// groupByHash collects files that share an identical hash.
+func groupByHash(files []fileHash) map[string][]fileHash {
+	groups := make(map[string][]fileHash)
+	for _, fh := range files {
+		if fh.Err != nil {
+			fmt.Fprintf(os.Stderr, "error: %s: %v\n", fh.Path, fh.Err)
+			continue
+		}
+		if fh.Hash == "" {
+			continue
+		}
+		groups[fh.Hash] = append(groups[fh.Hash], fh)
+	}
+	return groups
+}
+
+// printDuplicates outputs groups that contain more than one file.
+func printDuplicates(groups map[string][]fileHash) {
+	duplicates := 0
+	hashes := make([]string, 0, len(groups))
+	for h, files := range groups {
+		if len(files) < 2 {
+			continue
+		}
+		hashes = append(hashes, h)
+	}
+	sort.Strings(hashes)
+
+	for _, h := range hashes {
+		files := groups[h]
+		sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+		first := files[0]
+		totalSize := fileSize(first.Path)
+		fmt.Printf("SHA256: %s  (%d files, %d bytes each):\n", h, len(files), totalSize)
+		for _, f := range files {
+			fmt.Printf("  %s\n", f.Path)
+		}
+		fmt.Println()
+		duplicates++
+	}
+
+	if duplicates == 0 {
+		fmt.Println("No duplicate files found.")
+	}
+}
+
+// fileSize returns the size of the file in bytes, or 0 on error.
+func fileSize(path string) int64 {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0
+	}
+	return info.Size()
+}

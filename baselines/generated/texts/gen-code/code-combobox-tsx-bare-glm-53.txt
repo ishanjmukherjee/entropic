@@ -1,0 +1,430 @@
+/**
+ * AccessibleAutocomplete.tsx
+ *
+ * A fully accessible combobox (autocomplete) component implementing the
+ * WAI-ARIA 1.2 Combobox Pattern:
+ * https://www.w3.org/WAI/ARIA/apg/patterns/combobox/
+ *
+ * Features:
+ * - role="combobox" input with aria-expanded, aria-controls, aria-autocomplete="list"
+ * - Popup listbox with aria-activedescendant for virtual focus
+ * - Full keyboard support: ArrowUp/Down, Home/End, Enter, Escape, Tab, Backspace
+ * - Closes popup on outside click / outside focus / window blur
+ * - Optional status region announcing result counts to screen readers
+ *
+ * Usage:
+ *   <Autocomplete
+ *     label="Country"
+ *     options={countries}
+ *     onSelect={(value) => ...}
+ *   />
+ */
+
+import * as React from "react";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface AutocompleteOption {
+  /** Stable, unique identifier for the option. */
+  id: string;
+  /** Human-readable label shown in the listbox. */
+  label: string;
+  /** Optional secondary string matched during filtering but not displayed. */
+  keywords?: string;
+}
+
+export interface AutocompleteProps {
+  /** Accessible, visible label for the combobox. Required for a11y. */
+  label: string;
+  /** All selectable options. */
+  options: AutocompleteOption[];
+  /** Called when the user commits a selection (Enter, click, or blur-match). */
+  onSelect?: (option: AutocompleteOption) => void;
+  /** Called whenever the input value changes. */
+  onInputChange?: (value: string) => void;
+  /** Initial input value. */
+  defaultValue?: string;
+  /** Placeholder text for the input. */
+  placeholder?: string;
+  /** Custom filter predicate. Defaults to case-insensitive substring match. */
+  filterFn?: (option: AutocompleteOption, query: string) => boolean;
+  /** Maximum number of results to render in the popup. */
+  maxResults?: number;
+  /** Optional suffix appended to the combobox id (for pages with multiple). */
+  id?: string;
+  /** Disable the whole control. */
+  disabled?: boolean;
+  /** Render an optional hint below the input. */
+  hint?: React.ReactNode;
+  /** Name attribute forwarded to the input (useful in forms). */
+  name?: string;
+  className?: string;
+}
+
+type HighlightIndex = number | null;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const defaultFilter = (option: AutocompleteOption, query: string): boolean => {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    option.label.toLowerCase().includes(q) ||
+    (option.keywords?.toLowerCase().includes(q) ?? false)
+  );
+};
+
+const KEYS = {
+  ESCAPE: "Escape",
+  ENTER: "Enter",
+  TAB: "Tab",
+  UP: "ArrowUp",
+  DOWN: "ArrowDown",
+  HOME: "Home",
+  END: "End",
+} as const;
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export const Autocomplete: React.FC<AutocompleteProps> = ({
+  label,
+  options,
+  onSelect,
+  onInputChange,
+  defaultValue = "",
+  placeholder,
+  filterFn = defaultFilter,
+  maxResults = 100,
+  id,
+  disabled = false,
+  hint,
+  name,
+  className,
+}) => {
+  const autoId = React.useId();
+  const baseId = id ?? `autocomplete-${autoId}`;
+
+  const listboxId = `${baseId}-listbox`;
+  const statusId = `${baseId}-status`;
+
+  const [value, setValue] = React.useState<string>(defaultValue);
+  const [open, setOpen] = React.useState<boolean>(false);
+  const [highlightIndex, setHighlightIndex] = React.useState<HighlightIndex>(null);
+
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const listRef = React.useRef<HTMLUListElement>(null);
+
+  // ------------------------------------------------------------------
+  // Derived: filtered results
+  // ------------------------------------------------------------------
+
+  const results = React.useMemo<AutocompleteOption[]>(() => {
+    return options.filter((o) => filterFn(o, value)).slice(0, maxResults);
+  }, [options, value, filterFn, maxResults]);
+
+  // Keep highlight within range when the result set shrinks.
+  React.useEffect(() => {
+    setHighlightIndex((prev) => {
+      if (prev === null) return null;
+      if (results.length === 0) return null;
+      return Math.min(prev, results.length - 1);
+    });
+  }, [results.length]);
+
+  // ------------------------------------------------------------------
+  // Behavior
+  // ------------------------------------------------------------------
+
+  const closePopup = React.useCallback((restoreFocus?: boolean) => {
+    setOpen(false);
+    setHighlightIndex(null);
+    if (restoreFocus) {
+      inputRef.current?.focus();
+    }
+  }, []);
+
+  const commit = React.useCallback(
+    (option: AutocompleteOption) => {
+      setValue(option.label);
+      onSelect?.(option);
+      onInputChange?.(option.label);
+      closePopup(true);
+    },
+    [onSelect, onInputChange, closePopup],
+  );
+
+  const openAndHighlightFirst = React.useCallback(() => {
+    setOpen(true);
+  }, []);
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const next = event.target.value;
+    setValue(next);
+    onInputChange?.(next);
+    setHighlightIndex(null);
+    setOpen(true);
+  };
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    switch (event.key) {
+      case KEYS.DOWN: {
+        event.preventDefault();
+        if (!open) {
+          openAndHighlightFirst();
+        } else if (results.length > 0) {
+          setHighlightIndex((prev) => {
+            const nextIndex =
+              prev === null ? 0 : Math.min(prev + 1, results.length - 1);
+            return nextIndex;
+          });
+        }
+        break;
+      }
+      case KEYS.UP: {
+        event.preventDefault();
+        if (open && results.length > 0) {
+          setHighlightIndex((prev) => {
+            const nextIndex =
+              prev === null ? results.length - 1 : Math.max(prev - 1, 0);
+            return nextIndex;
+          });
+        }
+        break;
+      }
+      case KEYS.HOME: {
+        if (open && results.length > 0) {
+          event.preventDefault();
+          setHighlightIndex(0);
+        }
+        break;
+      }
+      case KEYS.END: {
+        if (open && results.length > 0) {
+          event.preventDefault();
+          setHighlightIndex(results.length - 1);
+        }
+        break;
+      }
+      case KEYS.ENTER: {
+        if (open && highlightIndex !== null) {
+          const option = results[highlightIndex];
+          if (option) {
+            event.preventDefault();
+            commit(option);
+          }
+        } else if (open) {
+          event.preventDefault();
+          closePopup();
+        }
+        break;
+      }
+      case KEYS.ESCAPE: {
+        if (open) {
+          event.preventDefault();
+          closePopup();
+        }
+        break;
+      }
+      case KEYS.TAB: {
+        if (open && highlightIndex !== null) {
+          const option = results[highlightIndex];
+          if (option) commit(option);
+        } else if (open) {
+          closePopup();
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
+  // Close on outside pointerdown.
+  React.useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        closePopup();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open, closePopup]);
+
+  // Close when focus leaves the component entirely.
+  React.useEffect(() => {
+    if (!open) return;
+    const onFocusIn = (event: FocusEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        closePopup();
+      }
+    };
+    document.addEventListener("focusin", onFocusIn);
+    return () => document.removeEventListener("focusin", onFocusIn);
+  }, [open, closePopup]);
+
+  // Keep the highlighted option scrolled into view.
+  React.useEffect(() => {
+    if (highlightIndex === null || !listRef.current) return;
+    const el = listRef.current.children[highlightIndex] as HTMLElement | undefined;
+    el?.scrollIntoView({ block: "nearest" });
+  }, [highlightIndex]);
+
+  // ------------------------------------------------------------------
+  // aria-activedescendant id: must reference the currently highlighted option,
+  // or be omitted entirely when nothing is highlighted.
+  // ------------------------------------------------------------------
+
+  const activeDescendantId =
+    highlightIndex !== null && results[highlightIndex]
+      ? `${baseId}-option-${results[highlightIndex].id}`
+      : undefined;
+
+  const inputProps: React.InputHTMLAttributes<HTMLInputElement> = {
+    ref: inputRef,
+    role: "combobox",
+    "aria-expanded": open,
+    "aria-haspopup": "listbox",
+    "aria-controls": listboxId,
+    "aria-autocomplete": "list",
+    "aria-describedby": hint ? `${baseId}-hint` : undefined,
+    "aria-activedescendant": activeDescendantId,
+    "aria-label": activeDescendantId ? undefined : undefined, // label element suffices
+    autoComplete: "off",
+    autoCapitalize: "none",
+    spellCheck: false,
+    value,
+    placeholder,
+    disabled,
+    name,
+    onChange: handleInputChange,
+    onKeyDown: handleInputKeyDown,
+    onFocus: () => {
+      // Open on focus if there is content worth showing; silent otherwise.
+      if (!disabled && results.length > 0 && document.activeElement === inputRef.current) {
+        setOpen(true);
+      }
+    },
+    id: `${baseId}-input`,
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className={className ? `autocomplete ${className}` : "autocomplete"}
+      style={{ position: "relative" }}
+    >
+      <label htmlFor={`${baseId}-input`} className="autocomplete__label">
+        {label}
+      </label>
+
+      <input
+        {...inputProps}
+        className="autocomplete__input"
+        style={{ width: "100%", boxSizing: "border-box" }}
+      />
+
+      {hint ? (
+        <p id={`${baseId}-hint`} className="autocomplete__hint">
+          {hint}
+        </p>
+      ) : null}
+
+      {open && results.length > 0 ? (
+        <ul
+          ref={listRef}
+          id={listboxId}
+          role="listbox"
+          aria-label={label}
+          tabIndex={-1}
+          className="autocomplete__listbox"
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            margin: "4px 0 0",
+            padding: 0,
+            listStyle: "none",
+            maxHeight: "16rem",
+            overflowY: "auto",
+            background: "#fff",
+            border: "1px solid #ccc",
+            borderRadius: 4,
+          }}
+        >
+          {results.map((option, index) => {
+            const optionId = `${baseId}-option-${option.id}`;
+            const isHighlighted = index === highlightIndex;
+            return (
+              <li
+                key={option.id}
+                id={optionId}
+                role="option"
+                aria-selected={isHighlighted}
+                tabIndex={-1}
+                className="autocomplete__option"
+                style={{
+                  padding: "0.5rem 0.75rem",
+                  cursor: "pointer",
+                  background: isHighlighted ? "var(--autocomplete-highlight, #e0e7ff)" : "transparent",
+                }}
+                onMouseDown={(e) => {
+                  // Prevent blur-before-click race; commit on mousedown.
+                  e.preventDefault();
+                  commit(option);
+                }}
+                onMouseMove={() => {
+                  if (highlightIndex !== index) setHighlightIndex(index);
+                }}
+              >
+                {option.label}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      {/* Polite live region announcing the number of available results. */}
+      <div
+        id={statusId}
+        role="status"
+        aria-live="polite"
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          margin: -1,
+          padding: 0,
+          overflow: "hidden",
+          clip: "rect(0 0 0 0)",
+          clipPath: "inset(50%)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
+      >
+        {open
+          ? results.length === 0
+            ? "No results found."
+            : `${results.length} result${results.length === 1 ? "" : "s"} available.`
+          : ""}
+      </div>
+    </div>
+  );
+};
+
+export default Autocomplete;

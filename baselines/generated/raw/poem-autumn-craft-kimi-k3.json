@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: autumn. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-autumn-craft-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The parking meters blink their empty green eyes\nalong Congress Street where the city workers\nhave already swept the Thursday market stalls\ninto canvas bags and left the stems\n\nAt seven the air holds the cold\nthat the brick buildings kept from October\nand you carry the wooden ladder\nacross the empty lot to the plane tree\n\nYour jacket pockets hold the tang\nof hardware store nails and the fish sandwich\nyou bought from the truck parked by the synagogue\nwhere the cantor practices standing on one foot\n\nThe ladder vibrates when you drop the wrench\nand above you the branches let go\nthree yellow leaves that spiral down\nto rest inside the empty cash box\n\nYou think about your father’s hands\nhow they still smell of turpentine\nthough he has not painted since the factory closed\nand now he carves ducks for children\n\nThe cold enters through your boots\nwhile the streetlights buzz awake\nand a woman pushes a stroller\nfull of pumpkin vines across the asphalt\n\nYou tighten the bolt on the bracket\nand taste the salt on the wind\nthat has come down from the north\nto lace the sidewalk with the first thin ice",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 194,
+  "completion_tokens": 240,
+  "total_tokens": 434,
+  "cost": 0.004182,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

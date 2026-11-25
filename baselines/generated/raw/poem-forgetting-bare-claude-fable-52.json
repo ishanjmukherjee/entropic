@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "bare",
+ "prompt": "Write a villanelle about forgetting. Output only the poem, with no title.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-forgetting-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "The names slip first, like water through the hand,\nthen faces thin to weather and decay;\nI hold what's left and cannot understand.\n\nA house, a street, a shoreline's shifting sand,\nI knew them once, and knew them yesterday.\nThe names slip first, like water through the hand.\n\nSomewhere a kitchen, somewhere a brass band,\na woman laughing, turning half away;\nI hold what's left and cannot understand.\n\nThe mind's a map of half-remembered land\nwhose roads dissolve in fog and go to gray.\nThe names slip first, like water through the hand.\n\nI reach for words; they scatter where I stand,\nsmall birds that will not settle, will not stay.\nI hold what's left and cannot understand.\n\nNo loss arrives the way that it was planned.\nIt takes the night, and then it takes the day.\nThe names slip first, like water through the hand;\nI hold what's left and cannot understand.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

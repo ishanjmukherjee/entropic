@@ -1,0 +1,254 @@
+"""
+daily_sales_forecaster.py
+
+Loads a CSV of daily sales, cleans and prepares the data, fits a seasonal
+SARIMA model with statsmodels, and evaluates forecast accuracy on a
+held-out test window.
+
+Usage:
+    python daily_sales_forecaster.py --input sales.csv --date-col date \
+        --sales-col revenue --test-days 28 --period 7
+
+Input CSV expectations:
+    - A date column (parseable dates).
+    - A numeric sales/revenue column.
+    - One row per day; duplicates and gaps are handled automatically.
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+from pathlib import Path
+from typing import Tuple
+
+import numpy as np
+import pandas as pd
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+# --------------------------------------------------------------------------- #
+# Logging configuration
+# --------------------------------------------------------------------------- #
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("daily_sales_forecaster")
+
+
+# --------------------------------------------------------------------------- #
+# Data loading and cleaning
+# --------------------------------------------------------------------------- #
+
+def load_sales_csv(
+    path: str | Path,
+    date_col: str = "date",
+    sales_col: str = "sales",
+) -> pd.DataFrame:
+    """Load a raw sales CSV and return a cleaned daily series frame."""
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Input file not found: {path}")
+
+    logger.info("Loading %s", path)
+    df = pd.read_csv(path)
+
+    missing_cols = {date_col, sales_col} - set(df.columns)
+    if missing_cols:
+        raise ValueError(f"Missing required columns: {sorted(missing_cols)}")
+
+    df = df[[date_col, sales_col]].copy()
+    df.columns = ["date", "sales"]
+
+    # --- Parse dates, dropping unparseable rows ------------------------- #
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    n_bad = int(df["date"].isna().sum())
+    if n_bad:
+        logger.warning("Dropping %d rows with unparseable dates", n_bad)
+    df = df.dropna(subset=["date"])
+
+    if df.empty:
+        raise ValueError("No valid rows remain after date parsing.")
+
+    # --- Coerce sales to numeric; impute missing with interpolation ----- #
+    df["sales"] = pd.to_numeric(df["sales"], errors="coerce")
+    n_bad_sales = int(df["sales"].isna().sum())
+    if n_bad_sales:
+        logger.warning("Dropping %d rows with non-numeric sales", n_bad_sales)
+    df = df.dropna(subset=["sales"])
+
+    # --- Aggregate duplicate dates (sum same-day records) ---------------- #
+    n_before = len(df)
+    df = df.groupby("date", as_index=False)["sales"].sum()
+    if len(df) < n_before:
+        logger.info(
+            "Aggregated %d duplicate date rows into %d daily rows",
+            n_before,
+            len(df),
+        )
+
+    # --- Reindex to a full daily range, interpolate gaps ----------------- #
+    full_index = pd.date_range(df["date"].min(), df["date"].max(), freq="D")
+    series = df.set_index("date")["sales"].reindex(full_index)
+    n_gaps = int(series.isna().sum())
+    if n_gaps:
+        logger.warning("Interpolating %d missing days via time interpolation", n_gaps)
+    series = series.interpolate(method="time", limit_direction="both")
+
+    # --- Remove outliers beyond 5 sigma (rolling window) ------------------ #
+    rolled = series.rolling(window=7, center=True, min_periods=1)
+    med = rolled.median()
+    mad = (series - med).abs().rolling(7, center=True, min_periods=1).median()
+    mask = (series - med).abs() > 5.0 * 1.4826 * mad.clip(lower=1e-9)
+    if mask.any():
+        logger.warning("Winsorizing %d outlier days", int(mask.sum()))
+        series = series.where(~mask, med)
+
+    result = series.to_frame(name="sales")
+    logger.info(
+        "Cleaned series: %s to %s (%d days)",
+        result.index.min().date(),
+        result.index.max().date(),
+        len(result),
+    )
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# Train / test split
+# --------------------------------------------------------------------------- #
+
+def split_train_test(
+    df: pd.DataFrame, test_days: int
+) -> Tuple[pd.Series, pd.Series]:
+    """Split the daily series into train and test sets."""
+    if test_days <= 0 or test_days >= len(df):
+        raise ValueError(
+            f"test_days must be in (0, {len(df)}); got {test_days}"
+        )
+    train = df["sales"].iloc[:-test_days]
+    test = df["sales"].iloc[-test_days:]
+    logger.info(
+        "Split: train=%d days (%s to %s), test=%d days (%s to %s)",
+        len(train),
+        train.index.min().date(),
+        train.index.max().date(),
+        len(test),
+        test.index.min().date(),
+        test.index.max().date(),
+    )
+    return train, test
+
+
+# --------------------------------------------------------------------------- #
+# Model fitting and evaluation
+# --------------------------------------------------------------------------- #
+
+def fit_sarima(
+    train: pd.Series,
+    order: Tuple[int, int, int] = (1, 1, 1),
+    seasonal_order: Tuple[int, int, int, int] = (1, 1, 1, 7),
+) -> SARIMAX:
+    """Fit a SARIMA model to the training series."""
+    logger.info(
+        "Fitting SARIMA(order=%s, seasonal_order=%s)",
+        order,
+        seasonal_order,
+    )
+    model = SARIMAX(
+        train,
+        order=order,
+        seasonal_order=seasonal_order,
+        enforce_stationarity=False,
+        enforce_invertibility=False,
+    )
+    result = model.fit(disp=False)
+    logger.info("AIC=%.2f", result.aic)
+    return result
+
+
+def evaluate_forecast(
+    result: SARIMAX, test: pd.Series
+) -> pd.DataFrame:
+    """Produce a forecast for the test window and compute error metrics."""
+    n_steps = len(test)
+    forecast = result.get_forecast(steps=n_steps)
+    pred_mean = forecast.predicted_mean
+    pred_ci = forecast.conf_int(alpha=0.05)
+
+    y_true = test.to_numpy()
+    y_pred = pred_mean.to_numpy()
+
+    mae = float(np.mean(np.abs(y_true - y_pred)))
+    rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
+    denom = np.abs(y_true)
+    mask = denom > 1e-9  # avoid division by zero
+    mape = float(np.mean(np.abs((y_true[mask] - y_pred[mask]) / denom[mask])) * 100)
+    coverage = float(
+        np.mean(
+            (y_true >= pred_ci.iloc[:, 0].to_numpy())
+            & (y_true <= pred_ci.iloc[:, 1].to_numpy())
+        )
+        * 100
+    )
+
+    stats = pd.DataFrame(
+        {
+            "MAE": [mae],
+            "RMSE": [rmse],
+            "MAPE_%": [mape],
+            "CI95_coverage_%": [coverage],
+        }
+    )
+    logger.info("Evaluation metrics:\n%s", stats.to_string(index=False))
+    return stats
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Clean daily sales data and fit/evaluate a seasonal SARIMA model."
+    )
+    parser.add_argument("--input", required=True, help="Path to the input CSV")
+    parser.add_argument("--date-col", default="date", help="Name of the date column")
+    parser.add_argument("--sales-col", default="sales", help="Name of the sales column")
+    parser.add_argument("--test-days", type=int, default=28, help="Held-out test length")
+    parser.add_argument(
+        "--order", nargs=3, type=int, default=[1, 1, 1],
+        help="SARIMA (p, d, q) order",
+    )
+    parser.add_argument(
+        "--seasonal-order", nargs=4, type=int, default=[1, 1, 1, 7],
+        help="SARIMA (P, D, Q, s) seasonal order",
+    )
+    parser.add_argument(
+        "--output", default=None,
+        help="Optional path to write forecast metrics as CSV",
+    )
+    args = parser.parse_args(argv)
+
+    try:
+        df = load_sales_csv(args.input, args.date_col, args.sales_col)
+        train, test = split_train_test(df, args.test_days)
+        result = fit_sarima(
+            train, tuple(args.order), tuple(args.seasonal_order)
+        )
+        metrics = evaluate_forecast(result, test)
+
+        if args.output:
+            out_path = Path(args.output)
+            metrics.to_csv(out_path, index=False)
+            logger.info("Metrics written to %s", out_path)
+
+    except (FileNotFoundError, ValueError) as exc:
+        logger.error("Aborting: %s", exc)
+        return 1
+
+    logger.info("Done.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

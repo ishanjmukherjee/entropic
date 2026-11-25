@@ -1,0 +1,262 @@
+import SwiftUI
+import Combine
+
+// MARK: - Models
+
+struct Article: Codable, Identifiable {
+    let id: Int
+    let title: String
+    let description: String
+    let author: String
+    let publishedAt: Date
+    let imageUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description, author
+        case publishedAt = "published_at"
+        case imageUrl = "image_url"
+    }
+}
+
+// MARK: - API Service
+
+protocol ArticleServiceProtocol {
+    func fetchArticles(page: Int, limit: Int) -> AnyPublisher<[Article], Error>
+}
+
+class ArticleService: ArticleServiceProtocol {
+    private let baseURL = "https://api.example.com/articles"
+    private let urlSession = URLSession.shared
+
+    func fetchArticles(page: Int, limit: Int) -> AnyPublisher<[Article], Error> {
+        guard var urlComponents = URLComponents(string: baseURL) else {
+            return Fail(error: URLError(.badURL))
+                .eraseToAnyPublisher()
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "limit", value: "\(limit)")
+        ]
+
+        guard let url = urlComponents.url else {
+            return Fail(error: URLError(.badURL))
+                .eraseToAnyPublisher()
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        return urlSession.dataTaskPublisher(for: request)
+            .map(\.data)
+            .decode(type: [Article].self, decoder: jsonDecoder)
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
+
+    private var jsonDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+}
+
+// MARK: - View Model
+
+@MainActor
+final class ArticlesViewModel: ObservableObject {
+    @Published private(set) var articles: [Article] = []
+    @Published private(set) var isLoading: Bool = false
+    @Published private(set) var errorMessage: String? = nil
+    @Published private(set) var hasMorePages: Bool = true
+
+    private let articleService: ArticleServiceProtocol
+    private let pageSize: Int
+    private var currentPage: Int = 0
+    private var isLoadingPage: Bool = false
+
+    private var cancellables = Set<AnyCancellable>()
+
+    init(articleService: ArticleServiceProtocol = ArticleService(), pageSize: Int = 20) {
+        self.articleService = articleService
+        self.pageSize = pageSize
+    }
+
+    func loadInitialArticles() {
+        currentPage = 0
+        articles = []
+        hasMorePages = true
+        loadArticles(page: 1)
+    }
+
+    func loadNextPage() {
+        guard !isLoadingPage, hasMorePages else { return }
+        loadArticles(page: currentPage + 1)
+    }
+
+    private func loadArticles(page: Int) {
+        guard !isLoading else { return }
+
+        isLoading = true
+        isLoadingPage = true
+        errorMessage = nil
+
+        articleService.fetchArticles(page: page, limit: pageSize)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    self?.isLoading = false
+                    self?.isLoadingPage = false
+
+                    if case .failure(let error) = completion {
+                        self?.errorMessage = error.localizedDescription
+                    }
+                },
+                receiveValue: { [weak self] articles in
+                    self?.handleReceivedArticles(articles, page: page)
+                }
+            )
+            .store(in: &cancellables)
+    }
+
+    private func handleReceivedArticles(_ newArticles: [Article], page: Int) {
+        if page == 1 {
+            articles = newArticles
+        } else {
+            articles.append(contentsOf: newArticles)
+        }
+
+        currentPage = page
+        hasMorePages = newArticles.count == pageSize
+    }
+
+    func refresh() {
+        loadInitialArticles()
+    }
+}
+
+// MARK: - Views
+
+struct ArticlesListView: View {
+    @StateObject private var viewModel = ArticlesViewModel()
+
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(viewModel.articles) { article in
+                    ArticleRowView(article: article)
+                }
+
+                if viewModel.hasMorePages {
+                    ProgressView()
+                        .onAppear {
+                            viewModel.loadNextPage()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding()
+                }
+            }
+            .refreshable {
+                await viewModel.refresh()
+            }
+            .navigationTitle("Articles")
+            .overlay(
+                Group {
+                    if viewModel.articles.isEmpty && !viewModel.isLoading {
+                        if let errorMessage = viewModel.errorMessage {
+                            ErrorView(message: errorMessage) {
+                                viewModel.loadInitialArticles()
+                            }
+                        } else {
+                            EmptyView()
+                        }
+                    }
+                }
+            )
+        }
+        .task {
+            viewModel.loadInitialArticles()
+        }
+    }
+}
+
+struct ArticleRowView: View {
+    let article: Article
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let imageURL = article.imageUrl,
+               let url = URL(string: imageURL) {
+                AsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } placeholder: {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(height: 150)
+                }
+                .frame(height: 150)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            Text(article.title)
+                .font(.headline)
+                .lineLimit(2)
+
+            Text(article.description)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .lineLimit(3)
+
+            HStack {
+                Text(article.author)
+                    .font(.caption)
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                Text(article.publishedAt, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct ErrorView: View {
+    let message: String
+    let retryAction: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.largeTitle)
+                .foregroundColor(.orange)
+
+            Text("Something went wrong")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text(message)
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+
+            Button("Try Again") {
+                retryAction()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Preview
+
+struct ArticlesListView_Previews: PreviewProvider {
+    static var previews: some View {
+        ArticlesListView()
+    }
+}

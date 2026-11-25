@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "bare",
+ "prompt": "Write a sonnet about insomnia. Output only the poem, with no title.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-insomnia-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "The clock has swallowed midnight whole, and still\nI lie awake and count the ceiling's cracks;\nThe house exhales; the radiators fill\nWith ticking ghosts that knock along their tracks.\nMy mind, a moth, keeps battering the glass\nOf every word I wish I'd never said,\nAnd all tomorrow's errands, as they pass,\nParade like soldiers through my aching head.\nI turn the pillow to its cooler side\nAs if relief were something I could flip;\nI bargain with the dark, I try to hide\nInside the hush between each faucet drip.\n  At last the window grays, the birds begin,\n  And now, too late, I feel the tide roll in.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

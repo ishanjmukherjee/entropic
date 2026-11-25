@@ -1,0 +1,651 @@
+#!/usr/bin/env python3
+"""A small JSON HTTP API for a to-do list, built on the standard library only.
+
+Endpoints
+---------
+    GET    /health         Liveness check.
+    GET    /todos          List to-dos. Query: completed=true|false, limit, offset.
+    POST   /todos          Create a to-do.
+    GET    /todos/{id}     Fetch a single to-do.
+    PUT    /todos/{id}     Replace a to-do (title required).
+    PATCH  /todos/{id}     Partially update a to-do.
+    DELETE /todos/{id}     Delete a to-do.
+
+To-do representation
+--------------------
+    {
+        "id": 1,
+        "title": "Buy milk",
+        "description": "",
+        "completed": false,
+        "created_at": "2024-01-01T12:00:00.000Z",
+        "updated_at": "2024-01-01T12:00:00.000Z"
+    }
+
+Errors are returned as ``{"error": {"code": <http status>, "message": "..."}}``.
+
+Usage
+-----
+    python todo_api.py --host 127.0.0.1 --port 8000 --data-file todos.json
+
+Without ``--data-file`` the data lives in memory only. Requires Python 3.9+.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import os
+import re
+import signal
+import socket
+import sys
+import tempfile
+import threading
+from datetime import datetime, timezone
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any, Dict, List, Mapping, Optional, Tuple
+from urllib.parse import parse_qs, urlsplit
+
+LOG = logging.getLogger("todo_api")
+
+MAX_BODY_BYTES = 64 * 1024
+MAX_TITLE_LENGTH = 200
+MAX_DESCRIPTION_LENGTH = 2000
+DEFAULT_PAGE_SIZE = 100
+MAX_PAGE_SIZE = 1000
+SOCKET_TIMEOUT_SECONDS = 30
+
+_TODO_PATH_RE = re.compile(r"/todos/(\d{1,18})")
+_ALLOWED_FIELDS = frozenset({"title", "description", "completed"})
+
+Todo = Dict[str, Any]
+Response = Tuple[int, Optional[Any], Dict[str, str]]
+
+
+# --------------------------------------------------------------------------- #
+# Errors
+# --------------------------------------------------------------------------- #
+
+
+class ApiError(Exception):
+    """An error that maps directly to an HTTP error response."""
+
+    def __init__(
+        self,
+        status: int,
+        message: str,
+        headers: Optional[Mapping[str, str]] = None,
+    ) -> None:
+        super().__init__(message)
+        self.status = status
+        self.message = message
+        self.headers = dict(headers or {})
+
+
+class StorageError(Exception):
+    """Raised when the backing data file cannot be read or written."""
+
+
+class ClientDisconnected(Exception):
+    """Raised when the client goes away before the request is fully read."""
+
+
+# --------------------------------------------------------------------------- #
+# Storage
+# --------------------------------------------------------------------------- #
+
+
+def _utc_now() -> str:
+    now = datetime.now(timezone.utc)
+    return now.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+class TodoStore:
+    """Thread-safe to-do store with optional atomic JSON file persistence.
+
+    Every mutation is persisted before it becomes visible, so the in-memory
+    state never gets ahead of what is on disk.
+    """
+
+    def __init__(self, path: Optional[str] = None) -> None:
+        self._path = os.path.abspath(path) if path else None
+        self._lock = threading.Lock()
+        self._todos: Dict[int, Todo] = {}
+        self._next_id = 1
+        if self._path and os.path.exists(self._path):
+            self._load()
+
+    # -- queries ------------------------------------------------------------
+
+    def list(
+        self, completed: Optional[bool], limit: int, offset: int
+    ) -> Tuple[List[Todo], int]:
+        with self._lock:
+            items = [
+                todo
+                for todo in self._todos.values()
+                if completed is None or todo["completed"] is completed
+            ]
+            page = [dict(todo) for todo in items[offset : offset + limit]]
+            return page, len(items)
+
+    def get(self, todo_id: int) -> Optional[Todo]:
+        with self._lock:
+            todo = self._todos.get(todo_id)
+            return dict(todo) if todo is not None else None
+
+    # -- mutations ----------------------------------------------------------
+
+    def create(self, fields: Mapping[str, Any]) -> Todo:
+        with self._lock:
+            now = _utc_now()
+            todo: Todo = {
+                "id": self._next_id,
+                "title": fields["title"],
+                "description": fields.get("description", ""),
+                "completed": fields.get("completed", False),
+                "created_at": now,
+                "updated_at": now,
+            }
+            todos = dict(self._todos)
+            todos[todo["id"]] = todo
+            self._commit(todos, self._next_id + 1)
+            return dict(todo)
+
+    def update(self, todo_id: int, fields: Mapping[str, Any]) -> Optional[Todo]:
+        with self._lock:
+            current = self._todos.get(todo_id)
+            if current is None:
+                return None
+            todo = dict(current)
+            todo.update(fields)
+            todo["updated_at"] = _utc_now()
+            todos = dict(self._todos)
+            todos[todo_id] = todo
+            self._commit(todos, self._next_id)
+            return dict(todo)
+
+    def delete(self, todo_id: int) -> bool:
+        with self._lock:
+            if todo_id not in self._todos:
+                return False
+            todos = dict(self._todos)
+            del todos[todo_id]
+            self._commit(todos, self._next_id)
+            return True
+
+    # -- persistence --------------------------------------------------------
+
+    def _commit(self, todos: Dict[int, Todo], next_id: int) -> None:
+        """Persist the new state, then make it visible. Caller holds the lock."""
+        if self._path:
+            self._write_file(todos, next_id)
+        self._todos = todos
+        self._next_id = next_id
+
+    def _write_file(self, todos: Dict[int, Todo], next_id: int) -> None:
+        assert self._path is not None
+        directory = os.path.dirname(self._path)
+        document = {"next_id": next_id, "todos": list(todos.values())}
+        tmp_path = None
+        try:
+            fd, tmp_path = tempfile.mkstemp(
+                dir=directory, prefix=".todos-", suffix=".tmp"
+            )
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(document, handle, ensure_ascii=False, indent=2)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(tmp_path, self._path)
+        except OSError as exc:
+            if tmp_path is not None:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+            raise StorageError(f"cannot write {self._path}: {exc}") from exc
+
+    def _load(self) -> None:
+        assert self._path is not None
+        try:
+            with open(self._path, "r", encoding="utf-8") as handle:
+                document = json.load(handle)
+        except (OSError, ValueError) as exc:
+            raise StorageError(f"cannot read {self._path}: {exc}") from exc
+
+        try:
+            todos: Dict[int, Todo] = {}
+            for raw in sorted(document["todos"], key=lambda item: item["id"]):
+                todo = self._check_loaded_todo(raw)
+                if todo["id"] in todos:
+                    raise ValueError(f"duplicate id {todo['id']}")
+                todos[todo["id"]] = todo
+            next_id = document["next_id"]
+            if type(next_id) is not int or next_id < 1:
+                raise ValueError("next_id must be a positive integer")
+        except (KeyError, TypeError, ValueError) as exc:
+            raise StorageError(
+                f"data file {self._path} is malformed: {exc!r}"
+            ) from exc
+
+        self._todos = todos
+        self._next_id = max([next_id] + [todo_id + 1 for todo_id in todos])
+
+    @staticmethod
+    def _check_loaded_todo(raw: Any) -> Todo:
+        if not isinstance(raw, dict):
+            raise ValueError("to-do entries must be objects")
+        expected = {
+            "id": int,
+            "title": str,
+            "description": str,
+            "completed": bool,
+            "created_at": str,
+            "updated_at": str,
+        }
+        todo: Todo = {}
+        for key, kind in expected.items():
+            value = raw[key]
+            if type(value) is not kind:
+                raise ValueError(f"field {key!r} has the wrong type")
+            todo[key] = value
+        if todo["id"] < 1:
+            raise ValueError("ids must be positive")
+        return todo
+
+
+# --------------------------------------------------------------------------- #
+# Validation
+# --------------------------------------------------------------------------- #
+
+
+def validate_todo_fields(data: Any, *, partial: bool) -> Dict[str, Any]:
+    """Validate a request body and return the cleaned fields.
+
+    With ``partial=False`` the title is required. With ``partial=True`` any
+    non-empty subset of the fields is accepted.
+    """
+    if not isinstance(data, dict):
+        raise ApiError(400, "Request body must be a JSON object")
+
+    unknown = sorted(set(data) - _ALLOWED_FIELDS)
+    if unknown:
+        raise ApiError(422, "Unknown field(s): " + ", ".join(unknown))
+
+    cleaned: Dict[str, Any] = {}
+
+    if "title" in data:
+        title = data["title"]
+        if not isinstance(title, str):
+            raise ApiError(422, "'title' must be a string")
+        title = title.strip()
+        if not title:
+            raise ApiError(422, "'title' must not be empty")
+        if len(title) > MAX_TITLE_LENGTH:
+            raise ApiError(
+                422, f"'title' must be at most {MAX_TITLE_LENGTH} characters"
+            )
+        cleaned["title"] = title
+    elif not partial:
+        raise ApiError(422, "'title' is required")
+
+    if "description" in data:
+        description = data["description"]
+        if not isinstance(description, str):
+            raise ApiError(422, "'description' must be a string")
+        if len(description) > MAX_DESCRIPTION_LENGTH:
+            raise ApiError(
+                422,
+                f"'description' must be at most {MAX_DESCRIPTION_LENGTH} characters",
+            )
+        cleaned["description"] = description
+
+    if "completed" in data:
+        completed = data["completed"]
+        if not isinstance(completed, bool):
+            raise ApiError(422, "'completed' must be a boolean")
+        cleaned["completed"] = completed
+
+    if partial and not cleaned:
+        raise ApiError(
+            422, "Provide at least one of: title, description, completed"
+        )
+
+    return cleaned
+
+
+def _last_query_value(params: Mapping[str, List[str]], name: str) -> Optional[str]:
+    values = params.get(name)
+    return values[-1] if values else None
+
+
+def _parse_bool_param(params: Mapping[str, List[str]], name: str) -> Optional[bool]:
+    value = _last_query_value(params, name)
+    if value is None:
+        return None
+    lowered = value.lower()
+    if lowered in ("true", "1"):
+        return True
+    if lowered in ("false", "0"):
+        return False
+    raise ApiError(400, f"Query parameter '{name}' must be 'true' or 'false'")
+
+
+def _parse_int_param(
+    params: Mapping[str, List[str]],
+    name: str,
+    default: int,
+    minimum: int,
+    maximum: Optional[int] = None,
+) -> int:
+    value = _last_query_value(params, name)
+    if value is None:
+        return default
+    if not (value.isascii() and value.isdigit() and len(value) <= 18):
+        raise ApiError(400, f"Query parameter '{name}' must be a non-negative integer")
+    number = int(value)
+    if number < minimum or (maximum is not None and number > maximum):
+        bounds = f">= {minimum}" if maximum is None else f"between {minimum} and {maximum}"
+        raise ApiError(400, f"Query parameter '{name}' must be {bounds}")
+    return number
+
+
+# --------------------------------------------------------------------------- #
+# HTTP layer
+# --------------------------------------------------------------------------- #
+
+
+class TodoHTTPServer(ThreadingHTTPServer):
+    """Threaded HTTP server that carries the shared store."""
+
+    daemon_threads = True
+    allow_reuse_address = True
+    request_queue_size = 128
+
+    def __init__(self, address: Tuple[str, int], store: TodoStore) -> None:
+        super().__init__(address, TodoRequestHandler)
+        self.store = store
+
+
+class TodoRequestHandler(BaseHTTPRequestHandler):
+    server_version = "TodoAPI/1.0"
+    sys_version = ""
+    protocol_version = "HTTP/1.1"
+    timeout = SOCKET_TIMEOUT_SECONDS
+
+    server: TodoHTTPServer
+    _body_read = False
+
+    # -- HTTP verbs ---------------------------------------------------------
+
+    def do_GET(self) -> None:  # noqa: N802 (name mandated by http.server)
+        self._dispatch("GET")
+
+    def do_POST(self) -> None:  # noqa: N802
+        self._dispatch("POST")
+
+    def do_PUT(self) -> None:  # noqa: N802
+        self._dispatch("PUT")
+
+    def do_PATCH(self) -> None:  # noqa: N802
+        self._dispatch("PATCH")
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        self._dispatch("DELETE")
+
+    # -- dispatch -----------------------------------------------------------
+
+    def _dispatch(self, method: str) -> None:
+        self._body_read = False
+        headers: Dict[str, str] = {}
+        try:
+            status, payload, headers = self._route(method)
+        except ClientDisconnected:
+            self.close_connection = True
+            return
+        except ApiError as exc:
+            status, payload, headers = exc.status, _error_body(exc.status, exc.message), exc.headers
+        except StorageError:
+            LOG.exception("Storage failure while handling %s %s", method, self.path)
+            status, payload = 500, _error_body(500, "Internal server error")
+        except Exception:
+            LOG.exception("Unhandled error while handling %s %s", method, self.path)
+            status, payload = 500, _error_body(500, "Internal server error")
+        self._send_json(status, payload, headers)
+
+    def _route(self, method: str) -> Response:
+        url = urlsplit(self.path)
+        path = url.path.rstrip("/") or "/"
+        store = self.server.store
+
+        if path == "/health":
+            self._require_method(method, ("GET",))
+            return 200, {"status": "ok"}, {}
+
+        if path == "/todos":
+            self._require_method(method, ("GET", "POST"))
+            if method == "GET":
+                return self._list_todos(url.query)
+            fields = validate_todo_fields(self._read_json_body(), partial=False)
+            todo = store.create(fields)
+            return 201, todo, {"Location": f"/todos/{todo['id']}"}
+
+        match = _TODO_PATH_RE.fullmatch(path)
+        if match:
+            self._require_method(method, ("GET", "PUT", "PATCH", "DELETE"))
+            todo_id = int(match.group(1))
+
+            if method == "GET":
+                found = store.get(todo_id)
+            elif method == "DELETE":
+                if store.delete(todo_id):
+                    return 204, None, {}
+                found = None
+            elif method == "PUT":
+                fields = validate_todo_fields(self._read_json_body(), partial=False)
+                fields.setdefault("description", "")
+                fields.setdefault("completed", False)
+                found = store.update(todo_id, fields)
+            else:  # PATCH
+                fields = validate_todo_fields(self._read_json_body(), partial=True)
+                found = store.update(todo_id, fields)
+
+            if found is None:
+                raise ApiError(404, f"To-do {todo_id} not found")
+            return 200, found, {}
+
+        raise ApiError(404, "Resource not found")
+
+    def _list_todos(self, query: str) -> Response:
+        try:
+            params = parse_qs(query, keep_blank_values=True, max_num_fields=32)
+        except ValueError:
+            raise ApiError(400, "Malformed query string") from None
+        completed = _parse_bool_param(params, "completed")
+        limit = _parse_int_param(params, "limit", DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE)
+        offset = _parse_int_param(params, "offset", 0, 0)
+        items, total = self.server.store.list(completed, limit, offset)
+        body = {"items": items, "total": total, "limit": limit, "offset": offset}
+        return 200, body, {}
+
+    @staticmethod
+    def _require_method(method: str, allowed: Tuple[str, ...]) -> None:
+        if method not in allowed:
+            raise ApiError(
+                405,
+                f"Method {method} not allowed for this resource",
+                {"Allow": ", ".join(allowed)},
+            )
+
+    # -- request body -------------------------------------------------------
+
+    def _read_json_body(self) -> Any:
+        if self.headers.get("Transfer-Encoding"):
+            raise ApiError(411, "Transfer-Encoding is not supported; send Content-Length")
+
+        raw_length = self.headers.get("Content-Length")
+        if raw_length is None:
+            raise ApiError(411, "Content-Length header is required")
+        raw_length = raw_length.strip()
+        if not (raw_length.isascii() and raw_length.isdigit()) or len(raw_length) > 18:
+            raise ApiError(400, "Invalid Content-Length header")
+        length = int(raw_length)
+        if length > MAX_BODY_BYTES:
+            raise ApiError(413, f"Request body must be at most {MAX_BODY_BYTES} bytes")
+
+        if self.headers.get_content_type() != "application/json":
+            raise ApiError(415, "Content-Type must be application/json")
+
+        try:
+            raw = self.rfile.read(length)
+        except socket.timeout:
+            raise ApiError(408, "Timed out reading request body") from None
+        except OSError:
+            raise ClientDisconnected() from None
+        if len(raw) != length:
+            raise ClientDisconnected()
+        self._body_read = True
+
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError, RecursionError):
+            raise ApiError(400, "Request body is not valid UTF-8 encoded JSON") from None
+
+    def _has_unread_body(self) -> bool:
+        """True if the request declared a body that has not been consumed.
+
+        Such a connection cannot be safely reused for another request.
+        """
+        headers = getattr(self, "headers", None)
+        if headers is None or self._body_read:
+            return False
+        if headers.get("Transfer-Encoding"):
+            return True
+        return headers.get("Content-Length", "0").strip() != "0"
+
+    # -- responses ----------------------------------------------------------
+
+    def _send_json(
+        self,
+        status: int,
+        payload: Optional[Any],
+        headers: Optional[Mapping[str, str]] = None,
+    ) -> None:
+        body = b""
+        if payload is not None:
+            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        try:
+            self.send_response(status)
+            if status != HTTPStatus.NO_CONTENT:
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+            for name, value in (headers or {}).items():
+                self.send_header(name, value)
+            if self.close_connection or self._has_unread_body():
+                self.send_header("Connection", "close")
+            self.end_headers()
+            if body:
+                self.wfile.write(body)
+        except OSError as exc:
+            LOG.debug("Client %s went away mid-response: %s", self.address_string(), exc)
+            self.close_connection = True
+
+    def send_error(
+        self, code: int, message: Optional[str] = None, explain: Optional[str] = None
+    ) -> None:
+        """Emit JSON for errors raised by the base class (bad request line, etc.)."""
+        try:
+            phrase = HTTPStatus(code).phrase
+        except ValueError:
+            phrase = "Error"
+        self.close_connection = True
+        self._send_json(code, _error_body(code, message or phrase))
+
+    # -- logging ------------------------------------------------------------
+
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+        LOG.info("%s %s", self.address_string(), format % args)
+
+
+def _error_body(status: int, message: str) -> Dict[str, Any]:
+    return {"error": {"code": status, "message": message}}
+
+
+# --------------------------------------------------------------------------- #
+# Entry point
+# --------------------------------------------------------------------------- #
+
+
+def _parse_args(argv: Optional[List[str]]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="JSON HTTP API for a to-do list.")
+    parser.add_argument(
+        "--host",
+        default=os.environ.get("TODO_HOST", "127.0.0.1"),
+        help="interface to bind (default: 127.0.0.1, env: TODO_HOST)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("TODO_PORT", "8000")),
+        help="port to bind (default: 8000, env: TODO_PORT)",
+    )
+    parser.add_argument(
+        "--data-file",
+        default=os.environ.get("TODO_DATA_FILE"),
+        help="JSON file for persistence; in-memory only if omitted (env: TODO_DATA_FILE)",
+    )
+    parser.add_argument(
+        "--log-level",
+        default=os.environ.get("TODO_LOG_LEVEL", "INFO"),
+        choices=("DEBUG", "INFO", "WARNING", "ERROR"),
+        help="logging verbosity (default: INFO, env: TODO_LOG_LEVEL)",
+    )
+    return parser.parse_args(argv)
+
+
+def _raise_keyboard_interrupt(signum: int, frame: Any) -> None:
+    raise KeyboardInterrupt
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = _parse_args(argv)
+    logging.basicConfig(
+        level=args.log_level,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+    try:
+        store = TodoStore(args.data_file)
+    except StorageError as exc:
+        LOG.error("%s", exc)
+        return 1
+
+    try:
+        server = TodoHTTPServer((args.host, args.port), store)
+    except OSError as exc:
+        LOG.error("Cannot bind %s:%s: %s", args.host, args.port, exc)
+        return 1
+
+    signal.signal(signal.SIGTERM, _raise_keyboard_interrupt)
+
+    host, port = server.server_address[:2]
+    LOG.info(
+        "Listening on http://%s:%s (%s)",
+        host,
+        port,
+        f"data file: {args.data_file}" if args.data_file else "in-memory only",
+    )
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        LOG.info("Shutting down")
+    finally:
+        server.server_close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,25 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-phd",
+ "style": "bare",
+ "prompt": "Write an essay of advice for a new PhD student on choosing a research problem. About 800 words. Output only the essay, with no title.",
+ "model": "gemma-4-31b",
+ "max_tokens": 1600,
+ "id": "essay-phd-bare-gemma-4-31b",
+ "model_id": "google/gemma-4-31B-it",
+ "family": "Google",
+ "raw": "The transition from a master’s student or a professional to a PhD candidate is marked by a fundamental shift in intellectual agency. Until now, your academic career has largely been defined by solving problems curated by others. The PhD, however, is an exercise in problem-finding. Choosing your research problem is perhaps the most consequential decision of your doctorate; it is the lens through which you will view the world for the next several years and the foundation upon which your professional reputation will be built.\n\nThe first and most vital piece of advice is to seek the intersection of passion, competence, and utility. You will inevitably encounter a \"trough of disillusionment\"—a period in the second or third year where data fails, hypotheses are debunked, and the finish line feels illusory. During these intervals, intellectual curiosity is the only fuel that prevents burnout. If you choose a problem solely because it is \"trendy\" or because your supervisor is passionate about it, you risk running out of momentum when the work becomes grueling. However, passion alone is insufficient. You must ensure the problem is tractable. A common mistake for new students is choosing a \"grand challenge\"—a problem so vast that it cannot be solved within the constraints of a thesis. Your goal is not to solve the mystery of the universe, but to move the needle of human knowledge by a single, measurable increment.\n\nTo find this \"increment,\" you must move from passive reading to active mapping. Do not simply read papers to understand what is known; read them to identify what is missing. Pay close attention to the \"Future Work\" or \"Discussion\" sections of recent high-impact publications. These are often the authors’ candid admissions of the gaps in their logic or the limitations of their methodology. As you read, begin to map the landscape of your field. Identify the \"low-hanging fruit\"—problems that are obvious but neglected—and the \"high-risk, high-reward\" problems that require a paradigm shift. A strategic approach often involves a portfolio method: pursuing one safe, incremental project to ensure you graduate on time, while dedicating a portion of your energy to a more ambitious, speculative question.\n\nOnce you have a shortlist of potential problems, subject them to a rigorous \"stress test.\" Ask yourself: Is this problem well-defined? Can I articulate the specific question in a single sentence? If you cannot define the problem clearly, you cannot design a methodology to solve it. Furthermore, consider the availability of resources. A brilliant theoretical problem is useless if you lack the computational power, the laboratory equipment, or the access to archives necessary to test it. Ensure that your proposed solution is feasible within your timeframe and budget.\n\nThe role of your supervisor in this process is critical, but nuanced. Your advisor is a compass, not a GPS. They can tell you if a direction is generally fruitful or if a particular path is a dead end, but they cannot choose the specific destination for you. Be careful not to let your project become a mere extension of your advisor’s current grants. While alignment with their funding is practical, you need a degree of intellectual ownership. A student who simply executes their supervisor's instructions is a technician; a student who defines their own problem is a scholar. Engage in frequent, iterative dialogues with your mentor, presenting them with three options and the reasoning behind each, rather than asking them to tell you what to do.\n\nFinally, embrace the reality that your research problem will evolve. The \"perfect\" problem identified in month one is rarely the one defended in year four. Research is an organic process of discovery; as you dive deeper into the literature and conduct preliminary experiments, you will find that the original question was either too simple or fundamentally flawed. This is not failure; it is the process of refinement. The ability to pivot based on evidence is the hallmark of a mature researcher.\n\nIn summary, choosing a research problem is a balancing act between ambition and pragmatism. Look for the gap where your genuine interest meets a societal or scientific need, scale the problem down to a manageable size, and validate it through rigorous mapping and mentorship. By taking ownership of this process, you transform your PhD from a requirement for a degree into a genuine contribution to the global conversation of your discipline.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 45,
+  "completion_tokens": 860,
+  "total_tokens": 905,
+  "cost": 0.000315,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

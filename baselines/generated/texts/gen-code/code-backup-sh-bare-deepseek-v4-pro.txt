@@ -1,0 +1,308 @@
+#!/usr/bin/env bash
+#
+# backup-postgres-to-s3.sh
+#
+# Backs up a PostgreSQL database to Amazon S3 with configurable retention
+# and robust error handling.
+#
+# Required environment variables:
+#   DB_HOST          - PostgreSQL host (default: localhost)
+#   DB_PORT          - PostgreSQL port (default: 5432)
+#   DB_NAME          - Database name
+#   DB_USER          - Database user
+#   DB_PASSWORD      - Database password (or use .pgpass)
+#   S3_BUCKET        - S3 bucket name (e.g., my-backup-bucket)
+#   S3_PREFIX        - S3 key prefix (e.g., database-backups/production)
+#   RETENTION_DAYS   - Number of days to retain backups (default: 30)
+#
+# Optional environment variables:
+#   PGPASSFILE       - Path to .pgpass file
+#   AWS_DEFAULT_REGION
+#   AWS_ACCESS_KEY_ID
+#   AWS_SECRET_ACCESS_KEY
+#   S3_ENDPOINT_URL  - Custom S3-compatible endpoint
+#   ENCRYPTION_KEY   - KMS key ID for SSE-KMS encryption
+#   STORAGE_CLASS    - S3 storage class (default: STANDARD)
+#   BACKUP_DIR       - Local temporary directory (default: /tmp/pg_backups)
+#
+# Dependencies: pg_dump, gzip, aws-cli, date (GNU or BSD)
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+# ──────────────────────────────────────────────
+# Configuration and defaults
+# ──────────────────────────────────────────────
+readonly SCRIPT_NAME="$(basename "${0}")"
+readonly TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+readonly DEFAULT_BACKUP_DIR="/tmp/pg_backups"
+readonly LOCK_FILE="/var/run/${SCRIPT_NAME}.lock"
+
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-5432}"
+DB_NAME="${DB_NAME:?Environment variable DB_NAME is required}"
+DB_USER="${DB_USER:?Environment variable DB_USER is required}"
+DB_PASSWORD="${DB_PASSWORD:-}"
+S3_BUCKET="${S3_BUCKET:?Environment variable S3_BUCKET is required}"
+S3_PREFIX="${S3_PREFIX:?Environment variable S3_PREFIX is required}"
+RETENTION_DAYS="${RETENTION_DAYS:-30}"
+BACKUP_DIR="${BACKUP_DIR:-${DEFAULT_BACKUP_DIR}}"
+STORAGE_CLASS="${STORAGE_CLASS:-STANDARD}"
+ENCRYPTION_KEY="${ENCRYPTION_KEY:-}"
+
+readonly DB_HOST DB_PORT DB_NAME DB_USER S3_BUCKET S3_PREFIX RETENTION_DAYS
+readonly BACKUP_DIR STORAGE_CLASS ENCRYPTION_KEY TIMESTAMP
+
+# ──────────────────────────────────────────────
+# Logging functions
+# ──────────────────────────────────────────────
+log() {
+    local level="${1}"
+    shift
+    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [${level}] ${*}" >&2
+}
+
+log_info()  { log "INFO" "${@}"; }
+log_warn()  { log "WARN" "${@}"; }
+log_error() { log "ERROR" "${@}"; }
+
+# ──────────────────────────────────────────────
+# Cleanup handler
+# ──────────────────────────────────────────────
+cleanup() {
+    local exit_code=$?
+    # Remove lock file
+    rm -f "${LOCK_FILE}"
+    # Clean up temporary backup directory for this run
+    if [[ -n "${RUN_BACKUP_DIR:-}" ]] && [[ -d "${RUN_BACKUP_DIR}" ]]; then
+        rm -rf "${RUN_BACKUP_DIR}"
+        log_info "Cleaned up temporary directory: ${RUN_BACKUP_DIR}"
+    fi
+    if [[ ${exit_code} -ne 0 ]]; then
+        log_error "Script terminated with exit code ${exit_code}"
+    fi
+    exit ${exit_code}
+}
+
+trap cleanup EXIT INT TERM
+
+# ──────────────────────────────────────────────
+# Lock file management (prevent concurrent runs)
+# ──────────────────────────────────────────────
+acquire_lock() {
+    if [[ -f "${LOCK_FILE}" ]]; then
+        local pid
+        pid="$(cat "${LOCK_FILE}" 2>/dev/null || true)"
+        if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
+            log_error "Another instance is already running (PID: ${pid}). Exiting."
+            exit 1
+        fi
+        log_warn "Stale lock file found. Removing."
+        rm -f "${LOCK_FILE}"
+    fi
+    echo $$ > "${LOCK_FILE}"
+    log_info "Lock acquired (PID: $$)"
+}
+
+# ──────────────────────────────────────────────
+# Validate prerequisites
+# ──────────────────────────────────────────────
+validate_prerequisites() {
+    local required_commands=("pg_dump" "gzip" "aws")
+    local missing_commands=()
+
+    for cmd in "${required_commands[@]}"; do
+        if ! command -v "${cmd}" &>/dev/null; then
+            missing_commands+=("${cmd}")
+        fi
+    done
+
+    if [[ ${#missing_commands[@]} -gt 0 ]]; then
+        log_error "Missing required commands: ${missing_commands[*]}"
+        exit 1
+    fi
+
+    # Ensure RETENTION_DAYS is a positive integer
+    if ! [[ "${RETENTION_DAYS}" =~ ^[0-9]+$ ]] || [[ "${RETENTION_DAYS}" -lt 1 ]]; then
+        log_error "RETENTION_DAYS must be a positive integer, got: ${RETENTION_DAYS}"
+        exit 1
+    fi
+}
+
+# ──────────────────────────────────────────────
+# Prepare backup directory
+# ──────────────────────────────────────────────
+prepare_backup_dir() {
+    RUN_BACKUP_DIR="${BACKUP_DIR}/${DB_NAME}-${TIMESTAMP}"
+    if ! mkdir -p "${RUN_BACKUP_DIR}"; then
+        log_error "Failed to create backup directory: ${RUN_BACKUP_DIR}"
+        exit 1
+    fi
+    log_info "Backup directory: ${RUN_BACKUP_DIR}"
+}
+
+# ──────────────────────────────────────────────
+# Export PostgreSQL password if provided
+# ──────────────────────────────────────────────
+setup_pg_environment() {
+    if [[ -n "${DB_PASSWORD}" ]]; then
+        export PGPASSWORD="${DB_PASSWORD}"
+    fi
+}
+
+# ──────────────────────────────────────────────
+# Perform PostgreSQL dump
+# ──────────────────────────────────────────────
+perform_dump() {
+    local dump_file="${RUN_BACKUP_DIR}/${DB_NAME}.sql"
+    local compressed_file="${dump_file}.gz"
+
+    log_info "Starting PostgreSQL dump for database '${DB_NAME}'..."
+
+    if ! pg_dump \
+        --host="${DB_HOST}" \
+        --port="${DB_PORT}" \
+        --username="${DB_USER}" \
+        --no-password \
+        --no-owner \
+        --format=custom \
+        --verbose \
+        --file="${dump_file}" \
+        "${DB_NAME}" 2>&1 | while IFS= read -r line; do
+            log_info "pg_dump: ${line}"
+        done; then
+        log_error "pg_dump failed for database '${DB_NAME}'"
+        exit 1
+    fi
+
+    local dump_size
+    dump_size="$(stat -c%s "${dump_file}" 2>/dev/null || stat -f%z "${dump_file}" 2>/dev/null || echo 0)"
+    log_info "Dump completed. Raw size: ${dump_size} bytes"
+
+    # Compress
+    log_info "Compressing backup..."
+    if ! gzip --force --best "${dump_file}"; then
+        log_error "Compression failed"
+        exit 1
+    fi
+
+    local compressed_size
+    compressed_size="$(stat -c%s "${compressed_file}" 2>/dev/null || stat -f%z "${compressed_file}" 2>/dev/null || echo 0)"
+    log_info "Compression completed. Compressed size: ${compressed_size} bytes"
+}
+
+# ──────────────────────────────────────────────
+# Upload backup to S3
+# ──────────────────────────────────────────────
+upload_to_s3() {
+    local compressed_file="${RUN_BACKUP_DIR}/${DB_NAME}.sql.gz"
+    local s3_key="${S3_PREFIX%/}/${DB_NAME}-${TIMESTAMP}.sql.gz"
+    local aws_opts=()
+
+    # Build multi-part upload filter (only upload .gz files)
+    # We use 'aws s3 cp' for single-file efficiency
+
+    aws_opts+=(--storage-class "${STORAGE_CLASS}")
+
+    if [[ -n "${ENCRYPTION_KEY}" ]]; then
+        aws_opts+=(--sse aws:kms --sse-kms-key-id "${ENCRYPTION_KEY}")
+        log_info "Using SSE-KMS encryption with key: ${ENCRYPTION_KEY}"
+    elif [[ -n "${S3_ENDPOINT_URL:-}" ]]; then
+        aws_opts+=(--sse AES256)
+        log_info "Using SSE-S3 encryption (AES256)"
+    else
+        aws_opts+=(--sse AES256)
+        log_info "Using SSE-S3 encryption (AES256)"
+    fi
+
+    if [[ -n "${S3_ENDPOINT_URL:-}" ]]; then
+        aws_opts+=(--endpoint-url "${S3_ENDPOINT_URL}")
+    fi
+
+    log_info "Uploading ${compressed_file} to s3://${S3_BUCKET}/${s3_key}..."
+
+    if ! aws s3 cp \
+        "${compressed_file}" \
+        "s3://${S3_BUCKET}/${s3_key}" \
+        "${aws_opts[@]}" \
+        --quiet; then
+        log_error "Upload to S3 failed"
+        exit 1
+    fi
+
+    log_info "Upload completed successfully: s3://${S3_BUCKET}/${s3_key}"
+
+    # Write a manifest file for auditing
+    local manifest_file="${RUN_BACKUP_DIR}/manifest.json"
+    cat > "${manifest_file}" << EOF
+{
+  "timestamp": "${TIMESTAMP}",
+  "database": "${DB_NAME}",
+  "host": "${DB_HOST}",
+  "port": "${DB_PORT}",
+  "s3_bucket": "${S3_BUCKET}",
+  "s3_key": "${s3_key}",
+  "storage_class": "${STORAGE_CLASS}",
+  "encryption": "${ENCRYPTION_KEY:+aws:kms}${ENCRYPTION_KEY:-AES256}",
+  "format": "custom",
+  "compression": "gzip"
+}
+EOF
+
+    # Upload manifest alongside backup
+    aws s3 cp \
+        "${manifest_file}" \
+        "s3://${S3_BUCKET}/${S3_PREFIX%/}/${DB_NAME}-${TIMESTAMP}.manifest.json" \
+        --storage-class "${STORAGE_CLASS}" \
+        ${S3_ENDPOINT_URL:+--endpoint-url "${S3_ENDPOINT_URL}"} \
+        --quiet || log_warn "Failed to upload manifest file (non-fatal)"
+}
+
+# ──────────────────────────────────────────────
+# Rotate old backups
+# ──────────────────────────────────────────────
+rotate_old_backups() {
+    local cutoff_date
+    local deleted_count=0
+
+    # Calculate cutoff date (seconds since epoch)
+    if [[ "$(uname)" == "Darwin" ]]; then
+        cutoff_date="$(date -u -v-${RETENTION_DAYS}d +%Y-%m-%d)"
+    else
+        cutoff_date="$(date -u -d "${RETENTION_DAYS} days ago" +%Y-%m-%d)"
+    fi
+
+    log_info "Rotating backups older than ${RETENTION_DAYS} days (cutoff: ${cutoff_date})..."
+
+    local prefix="${S3_PREFIX%/}/${DB_NAME}-"
+
+    # List objects and filter by date
+    local aws_list_opts=()
+    [[ -n "${S3_ENDPOINT_URL:-}" ]] && aws_list_opts+=(--endpoint-url "${S3_ENDPOINT_URL}")
+
+    local objects
+    objects="$(aws s3api list-objects \
+        --bucket "${S3_BUCKET}" \
+        --prefix "${prefix}" \
+        --query "Contents[?LastModified<='${cutoff_date}T23:59:59Z'].[Key]" \
+        --output text \
+        "${aws_list_opts[@]}" 2>/dev/null || true)"
+
+    if [[ -z "${objects}" ]]; then
+        log_info "No backups found matching retention policy (older than ${RETENTION_DAYS} days)."
+        return 0
+    fi
+
+    while IFS= read -r key; do
+        [[ -z "${key}" ]] && continue
+
+        log_info "Deleting old backup: s3://${S3_BUCKET}/${key}"
+
+        if aws s3 rm "s3://${S3_BUCKET}/${key}" \
+            ${S3_ENDPOINT_URL:+--endpoint-url "${S3_ENDPOINT_URL}"} \
+            --quiet; then
+            deleted_count=$((deleted_count + 1))
+        else
+            log_warn "Failed to delete: s3://${S3_BUCKET}/${key}"
+        fi

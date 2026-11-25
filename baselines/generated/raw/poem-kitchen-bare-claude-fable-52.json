@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "bare",
+ "prompt": "Write a poem about a kitchen. Output only the poem, with no title.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-kitchen-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "Morning comes in through the window over the sink,\nlaying its pale hands on the counter's worn edge,\nwhere a ring from last night's cup still holds\nthe shape of a conversation.\n\nThe kettle begins its low complaint,\nthen rises, insistent, into song.\nSteam fogs the glass. A spoon\nrings once against the rim, a small bell.\n\nHere the onions have made everyone weep\nfor no reason worth naming,\nand bread has risen under a dish towel\nlike something quietly deciding to live.\n\nThe drawer that sticks, the burner that tilts,\nthe chair nobody claims but everyone uses:\nall of it leans toward the stove's blue flame,\nthat steady, flickering heart.\n\nAnd when the dishes are stacked and dripping,\nand the light goes amber, then gone,\nthe room keeps its warmth a while longer,\nthe way a hand remembers what it held.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

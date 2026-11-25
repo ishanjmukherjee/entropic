@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "craft",
+ "prompt": "Write the lyrics of a folk song about a river being dammed.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "glm-5.3",
+ "max_tokens": 900,
+ "id": "song-river-craft-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "They called it the Bramble Fork, ran brown behind the mill\nClara Jenkins washed her quilts there, hung them on the rail\nEd Hutchins poured his concrete on a Monday in the fall\nSaid a fella from Knoxville signed the paper for it all\n\nOh the water knows a road and the road runs downhill\nYou can stack your stones and lanterns, mark your line\nBut the water knows a road, and it waits behind the wall\nEverything that's held back has a mind\n\nThey measured it in acre-feet, they put it on a sign\nLottie's ferry went to rust behind the county line\nThe church held one last dinner on the banks that made the news\nPreacher blessed the water and the water didn't move\n\nOh the water knows a road and the road runs downhill\nYou can stack your stones and lanterns, mark your line\nBut the water knows a road, and it waits behind the wall\nEverything that's held back has a mind\n\nNow the lake is named for Hutchins, there's a marina where the ford\nClara's great-granddaughter sells the bait from in the store\nAt night she hears the hoot owls where the steeple used to stand\nSays the bass all run to deeper water when they can\n\nOh the water knows a road and the road runs downhill\nYou can stack your stones and lanterns, mark your line\nYeah, the water knows a road, and it's patient with the wall\nEverything that's held back has a mind\n\nThey opened up the sluice gates in the flooding of '29\nThe valley got its six feet back, a piece at a time\nOld Ed went broke in Knoxville, spent his last days selling land\nNobody bought the parcels where the water used to stand\n\nOh the water knows a road and the road runs downhill\nYou can stack your stones and lanterns, mark your line\nStill the water knows a road, though it sleeps behind the wall\nEverything that's held back has a mind\nEverything held back so long forgets it had a mind",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 149,
+  "completion_tokens": 478,
+  "total_tokens": 627,
+  "cost": 0.0023118,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

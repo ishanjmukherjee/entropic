@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "bare",
+ "prompt": "Write a poem about a father's hands. Output only the poem, with no title.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-father-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "These hands have weathered sixty winters’ bite,  \nA geography of callus, scar, and stain—  \nGrease mapping knuckles, thorn marks white  \nAt thumb’s edge, topography of pain  \nAnd persistence. Once, they feared to hold  \nThe porcelain doll I was, wary of their rough,  \nTheir blunt authority; now, grown old  \nAnd somewhat softened, they are enough  \nTo hoist the grandchild, swing her slow  \nThrough autumn’s dying light, or steady me  \nWith one palm’s press against my shoulder’s hollow.  \nI study how the veins swell, blue as sea  \nOr rivers on old maps, how fingers curl  \nAround the coffee cup that trembles slight—  \nHow much of life is grasping at the world  \nWith tools that crack but somehow hold us tight  \nThrough splintered boards and fevered nights.  \nThey taught that love is labor, not the heart  \nBut what the hand performs; that comfort starts  \nWith taking things apart to mend their parts.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 35,
+  "completion_tokens": 215,
+  "total_tokens": 250,
+  "cost": 0.00333,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

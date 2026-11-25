@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "bare",
+ "prompt": "Write the lyrics of a country song about leaving a small town. Output only the lyrics.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 900,
+ "id": "song-town-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "**Dust in the Rearview**\n\n*Verse 1*\nWater tower's fading in the morning haze,\nSame red light blinking like it has for days,\nI packed my whole life in a half-ton bed,\nWith Mama's last words running through my head.\nShe said, \"Baby, you were born with restless feet,\nAin't nothing for you here on Main Street.\"\n\n*Chorus*\nSo I'm leaving with dust in the rearview,\nA full tank of gas and a heart split in two,\nPast the Friday night lights and the old church pew,\nEvery mile I'm gaining's one more thing I lose.\nThis town made me everything I am,\nBut it can't hold everything I am,\nSo goodbye to the only home I knew,\nJust dust in the rearview.\n\n*Verse 2*\nThere's the diner where I learned to drink it black,\nThe gravel lot behind the railroad track,\nWhere I kissed a girl who swore she'd never stay,\nFunny how I'm the one who's driving away.\nDaddy shook my hand, couldn't say a word,\nBut his eyes said more than I ever heard.\n\n*Chorus*\nSo I'm leaving with dust in the rearview,\nA full tank of gas and a heart split in two,\nPast the Friday night lights and the old church pew,\nEvery mile I'm gaining's one more thing I lose.\nThis town made me everything I am,\nBut it can't hold everything I am,\nSo goodbye to the only home I knew,\nJust dust in the rearview.\n\n*Bridge*\nThey say you can't go back again,\nBut these roads are written on my skin,\nEvery cornfield, every creek, every name,\nI'm taking you with me just the same.\n\n*Final Chorus*\nSo I'm leaving with dust in the rearview,\nChasing down a dream I ain't sure will come true,\nPast the county line sign, paint peeling blue,\nLord, I hope I'm doing what I'm meant to do.\nThis town made me everything I am,\nAnd I'll carry it wherever I land,\nSo goodbye to the only home I knew,\nJust dust in the rearview.\n\n*Outro*\nWater tower's gone now, sun's up high,\nDidn't think I'd cry, but I guess I lied.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

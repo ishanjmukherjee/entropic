@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "bare",
+ "prompt": "Write the lyrics of a pop song about a breakup. Output only the lyrics.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 900,
+ "id": "song-breakup-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "(Verse 1)\nI found your t-shirt in the back of my drawer\nIt doesn't smell like you anymore\nJust cotton and silence, faded and thin\nGuess that’s the state that I’m living in\nI replayed the voicemail you left in July\nJust to hear a version of you that was mine\nBut the static is louder than any goodbye\nAnd I’m tired of asking the reasons why\n\n(Pre-Chorus)\nThey say the first few nights are always the hardest\nWaiting for a text that never comes\nI’ve been painting over all our apartment\nTrying to forget where you’re from\n\n(Chorus)\nI’m gonna move my body till my mind forgets\nDancing on the edge of my own silhouettes\nCrying in the bathroom, pretty in a mess\nDoing it for me now, got no regrets\nIt’s a sad girl summer, let the teardrops fall\nI don’t need a lover, I don’t need a call\nBreaking isn't broken when you’re standing tall\nWatch me love myself till I feel nothing at all\n\n(Verse 2)\nThrew out the playlist we made in the car\nNow I only sing songs that know who you are\nEmpty prescriptions and glitter and scars\nHealing looks gorgeous on broken hearts\nMy friends keep on telling me, \"Give it some time\"\nBut the fast track to freedom rewrites every line\nSo I’m putting my heartbreak in 4/4 time\nAnd leaving your memory behind\n\n(Pre-Chorus)\nThey say the lonely mornings hit just like a fever\nReaching for a hand that isn’t there\nBut I put on my armor and my favorite sneakers\nAnd I step out into the open air\n\n(Chorus)\nI’m gonna move my body till my mind forgets\nDancing on the edge of my own silhouettes\nCrying in the bathroom, pretty in a mess\nDoing it for me now, got no regrets\nIt’s a sad girl summer, let the teardrops fall\nI don’t need a lover, I don’t need a call\nBreaking isn't broken when you’re standing tall\nWatch me love myself till I feel nothing at all\n\n(Bridge)\nFlashback flickers, the late-night glow\nYou said, \"Don't you ever let me go\"\nBut I’m gripping the wheel and I’m taking control\nAnd the radio’s playing my song\n(My song, my song, my song...)\n\n(Breakdown Chorus - Upbeat, spoken-sung)\nI’m a wreck, I’m a queen\nI’m every shade in between\nAnd tonight, the whole damn floor is mine\n\n(Final Chorus)\nYeah, I move my body till my mind forgets\nKicking down the doors that you used to protect\nSmudging all my makeup, I’m a beautiful mess\nDoing it for me now, hold my own cigarette\nIt’s a sad girl summer, let the teardrops fall\nBlocked your stupid number, I won’t take the call\nBreaking isn't broken when you’re standing tall\nGonna love myself till I feel nothing at all\n\n(Outro)\nNothing at all\n(Nothing at all)\nNothing at all...\nOops, I forgot your name.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 20,
+  "completion_tokens": 708,
+  "total_tokens": 728,
+  "cost": 0.0022976,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

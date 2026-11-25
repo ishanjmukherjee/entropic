@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "bare",
+ "prompt": "Write a poem about a kitchen. Output only the poem, with no title.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-kitchen-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "The kettle starts its low complaint\nbefore the window's fully gray,\nand steam unthreads itself in loops\nthat drift toward the cupboard's sway.\n\nA drawer of spoons that never match,\na knife worn thinner than it was,\nthe table with its one short leg\nwe steady with a folded cause:\n\na letter no one answered, creased\nto fit the gap, and holding still.\nThe onions sweat. The butter browns.\nThe radio hums on the sill.\n\nHere flour settles into seams\nno sponge has ever fully cleared,\nand every scar along the board\nremembers someone who was here.\n\nMy mother's hands, my grandmother's,\nthe same slow turning of the wrist,\nthe pinch of salt that isn't measured,\nthe recipe that won't exist\n\non any card, in any book,\nbut lives the way that warmth survives:\npassed hand to hand above the stove,\nthe quiet liturgy of lives.\n\nAnd when the dishes dry at night,\nand all the burners click to black,\nthe kitchen keeps its patient hum,\nand waits for morning to come back.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

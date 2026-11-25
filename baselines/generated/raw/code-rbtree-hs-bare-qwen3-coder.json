@@ -1,0 +1,27 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-rbtree-hs",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Haskell source file that implements a persistent red-black tree with insert, member and toList. Output only the code.",
+ "model": "qwen3-coder",
+ "max_tokens": 3000,
+ "domain": "functional",
+ "language": "Haskell",
+ "id": "code-rbtree-hs-bare-qwen3-coder",
+ "model_id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+ "family": "Alibaba",
+ "raw": "```haskell\n{-# LANGUAGE DeriveFunctor #-}\nmodule RedBlackTree \n  ( RedBlackTree\n  , empty\n  , insert\n  , member\n  , toList\n  ) where\n\ndata Color = Red | Black\n  deriving (Show, Eq)\n\ndata RedBlackTree a \n  = Empty\n  | Node Color (RedBlackTree a) a (RedBlackTree a)\n  deriving (Show, Functor)\n\n-- | Create an empty red-black tree\nempty :: RedBlackTree a\nempty = Empty\n\n-- | Insert a value into the red-black tree\ninsert :: Ord a => a -> RedBlackTree a -> RedBlackTree a\ninsert x tree = \n  let (Node _ left val right) = ins tree\n  in Node Black left val right\n  where\n    ins Empty = Node Red Empty x Empty\n    ins (Node color left val right) =\n      case compare x val of\n        LT -> balance color (ins left) val right\n        GT -> balance color left val (ins right)\n        EQ -> Node color left val right\n    \n    balance :: Color -> RedBlackTree a -> a -> RedBlackTree a -> RedBlackTree a\n    balance Black (Node Red (Node Red a x b) y c) z d = \n      Node Red (Node Black a x b) y (Node Black c z d)\n    balance Black (Node Red a x (Node Red b y c)) z d = \n      Node Red (Node Black a x b) y (Node Black c z d)\n    balance Black a x (Node Red (Node Red b y c) z d) = \n      Node Red (Node Black a x b) y (Node Black c z d)\n    balance Black a x (Node Red b y (Node Red c z d)) = \n      Node Red (Node Black a x b) y (Node Black c z d)\n    balance color left val right = Node color left val right\n\n-- | Check if a value is a member of the red-black tree\nmember :: Ord a => a -> RedBlackTree a -> Bool\nmember _ Empty = False\nmember x (Node _ left val right) =\n  case compare x val of\n    LT -> member x left\n    GT -> member x right\n    EQ -> True\n\n-- | Convert the red-black tree to a sorted list\ntoList :: RedBlackTree a -> [a]\ntoList = foldTree (:[]) (:) (++) []\n  where\n    foldTree :: (a -> b) -> (a -> b -> b -> b) -> (b -> b -> b) -> b -> RedBlackTree a -> b\n    foldTree f g h z Empty = z\n    foldTree f g h z (Node _ left val right) = \n      g val (foldTree f g h z left) (foldTree f g h z right)\n```",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 37,
+  "completion_tokens": 606,
+  "total_tokens": 643,
+  "cost": 0.00095336,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

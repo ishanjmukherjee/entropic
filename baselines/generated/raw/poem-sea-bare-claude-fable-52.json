@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "bare",
+ "prompt": "Write a poem about the sea. Output only the poem, with no title.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-sea-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "The sea keeps no calendar, only the tide,\na slow gray breathing against the stone,\nhauling its silver in, letting it slide\nback to the deep where the light is unknown.\n\nIt carries the names of the ships it has held,\nthe salt of old storms, the hush after rain,\nand every shore that its patience has felled\nit gives to another as sand, grain by grain.\n\nAt dawn it is glass, at dusk it is fire,\nat midnight a field where the moon lays its road;\nit asks nothing of us, not grief nor desire,\nyet takes what we bring it and lightens the load.\n\nStand at its edge and the world falls away:\none long horizon, one voice, and the spray.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

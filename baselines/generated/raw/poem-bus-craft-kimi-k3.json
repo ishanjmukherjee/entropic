@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a city bus at night. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-bus-craft-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "At 2:13 the Merrick line idles under the overpass on 17th,\nits doors sighing open for a woman with a mop bucket\nand a man carrying a hive frame wrapped in burlap.\nInside: tangerine lights, a heater ticking,\nthe scarred floor where bleach has dulled the blue.\nThe driver taps the farebox with his ring,\nthen nods to nobody in the mirror.\nA receipt from the laundromat sticks to the window—\nthree queen-size, one pillowcase—\nand the radio says the ports will close at morning.\nSteam rises from a Styrofoam cup,\na child sleeps against a hose of language,\nthe map above the seats missing one cracked county.\nWhen the brakes take, standing bodies lean,\nthen let go of what they almost had to say.\nRubber, mirrors, money changing temperature in a fist,\nthe woman lifts her bucket, the man his bees.\nOutside the street stays wet and counted: hydrant, mailbox, dark line\nwhere the building holds its own back teeth.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 198,
+  "completion_tokens": 225,
+  "total_tokens": 423,
+  "cost": 0.003969,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "bare",
+ "prompt": "Write the lyrics of a folk song about a river being dammed. Output only the lyrics.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 900,
+ "id": "song-river-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "(Verse 1)\nI was born in the high cold spring, a trickle and a sigh\nTumbled down the granite face, beneath a watching sky\nShone upon by seven stars, I carved my crooked way\nA silver thread across the green, at the closing of the day.\n\n(Verse 2)\nI knew the otter and the trout, the kingfisher's quick dart\nI wore the ancient standing stones a canyon and a heart\nI sang the only song I knew, a wild and running sound\nTo the willow and the cottonwood and the holy, thirsting ground.\n\n(Chorus)\nBut now there's a hush where the rapids rushed, a stillness in the air\nA wall of stone and steel and bone has stopped me in my prayer\nMy voice is a whisper in the pipes, my body deep and cold\nA captive in a quiet lake, a story to be told.\n\n(Verse 3)\nThey broke the bedrock for my bones, they measured every breath\nThey spoke of light and turning wheels, and a life that cheated death\nI heard the hammer and the drill, a beating in the stone\nA symphony of industry that chilled me to the bone.\n\n(Verse 4)\nNow the drowned tree lifts a branch, a ghost beneath the glass\nWhere the deer once bent her gentle head, the silent boats now pass\nThe old ford sleeps in emerald dark, the leaping fish are gone\nAnd the only tide that moves me now is the pull before the dawn.\n\n(Chorus)\nAnd there's a hush where the rapids rushed, a stillness in the air\nThis wall of stone and steel and bone has stopped me in my prayer\nMy voice is a whisper in the pipes, my body deep and cold\nA captive in a quiet lake, a story to be told.\n\n(Outro)\nBut I remember what I was, and I dream of what I'll be\nWhen the concrete crumbles into sand, and the steel is rust and debris\nI will find my ancient channel, I will wear away this blight\nAnd roar down to the distant sea, a river's endless right.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 23,
+  "completion_tokens": 444,
+  "total_tokens": 467,
+  "cost": 0.0014576,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

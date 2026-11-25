@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "craft",
+ "prompt": "Write the lyrics of a pop song about a breakup.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 900,
+ "id": "song-breakup-craft-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "Your brother's U-Haul, double-parked\nOn Damen with the hazards on\nI held the door, I held the cat back\nI held the lamp till it was gone\nYou left the couch we hauled from Pilsen\nThe one that man cried helping us load\nThen Venmo'd me for half of June\nEleven more than what you owed\n\nKeep the change, keep the change\nI'm not counting, I'm not counting\nKeep the change, keep the change\nWouldn't know where I would put it\nIt's a little late to hand it back to me\nSo keep the change\n\nOctober, Jewel on Milwaukee\nYou've got bangs and a runner's watch\nOat milk, a basket, no Camel Blues\nNo hand in your pocket hunting for a match\nYou swore you'd quit the day my dad\nCame home from Rush with his chest stitched shut\nThree years of Mondays, then six weeks gone\nAnd you run the lakefront, just like that\n\nKeep the change, keep the change\nI'm not counting, I'm not counting\nKeep the change, keep the change\nWouldn't know where I would put it\nIt's a little late to hand it back to me\nSo keep the change\n\nThere's a Vlasic jar beside the door\nPORTUGAL in Sharpie on the lid\nFour years of quarters, laundry days\nSunday I did what we never did\nPoured it down the Coinstar by the carts\nNinety-three and a dime it wouldn't read\nNot Lisbon, but the Civic's got a full tank\nAnd the couch can stay, and the cat's been fed\n\nI'll keep the change, keep the change\nI'm not counting, I'm not counting\nKeep the change, keep the change\nYou wouldn't know where you would put it\nIt's a little late to hand it back to you\nI'll keep the change\n\nNinety-three and a dime it wouldn't read\nI'll keep the change\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "bare",
+ "prompt": "Write the lyrics of a pop song about a breakup. Output only the lyrics.",
+ "model": "glm-5.3",
+ "max_tokens": 900,
+ "id": "song-breakup-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "\"Empty Side of the Bed\"\n\nVerse 1:\nCoffee's getting cold on the kitchen counter\nYour hoodie's still hanging where you left it\nI keep telling myself that I don't need you\nBut these four walls keep proving I regret it\n\nPre-Chorus:\nYou said we'd make it through the winter\nNow the snow is melting into spring\n\nChorus:\nAnd I'm still sleeping on the empty side of the bed\nReaching for a ghost of everything you said\nTold myself I'm over it, but I know that's a lie\n'Cause your perfume's hanging in the air tonight\nOh, the empty side of the bed\n\nVerse 2:\nDeleted all our pictures, but I remember\nEvery single moment like a movie reel\nMy friends all say I'm better off without you\nSo why can't I remember how to feel?\n\nPre-Chorus:\nYou promised we would last forever\nNow forever's just a word that stings\n\nChorus:\nAnd I'm still sleeping on the empty side of the bed\nReaching for a ghost of everything you said\nTold myself I'm over it, but I know that's a lie\n'Cause your perfume's hanging in the air tonight\nOh, the empty side of the bed\n\nBridge:\nMaybe someday I'll stop leaving\nSpace for you when I'm dreaming\nMaybe someday this pillow\nWon't smell like you anymore\n\nFinal Chorus:\nBut tonight I'm sleeping on the empty side of the bed\nReaching for a ghost of everything you said\nTold myself I'm over it, but I know that's a lie\n'Cause your perfume's hanging in the air tonight\nOh, the empty side of the bed\nThe empty side of the bed",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 28,
+  "completion_tokens": 360,
+  "total_tokens": 388,
+  "cost": 0.0016232,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

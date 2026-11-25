@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "bare",
+ "prompt": "Write a poem about autumn. Output only the poem, with no title.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-autumn-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "The light comes slanted now, and thin,\na gold that's lost its summer heat;\nthe maples let their burning in\nand spill it, ember-red, at my feet.\n\nA wind arrives with something to say,\nrattling the dry stalks of the corn,\nand geese in their ragged alphabet\nwrite southward on the smoky morn.\n\nThe orchard gives its last sweet weight,\nwindfalls bruising in the grass,\nwhile spiders string the garden gate\nwith silver for the frost to glass.\n\nAnd evening settles early, deep,\nwith woodsmoke drifting, slow and blue—\nthe earth is leaning toward its sleep,\nand asks the same of me and you.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

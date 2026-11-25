@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "bare",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city. Output only the lyrics.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 900,
+ "id": "song-night-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "(Record scratch, beat drops - boom-bap with a jazzy horn sample)\n\n**Intro**\nYeah... uh\nCity lights flashin', check the mic, one two\nFriday night pressure, what we gonna do?\nStepped out the crib, left the stress on the floor\nWorld is ours tonight, hear the lion's roar, let's go\n\n**Verse 1**\nSplashed on the scent, the ritual cleanse\nCheck the phone, coordinates send from my friends\nElevator descent, a mirrored descent\nPast the lobby, nod the doorman, my intent\nIs to get lost in the neon blare\nConcrete labyrinth, fresh truth or dare\nKicks laced crisp, avoidin' the gum spots\nFeelin' like a king steppin' out the parking lot blocks\nSky bruisin' purple, the last of the day drips\nSubway rumblin' under like the earth's got the shakes and the quakes\nI rise up the steps to the avenues\nWhere every corner's a stage and every stranger's a muse\n\n**Chorus**\nIt's a night out in the city, where the lost get found\nMoney gettin' funny, rounds keep goin' 'round\nNeon dreamin', speakers screamin', bass is the sound\nYeah, we just tryna move a little weight off the ground\nJust a night out, city burnin' like a gemstone bright\nChasin' that flicker 'til they cut the light\n'til they cut the light... yo\n\n**Verse 2**\nSlide to the first spot, low-lit dungeon\nBartender with the heavy pour, antidote to the funk in\nMy head. Glasses clinkin', a percussive code\nSpottin' shorty in the corner, future memory mode\nBrief convo, just laughter, no deep science\nJust a truce against the week's defiant compliance\nBouncin', hit the boulevard, pizza slice architecture\nFolding it in half like a veteran's lecture\nThe city's pulse is a syncopated beat\nA saxophone bleeds from a window up the street\nIt ain't all pretty, saw a scuffle, a siren's cry\nA lovebird couple arguin' under the sky\nLife unfiltered, rawer than a scratched record\nA beautiful chaos you could never expect or\nPlan on a spreadsheet, this is soul caviar\nWatchin' the parade from the back of a rideshare car\n\n**Chorus**\nIt's a night out in the city, where the lost get found\nMoney gettin' funny, rounds keep goin' 'round\nNeon dreamin', speakers screamin', bass is the sound\nYeah, we just tryna move a little weight off the ground\nJust a night out, city burnin' like a gemstone bright\nChasin' that flicker 'til they cut the light\n'til they cut the light... uh\n\n**Bridge**\nThis for the stumble talk, the philosophical walk\nThe \"last one\" lie you tell yourself by the dock\nThis for the moments you feel truly alive\nIn a yellow-lit taxi on a downhill drive\nWhen the skyline's a crown you can almost touch\nAnd the night asks a question, you don't need much\nJust your crew, or yourself, and a defiant grin\nKnowin' Monday's a myth that can never quite win\n\n**Outro**\n(Beat breaks down to just the horn and a hi-hat)\nYeah... just a little weight off the ground\nStreetlight halo... the whole town's a playground\nFadin' echoes of a bass drum kick\nSun's creepin' up... wasn't that a trip?\nOne more slice for the road... keys in the lock\nCity sleeps with one eye open... tick, tick... tock.\n(Record scratch, fade)",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 25,
+  "completion_tokens": 808,
+  "total_tokens": 833,
+  "cost": 0.0026256,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

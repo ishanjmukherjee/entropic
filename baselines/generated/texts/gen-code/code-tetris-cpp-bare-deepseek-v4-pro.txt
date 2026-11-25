@@ -1,0 +1,314 @@
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstdint>
+#include <stdexcept>
+#include <vector>
+
+namespace Tetris {
+
+enum class TetrominoType : uint8_t { I, O, T, S, Z, J, L };
+
+// Rotation states use Super Rotation System (SRS) offsets,
+// but for simplicity we store all rotations explicitly here.
+// Each tetromino has 4 rotation states; each state is a 4x4 grid
+// of cells. 1 means filled, 0 means empty.
+using Shape = std::array<std::array<uint8_t, 4>, 4>;
+
+struct Piece final {
+    TetrominoType type;
+    int rotation = 0;    // 0-3
+    int x = 0;           // column of top-left of bounding box
+    int y = 0;           // row of top-left of bounding box
+};
+
+class Board final {
+public:
+    static constexpr int kWidth = 10;
+    static constexpr int kHeight = 20;
+    // Extra rows above the visible area for spawning
+    static constexpr int kBufferRows = 4;
+    static constexpr int kTotalRows = kHeight + kBufferRows;
+
+    Board() { cells_.fill(0); }
+
+    // Access cell at (row, col). Row 0 is top of buffer, row 19 is bottom visible row.
+    uint8_t cell(int row, int col) const {
+        return cells_[row * kWidth + col];
+    }
+
+    void setCell(int row, int col, uint8_t value) {
+        cells_[row * kWidth + col] = value;
+    }
+
+    // Check if placing a piece at its current position causes a collision.
+    bool collides(const Piece& piece) const {
+        const Shape& shape = shapes[static_cast<int>(piece.type)][piece.rotation];
+        for (int r = 0; r < 4; ++r) {
+            for (int c = 0; c < 4; ++c) {
+                if (shape[r][c]) {
+                    int boardRow = piece.y + r;
+                    int boardCol = piece.x + c;
+                    if (boardCol < 0 || boardCol >= kWidth || boardRow >= kTotalRows)
+                        return true;
+                    if (boardRow >= 0 && cell(boardRow, boardCol))
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Lock (place) the piece onto the board permanently.
+    // Returns false if any part of the piece is above the visible area (game over).
+    bool lock(const Piece& piece) {
+        const Shape& shape = shapes[static_cast<int>(piece.type)][piece.rotation];
+        bool gameOver = false;
+        for (int r = 0; r < 4; ++r) {
+            for (int c = 0; c < 4; ++c) {
+                if (shape[r][c]) {
+                    int boardRow = piece.y + r;
+                    int boardCol = piece.x + c;
+                    if (boardRow < kBufferRows) {
+                        gameOver = true; // locked above visible area
+                    }
+                    if (boardRow >= 0 && boardRow < kTotalRows && boardCol >= 0 && boardCol < kWidth) {
+                        setCell(boardRow, boardCol, 1);
+                    }
+                }
+            }
+        }
+        return gameOver;
+    }
+
+    // Clear completed lines and return the number of lines cleared.
+    int clearLines() {
+        int linesCleared = 0;
+        for (int row = kTotalRows - 1; row >= 0; --row) {
+            bool full = true;
+            for (int col = 0; col < kWidth; ++col) {
+                if (!cell(row, col)) {
+                    full = false;
+                    break;
+                }
+            }
+            if (full) {
+                ++linesCleared;
+                // Shift all rows above down by one.
+                for (int r = row; r > 0; --r) {
+                    for (int c = 0; c < kWidth; ++c) {
+                        setCell(r, c, cell(r - 1, c));
+                    }
+                }
+                // Clear the new top row.
+                for (int c = 0; c < kWidth; ++c) {
+                    setCell(0, c, 0);
+                }
+                // Re-check this row because it now contains the row that was above.
+                ++row;
+            }
+        }
+        return linesCleared;
+    }
+
+    // Get shape for a given piece type and rotation.
+    static const Shape& getShape(TetrominoType type, int rotation) {
+        return shapes[static_cast<int>(type)][rotation];
+    }
+
+    // Spawn a piece centered at the top of the board.
+    static Piece spawn(TetrominoType type) {
+        Piece p;
+        p.type = type;
+        p.rotation = 0;
+        // Pieces spawn horizontally centered, just above the visible area.
+        // The bounding box is 4 wide; center column on a 10-wide board is 3.
+        p.x = 3;
+        p.y = kBufferRows - 2; // start within buffer zone
+        return p;
+    }
+
+    // Move a piece by (dx, dy); returns true if successful (no collision).
+    bool tryMove(Piece& piece, int dx, int dy) const {
+        Piece moved = piece;
+        moved.x += dx;
+        moved.y += dy;
+        if (!collides(moved)) {
+            piece = moved;
+            return true;
+        }
+        return false;
+    }
+
+    // Rotate piece clockwise by 90 degrees. Returns true if successful.
+    bool tryRotateCW(Piece& piece) const {
+        Piece rotated = piece;
+        rotated.rotation = (piece.rotation + 1) % 4;
+        // Try basic rotation
+        if (!collides(rotated)) {
+            piece = rotated;
+            return true;
+        }
+        // Wall kick offsets (simplified SRS for instructional purposes)
+        // Offsets: (x, y) where x is column adjustment, y is row adjustment.
+        // Standard SRS uses a table; we implement a simplified version.
+        const std::array<std::pair<int, int>, 5> kicks = {{
+            { 0, 0}, {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+        }};
+        for (const auto& [dx, dy] : kicks) {
+            Piece kicked = rotated;
+            kicked.x += dx;
+            kicked.y += dy;
+            if (!collides(kicked)) {
+                piece = kicked;
+                return true;
+            }
+        }
+        return false; // rotation failed
+    }
+
+    // Access to raw board for rendering
+    const uint8_t* data() const { return cells_.data(); }
+
+private:
+    std::array<uint8_t, kTotalRows * kWidth> cells_{};
+
+    // SRS shapes: 4 rotations for each of the 7 tetrominoes.
+    static constexpr std::array<std::array<Shape, 4>, 7> shapes = {{
+        // I
+        {{
+            {{{0,0,0,0},
+              {1,1,1,1},
+              {0,0,0,0},
+              {0,0,0,0}}},
+            {{{0,0,1,0},
+              {0,0,1,0},
+              {0,0,1,0},
+              {0,0,1,0}}},
+            {{{0,0,0,0},
+              {0,0,0,0},
+              {1,1,1,1},
+              {0,0,0,0}}},
+            {{{0,1,0,0},
+              {0,1,0,0},
+              {0,1,0,0},
+              {0,1,0,0}}}
+        }},
+        // O
+        {{
+            {{{0,0,0,0},
+              {0,1,1,0},
+              {0,1,1,0},
+              {0,0,0,0}}},
+            {{{0,0,0,0},
+              {0,1,1,0},
+              {0,1,1,0},
+              {0,0,0,0}}},
+            {{{0,0,0,0},
+              {0,1,1,0},
+              {0,1,1,0},
+              {0,0,0,0}}},
+            {{{0,0,0,0},
+              {0,1,1,0},
+              {0,1,1,0},
+              {0,0,0,0}}}
+        }},
+        // T
+        {{
+            {{{0,0,0,0},
+              {0,1,0,0},
+              {1,1,1,0},
+              {0,0,0,0}}},
+            {{{0,0,0,0},
+              {0,1,0,0},
+              {0,1,1,0},
+              {0,1,0,0}}},
+            {{{0,0,0,0},
+              {0,0,0,0},
+              {1,1,1,0},
+              {0,1,0,0}}},
+            {{{0,0,0,0},
+              {0,1,0,0},
+              {1,1,0,0},
+              {0,1,0,0}}}
+        }},
+        // S
+        {{
+            {{{0,0,0,0},
+              {0,1,1,0},
+              {1,1,0,0},
+              {0,0,0,0}}},
+            {{{0,0,0,0},
+              {0,1,0,0},
+              {0,1,1,0},
+              {0,0,1,0}}},
+            {{{0,0,0,0},
+              {0,0,0,0},
+              {0,1,1,0},
+              {1,1,0,0}}},
+            {{{0,0,0,0},
+              {1,0,0,0},
+              {1,1,0,0},
+              {0,1,0,0}}}
+        }},
+        // Z
+        {{
+            {{{0,0,0,0},
+              {1,1,0,0},
+              {0,1,1,0},
+              {0,0,0,0}}},
+            {{{0,0,0,0},
+              {0,0,1,0},
+              {0,1,1,0},
+              {0,1,0,0}}},
+            {{{0,0,0,0},
+              {0,0,0,0},
+              {1,1,0,0},
+              {0,1,1,0}}},
+            {{{0,0,0,0},
+              {0,1,0,0},
+              {1,1,0,0},
+              {1,0,0,0}}}
+        }},
+        // J
+        {{
+            {{{0,0,0,0},
+              {1,0,0,0},
+              {1,1,1,0},
+              {0,0,0,0}}},
+            {{{0,0,0,0},
+              {0,1,1,0},
+              {0,1,0,0},
+              {0,1,0,0}}},
+            {{{0,0,0,0},
+              {0,0,0,0},
+              {1,1,1,0},
+              {0,0,1,0}}},
+            {{{0,0,0,0},
+              {0,1,0,0},
+              {0,1,0,0},
+              {1,1,0,0}}}
+        }},
+        // L
+        {{
+            {{{0,0,0,0},
+              {0,0,1,0},
+              {1,1,1,0},
+              {0,0,0,0}}},
+            {{{0,0,0,0},
+              {0,1,0,0},
+              {0,1,0,0},
+              {0,1,1,0}}},
+            {{{0,0,0,0},
+              {0,0,0,0},
+              {1,1,1,0},
+              {1,0,0,0}}},
+            {{{0,0,0,0},
+              {1,1,0,0},
+              {0,1,0,0},
+              {0,1,0,0}}}
+        }}
+    }};
+};
+
+} // namespace Tetris

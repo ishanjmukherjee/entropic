@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "bare",
+ "prompt": "Write the lyrics of a pop song about a breakup. Output only the lyrics.",
+ "model": "kimi-k2.6",
+ "max_tokens": 900,
+ "id": "song-breakup-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Verse 1:\nParking lot at 2 AM, your headlights on my face\nYou said we needed space, but you already packed your case\nThree years in a coffee shop, drawing hearts in foam\nNow I'm drinking bitter black, and sleeping alone\n\nPre-Chorus:\nYou took the dog, you took the raincoat I never wore\nLeft the key under the mat, don't live here anymore\n\nChorus:\nSo this is how it ends, not with fire, just the fade\nAnother pop song about a heart that you break\nI'll sing it in the shower, I'll sing it in the car\nPretend I'm doing better than I really are\n\nVerse 2:\nYour side of the closet's empty, ghosts of hangers hang\nI'm talking to your pillow like you never changed\nOur song came on the radio, I let it play and play\nTorturing myself in the same old cliché way\n\nPre-Chorus:\nYou took the plant, you took the photos off the shelf\nLeft a half-note on the counter, signed it \"Love, yourself\"\n\nChorus:\nSo this is how it ends, not with fire, just the fade\nAnother pop song about a heart that you break\nI'll sing it in the shower, I'll sing it in the car\nPretend I'm doing better than I really are\n\nBridge:\nMaybe in six months, I'll delete your number, babe\nMaybe in a year, I won't remember your name\n\nMaybe tomorrow, maybe next May, maybe never at all\nMaybe this is what I wanted, scared to answer when you'd call\n\nFinal Chorus:\nSo this is how it ends, not with fire, just the fade\nAnother pop song about a heart that you break\nI'll sing it in the shower, I'll sing it in the car\nPretend I'm doing better\nPretend I'm doing better\nPretend I'm doing better than I really are\n\nOutro:\nThinner than I really are\n(Fade out, fade out, fade)\nThinner than I really are",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 26,
+  "completion_tokens": 420,
+  "total_tokens": 446,
+  "cost": 0.0014488,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

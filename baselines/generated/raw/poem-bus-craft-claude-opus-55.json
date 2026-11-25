@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a city bus at night. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-bus-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "The 61C kneels at Forbes and Murray\nat twenty to two, and a woman in green scrubs\nclimbs on with a ten-pound sack of onions,\npays in quarters, sets the sack in the seat by the window\nand keeps one hand on it.\nThe driver has his radio low,\na ballgame from somewhere it is still evening,\nthe crowd coming and going like weather.\nTwo boys in the back pass a single earbud\nbetween them, and the heater ticks\nunder the seats. At every stop the doors fold open\non nobody. A man in a blue parka\npulls the cord at each block, then sits back\nand tells the window, Not this one.\nPast the cemetery fence, past the dark Giant Eagle,\nthe woman works one onion loose through the mesh,\nsplits the skin with her thumbnail,\nand bites into it like an apple.\nNobody looks. The boys trade the earbud.\nSomeone on the radio steals second.\nHer eyes run and she keeps chewing,\nthe sack slumped against the glass,\nand on the ribbed floor a curl of brown skin\nlifts a little each time the doors open\nand settles when they close.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

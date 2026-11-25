@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "bare",
+ "prompt": "Write a villanelle about forgetting. Output only the poem, with no title.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-forgetting-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Some things I lost I cannot name at all—\nThe way her laugh would catch, then fall like rain,\nWhat door I opened, what I let fall.\n\nKeys, sure. A number. Voices I recall\nbut not the face, the street, the year of pain.\nSome things I lost I cannot name at all.\n\nA necklace? Or the story that it held,\nthe picnic or the funeral, the train?\nWhat door I opened, what I let fall.\n\nMy mother's hands before they turned so pale,\nthe song she hummed to bring me home again—\nsome things I lost I cannot name at all.\n\nThe years collect what memory would sell:\nthis room, that stranger's worried, waiting face.\nWhat door I opened, what I let fall.\n\nNow I forget the thing I meant to tell,\nthe word for Yes, my own address, my name.\nSome things I lost I cannot name at all.\nWhat door. I opened. What I let fall.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 26,
+  "completion_tokens": 201,
+  "total_tokens": 227,
+  "cost": 0.0007042,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

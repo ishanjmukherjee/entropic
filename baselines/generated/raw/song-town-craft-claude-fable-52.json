@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "craft",
+ "prompt": "Write the lyrics of a country song about leaving a small town.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 900,
+ "id": "song-town-craft-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "Sold my saddle to the Hendricks girl for six hundred and a handshake\nPut two Coopers on the back of Daddy's Ranger\nCoach Brill was hosing off the walk in front of the State Farm\nHe raised two fingers off the nozzle like you would for any stranger\n\nThere's one light in Dunning and it only blinks yellow\nIt never once turned red on me\nI rolled through at twenty-five with the window halfway down\nPast the Sinclair and the Legion and the Dollar General sign\nAnd nobody flagged me down\n\nTravis checked my oil in the lot behind the Pump & Pantry\nWiped the dipstick on his Wranglers, said I'm down about a quart\nMy number's Sharpied on his visor, the seven's faded to a one\nHe shut the hood with both his hands and came up one word short\n\nThere's one light in Dunning and it only blinks yellow\nIt never once turned red on me\nI rolled through at twenty-five with the window halfway down\nPast the Sinclair and the Legion and the Dollar General sign\nAnd nobody flagged me down\n\nThe night that I was born, my daddy ran it doing sixty\nMama braced against the dash of a '79 LeMans\nIt blinked the same for them as for the grain trucks and the hearses\nIt keeps time, it don't make plans\n\nRest stop east of Sterling, I unfolded Mama's atlas\nThere's a twenty ironed flat inside the Colorado page\nShe never asked where I was headed, just filled up Daddy's Stanley\nSaid the wind lays down past Ogallala this time of day\n\nThere's one light in Dunning and it only blinks yellow\nIt never once turned red on me\nI rolled through at twenty-five with the window halfway down\nPast the Sinclair and the Legion and the Dollar General sign\nAnd nobody flagged me down\nNo, nobody flagged me down\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

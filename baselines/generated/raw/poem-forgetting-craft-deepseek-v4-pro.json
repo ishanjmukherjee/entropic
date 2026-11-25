@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: forgetting. Form: a villanelle; the refrains may shift slightly each time they return if that serves the poem.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-forgetting-craft-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "At five a.m. the fog erases Barrow Road,\na milk crate full of empties on the curb.\nI have to check the stove before I know\n\nI checked it twice already. A truck’s low load\ngrinds past the window, diesel and adverb.\nAt five a.m. the fog erases Barrow Road\n\nand the cat lifts her head as if she’s been told\nsomeone is coming. Nobody comes. The verb\nI have to check the stove before I know\n\nturns out to be the wrong verb. There’s a fold\nof skin above the knuckle where a burn once served\nas a small reminder. At five a.m., Barrow Road\n\nholds its breath, and in that pause the mold-\nflecked ceiling listens with me for the unheard\nclick I have to check the stove for. Before I know\n\nmy legs are carrying me, I’m at the stove. The cold\ndial registers off. The cat blinks at the curb\nwhere five a.m. eats the end of Barrow Road.\nI check the stove again before I know.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 190,
+  "completion_tokens": 230,
+  "total_tokens": 420,
+  "cost": 0.00104,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

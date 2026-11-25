@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a city bus at night. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-bus-craft-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Between 10th and Yamhill the doors fold shut\non a green-vested man and his bicycle frame\nwith the back wheel missing. Eleven twenty.\nA woman in a burgundy smock\npeels a hard-boiled egg into a napkin.\nHer phone lights up her chin.\n\nFrom the rear bench a transistor radio\nplays a Royals game nobody turns off.\nThe bus kneels at the curb on Morrison\nand a boy steps up with a pizza box\nwarm in his arms and sits\nwithout opening the lid.\n\nThe driver calls out the bridge lift\nbefore it appears, the steel deck\nangled against the river.\nA shopping bag slides two feet\nwhen the floor tilts\nand nobody reaches for it.\n\nUnder the halogen ceiling\na teenager uses a dry-erase marker\nto draw a long-necked bird on the window.\nThe ink is green and smells of acetone.\nIt will wipe away with a sleeve.\nThe drawbridge grates back down into place.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 183,
+  "completion_tokens": 203,
+  "total_tokens": 386,
+  "cost": 0.0009424,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: the sea. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-sea-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "At twenty past five the boats at Dungeness\nare still up on the shingle, leaning on their keels,\neach with a rusted cable running\nto a winch in a tin shed.\n\nMy father sets his thermos on the drum,\nunscrews the cup, and pours.\nThe steam goes sideways, toward France.\n\nFrom a hut with its door propped on a brick\nthe radio reads the shipping forecast,\nDover, Wight, south-west five or six,\nin the voice of a man who has never been wet.\n\nBehind us the power station keeps its lights on\nfor nobody. The tide is far out\nand coming in the way a dog comes back\nwhen it's called and not ready,\nby the long route, stopping at every stone.\n\nHe hands me the cup. The rim\ntakes the skin off my lip, the way it did\nwhen I was nine and stood here in his coat.\nHe doesn't ask for it back.\n\nAt the waterline a work glove, orange,\npalm up among the weed,\nand the first wave fills it\nand lifts each finger, one by one.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

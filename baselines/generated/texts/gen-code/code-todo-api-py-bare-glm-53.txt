@@ -1,0 +1,277 @@
+"""A small JSON HTTP API for a to-do list, using only the Python standard library.
+
+Endpoints:
+    GET    /todos            - list all todos (optional ?done=true|false)
+    POST   /todos            - create a todo  (body: {"title": str, "done": bool?})
+    GET    /todos/<id>       - fetch a single todo
+    PUT    /todos/<id>       - replace a todo (body: {"title": str, "done": bool?})
+    PATCH  /todos/<id>       - partially update a todo
+    DELETE /todos/<id>       - delete a todo
+    GET    /health           - health check
+
+Run:  python todo_api.py [--host HOST] [--port PORT]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import re
+import threading
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any, Optional
+from urllib.parse import parse_qs, urlparse
+
+logger = logging.getLogger("todo_api")
+
+MAX_BODY_BYTES = 1 * 1024 * 1024  # 1 MiB
+TODO_PATH_RE = re.compile(r"^/todos/(\d+)$")
+
+
+class TodoStore:
+    """Thread-safe in-memory store for todos."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._todos: dict[int, dict[str, Any]] = {}
+        self._next_id = 1
+
+    def list(self, done: Optional[bool] = None) -> list[dict[str, Any]]:
+        with self._lock:
+            todos = list(self._todos.values())
+        if done is not None:
+            todos = [t for t in todos if t["done"] is done]
+        return todos
+
+    def get(self, todo_id: int) -> Optional[dict[str, Any]]:
+        with self._lock:
+            return self._todos.get(todo_id)
+
+    def create(self, title: str, done: bool = False) -> dict[str, Any]:
+        with self._lock:
+            todo_id = self._next_id
+            self._next_id += 1
+            todo = {"id": todo_id, "title": title, "done": done}
+            self._todos[todo_id] = todo
+            return dict(todo)
+
+    def update(self, todo_id: int, fields: dict[str, Any]) -> Optional[dict[str, Any]]:
+        with self._lock:
+            todo = self._todos.get(todo_id)
+            if todo is None:
+                return None
+            todo.update(fields)
+            return dict(todo)
+
+    def delete(self, todo_id: int) -> bool:
+        with self._lock:
+            return self._todos.pop(todo_id, None) is not None
+
+
+def _validate_fields(data: dict[str, Any], partial: bool) -> tuple[Optional[dict[str, Any]], str]:
+    """Validate incoming payload; returns (fields, error)."""
+    fields: dict[str, Any] = {}
+    if "title" in data:
+        title = data["title"]
+        if not isinstance(title, str) or not title.strip():
+            return None, "title must be a non-empty string"
+        fields["title"] = title.strip()
+    elif not partial:
+        return None, "title is required"
+    if "done" in data:
+        if not isinstance(data["done"], bool):
+            return None, "done must be a boolean"
+        fields["done"] = data["done"]
+    unknown = set(data) - {"title", "done"}
+    if unknown:
+        return None, f"unknown fields: {sorted(unknown)}"
+    if not fields:
+        return None, "no fields to update"
+    return fields, ""
+
+
+class TodoHandler(BaseHTTPRequestHandler):
+    server_version = "TodoAPI/1.0"
+
+    # Set on the server instance by serve().
+    store: TodoStore
+
+    # ---- helpers -------------------------------------------------------
+
+    def _send_json(self, status: HTTPStatus, payload: Any) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_error_json(self, status: HTTPStatus, message: str) -> None:
+        self._send_json(status, {"error": message})
+
+    def _read_json(self) -> Optional[dict[str, Any]]:
+        length_header = self.headers.get("Content-Length")
+        try:
+            length = int(length_header) if length_header else 0
+        except ValueError:
+            length = -1
+        if length < 0 or length > MAX_BODY_BYTES:
+            self._send_error_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "request body too large")
+            return None
+        raw = self.rfile.read(length) if length else b""
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            self._send_error_json(HTTPStatus.BAD_REQUEST, "request body must be valid JSON")
+            return None
+        if not isinstance(data, dict):
+            self._send_error_json(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
+            return None
+        return data
+
+    def _dispatch(self) -> None:
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+        method = self.command
+
+        if path == "/health" and method == "GET":
+            self._send_json(HTTPStatus.OK, {"status": "ok"})
+            return
+
+        if path == "/todos":
+            if method == "GET":
+                self._handle_list(parse_qs(parsed.query))
+            elif method == "POST":
+                self._handle_create()
+            else:
+                self._send_error_json(
+                    HTTPStatus.METHOD_NOT_ALLOWED, f"method {method} not allowed on {path}"
+                )
+            return
+
+        match = TODO_PATH_RE.match(path)
+        if match:
+            todo_id = int(match.group(1))
+            if method == "GET":
+                self._handle_get(todo_id)
+            elif method in ("PUT", "PATCH"):
+                self._handle_update(todo_id, partial=(method == "PATCH"))
+            elif method == "DELETE":
+                self._handle_delete(todo_id)
+            else:
+                self._send_error_json(
+                    HTTPStatus.METHOD_NOT_ALLOWED, f"method {method} not allowed on {path}"
+                )
+            return
+
+        self._send_error_json(HTTPStatus.NOT_FOUND, "resource not found")
+
+    # ---- endpoint handlers ----------------------------------------------
+
+    def _handle_list(self, query: dict[str, list[str]]) -> None:
+        done_param = query.get("done", [None])[-1]
+        done: Optional[bool] = None
+        if done_param is not None:
+            if done_param.lower() not in ("true", "false"):
+                self._send_error_json(HTTPStatus.BAD_REQUEST, "done must be true or false")
+                return
+            done = done_param.lower() == "true"
+        self._send_json(HTTPStatus.OK, self.store.list(done=done))
+
+    def _handle_create(self) -> None:
+        data = self._read_json()
+        if data is None:
+            return
+        fields, error = _validate_fields(data, partial=False)
+        if error:
+            self._send_error_json(HTTPStatus.UNPROCESSABLE_ENTITY, error)
+            return
+        todo = self.store.create(fields["title"], fields.get("done", False))
+        self._send_json(HTTPStatus.CREATED, todo)
+
+    def _handle_get(self, todo_id: int) -> None:
+        todo = self.store.get(todo_id)
+        if todo is None:
+            self._send_error_json(HTTPStatus.NOT_FOUND, f"todo {todo_id} not found")
+        else:
+            self._send_json(HTTPStatus.OK, todo)
+
+    def _handle_update(self, todo_id: int, partial: bool) -> None:
+        data = self._read_json()
+        if data is None:
+            return
+        fields, error = _validate_fields(data, partial=partial)
+        if error:
+            self._send_error_json(HTTPStatus.UNPROCESSABLE_ENTITY, error)
+            return
+        todo = self.store.update(todo_id, fields)
+        if todo is None:
+            self._send_error_json(HTTPStatus.NOT_FOUND, f"todo {todo_id} not found")
+        else:
+            self._send_json(HTTPStatus.OK, todo)
+
+    def _handle_delete(self, todo_id: int) -> None:
+        if self.store.delete(todo_id):
+            self._send_json(HTTPStatus.OK, {"deleted": todo_id})
+        else:
+            self._send_error_json(HTTPStatus.NOT_FOUND, f"todo {todo_id} not found")
+
+    # ---- BaseHTTPRequestHandler overrides --------------------------------
+
+    def do_GET(self) -> None:  # noqa: N802
+        self._dispatch()
+
+    def do_POST(self) -> None:  # noqa: N802
+        self._dispatch()
+
+    def do_PUT(self) -> None:  # noqa: N802
+        self._dispatch()
+
+    def do_PATCH(self) -> None:  # noqa: N802
+        self._dispatch()
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        self._dispatch()
+
+    def log_message(self, fmt: str, *args: Any) -> None:
+        logger.info("%s - %s", self.address_string(), fmt % args)
+
+
+def serve(host: str, port: int) -> None:
+    store = TodoStore()
+
+    class BoundTodoHandler(TodoHandler):
+        pass  # store is looked up dynamically below
+
+    BoundTodoHandler.store = store
+
+    server = ThreadingHTTPServer((host, port), BoundTodoHandler)
+    server.daemon_threads = True
+    logger.info("Serving todo API on http://%s:%d", host, port)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        logger.info("Shutting down")
+    finally:
+        server.server_close()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="To-do list JSON API server")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--log-level", default="info",
+                        choices=["debug", "info", "warning", "error"])
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper()),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+    serve(args.host, args.port)
+
+
+if __name__ == "__main__":
+    main()

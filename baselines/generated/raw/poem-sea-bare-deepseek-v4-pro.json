@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "bare",
+ "prompt": "Write a poem about the sea. Output only the poem, with no title.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-sea-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "The sea is not a single thing, but many—\nA cradle rocking ancient, sunken stone,\nA begging bowl receiving every penny\nOf rain, and spending nothing of its own.\n\nIt is a wrinkled map of all the weather,\nA muscle flexing underneath the moon,\nA book the wind can’t read, that nonetheless will gather\nA single, shattered alphabet of foam.\n\nBy day, a beaten shield of tin and silver,\nBy night, a restless, black-and-bellied beast\nThat breathes against the continents and shivers\nThe shoreline, grain by grain, into the east.\n\nIt mumbles in the hollow of a conch shell,\nIt climbs the air and sharpens into wings,\nIt is the last, unfenced and common gospel\nOf which no human mouth can truly sing.\n\nIt does not know its depth, it does not measure\nThe ribs of ships it keeps, the swallowed prayers.\nIt only knows this endless, pressing pressure—\nTo rise and fall,\nand rise and fall,\nand wear.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 20,
+  "completion_tokens": 210,
+  "total_tokens": 230,
+  "cost": 0.000704,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

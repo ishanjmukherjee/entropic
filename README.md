@@ -63,3 +63,8 @@ The Featherless key in `main.js` is public by design: a static page has
 nowhere to hide it. It is a prepaid key with a small balance, and texts scored
 with it are capped at 60,000 characters. Visitors can supply their own key
 under "settings and privacy"; it is stored only in their browser.
+
+## To do
+
+- Add more human authors to the baseline.
+  - https://diffuse.one/

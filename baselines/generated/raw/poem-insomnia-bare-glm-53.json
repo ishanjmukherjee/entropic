@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "bare",
+ "prompt": "Write a sonnet about insomnia. Output only the poem, with no title.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-insomnia-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "The clock strikes three, and still my eyes stay wide,\nWhile shadows crawl like strangers on the wall.\nThe restless thoughts that spin from side to side\nRefuse to yield to slumber's gentle call.\n\nI count the breaths of distant passing cars,\nAnd hear the furnace hum its mournful tune;\nThe moon, a judge, peers coldly through the bars\nOf blinds, as if to mock my lonely ruin.\n\nEach hour I chase the dreams that flit away,\nLike mice that vanish underneath the floor.\nTomorrow's weight already presses today,\nYet sleep denies its shadow to my door.\n\nBut dawn arrives, and with the morning light\nI drift to dreams just as I've lost the night.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 28,
+  "completion_tokens": 170,
+  "total_tokens": 198,
+  "cost": 0.0007872,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

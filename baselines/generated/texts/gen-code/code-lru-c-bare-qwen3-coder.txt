@@ -1,0 +1,415 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+// Hash table implementation
+typedef struct HashNode {
+    char* key;
+    void* value;
+    struct HashNode* next;
+    struct ListNode* list_node;
+} HashNode;
+
+typedef struct HashTable {
+    HashNode** buckets;
+    size_t bucket_count;
+    size_t (*hash_function)(const char*);
+} HashTable;
+
+// Doubly linked list implementation
+typedef struct ListNode {
+    char* key;
+    void* value;
+    struct ListNode* prev;
+    struct ListNode* next;
+} ListNode;
+
+typedef struct List {
+    ListNode* head;
+    ListNode* tail;
+} List;
+
+// LRU Cache structure
+typedef struct LRUCache {
+    HashTable* hash_table;
+    List* list;
+    size_t capacity;
+    size_t size;
+    void (*free_value)(void*);
+} LRUCache;
+
+// Function prototypes
+static size_t djb2_hash(const char* str);
+static HashTable* hash_table_create(size_t bucket_count);
+static void hash_table_destroy(HashTable* ht, void (*free_value)(void*));
+static HashNode* hash_table_get(HashTable* ht, const char* key);
+static int hash_table_put(HashTable* ht, const char* key, void* value, ListNode* list_node);
+static int hash_table_remove(HashTable* ht, const char* key);
+static List* list_create(void);
+static void list_destroy(List* list, void (*free_value)(void*));
+static void list_move_to_front(List* list, ListNode* node);
+static ListNode* list_insert_front(List* list, const char* key, void* value);
+static void list_remove_node(List* list, ListNode* node);
+static void free_key(char* key);
+
+// Hash function (djb2 algorithm)
+static size_t djb2_hash(const char* str) {
+    size_t hash = 5381;
+    int c;
+
+    while ((c = *str++)) {
+        hash = ((hash << 5) + hash) + c; // hash * 33 + c
+    }
+
+    return hash;
+}
+
+// Create a new hash table
+static HashTable* hash_table_create(size_t bucket_count) {
+    HashTable* ht = malloc(sizeof(HashTable));
+    if (!ht) return NULL;
+
+    ht->buckets = calloc(bucket_count, sizeof(HashNode*));
+    if (!ht->buckets) {
+        free(ht);
+        return NULL;
+    }
+
+    ht->bucket_count = bucket_count;
+    ht->hash_function = djb2_hash;
+
+    return ht;
+}
+
+// Destroy hash table
+static void hash_table_destroy(HashTable* ht, void (*free_value)(void*)) {
+    if (!ht) return;
+
+    for (size_t i = 0; i < ht->bucket_count; i++) {
+        HashNode* current = ht->buckets[i];
+        while (current) {
+            HashNode* temp = current;
+            current = current->next;
+            free_key(temp->key);
+            if (free_value && temp->value) {
+                free_value(temp->value);
+            }
+            free(temp);
+        }
+    }
+
+    free(ht->buckets);
+    free(ht);
+}
+
+// Get a node from hash table
+static HashNode* hash_table_get(HashTable* ht, const char* key) {
+    if (!ht || !key) return NULL;
+
+    size_t index = ht->hash_function(key) % ht->bucket_count;
+    HashNode* current = ht->buckets[index];
+
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            return current;
+        }
+        current = current->next;
+    }
+
+    return NULL;
+}
+
+// Put a key-value pair into hash table
+static int hash_table_put(HashTable* ht, const char* key, void* value, ListNode* list_node) {
+    if (!ht || !key) return -1;
+
+    size_t index = ht->hash_function(key) % ht->bucket_count;
+    HashNode* current = ht->buckets[index];
+
+    // Check if key already exists
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            current->value = value;
+            current->list_node = list_node;
+            return 0; // Updated existing entry
+        }
+        current = current->next;
+    }
+
+    // Create new node
+    HashNode* new_node = malloc(sizeof(HashNode));
+    if (!new_node) return -1;
+
+    new_node->key = malloc(strlen(key) + 1);
+    if (!new_node->key) {
+        free(new_node);
+        return -1;
+    }
+
+    strcpy(new_node->key, key);
+    new_node->value = value;
+    new_node->list_node = list_node;
+    new_node->next = ht->buckets[index];
+    ht->buckets[index] = new_node;
+
+    return 1; // New entry added
+}
+
+// Remove a key from hash table
+static int hash_table_remove(HashTable* ht, const char* key) {
+    if (!ht || !key) return -1;
+
+    size_t index = ht->hash_function(key) % ht->bucket_count;
+    HashNode* current = ht->buckets[index];
+    HashNode* prev = NULL;
+
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            if (prev) {
+                prev->next = current->next;
+            } else {
+                ht->buckets[index] = current->next;
+            }
+
+            free_key(current->key);
+            free(current);
+            return 0; // Success
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return -1; // Key not found
+}
+
+// Create a new list
+static List* list_create(void) {
+    List* list = malloc(sizeof(List));
+    if (!list) return NULL;
+
+    list->head = NULL;
+    list->tail = NULL;
+
+    return list;
+}
+
+// Destroy list
+static void list_destroy(List* list, void (*free_value)(void*)) {
+    if (!list) return;
+
+    ListNode* current = list->head;
+    while (current) {
+        ListNode* temp = current;
+        current = current->next;
+        free_key(temp->key);
+        if (free_value && temp->value) {
+            free_value(temp->value);
+        }
+        free(temp);
+    }
+
+    free(list);
+}
+
+// Move node to front of list
+static void list_move_to_front(List* list, ListNode* node) {
+    if (!list || !node || node == list->head) return;
+
+    // Remove node from current position
+    if (node->prev) {
+        node->prev->next = node->next;
+    }
+    if (node->next) {
+        node->next->prev = node->prev;
+    }
+    if (list->tail == node) {
+        list->tail = node->prev;
+    }
+
+    // Add to front
+    node->next = list->head;
+    node->prev = NULL;
+    if (list->head) {
+        list->head->prev = node;
+    }
+    list->head = node;
+    if (!list->tail) {
+        list->tail = node;
+    }
+}
+
+// Insert node at front of list
+static ListNode* list_insert_front(List* list, const char* key, void* value) {
+    if (!list || !key) return NULL;
+
+    ListNode* new_node = malloc(sizeof(ListNode));
+    if (!new_node) return NULL;
+
+    new_node->key = malloc(strlen(key) + 1);
+    if (!new_node->key) {
+        free(new_node);
+        return NULL;
+    }
+
+    strcpy(new_node->key, key);
+    new_node->value = value;
+    new_node->prev = NULL;
+    new_node->next = list->head;
+
+    if (list->head) {
+        list->head->prev = new_node;
+    }
+    list->head = new_node;
+
+    if (!list->tail) {
+        list->tail = new_node;
+    }
+
+    return new_node;
+}
+
+// Remove node from list
+static void list_remove_node(List* list, ListNode* node) {
+    if (!list || !node) return;
+
+    if (node->prev) {
+        node->prev->next = node->next;
+    } else {
+        list->head = node->next;
+    }
+
+    if (node->next) {
+        node->next->prev = node->prev;
+    } else {
+        list->tail = node->prev;
+    }
+
+    free_key(node->key);
+    free(node);
+}
+
+// Free key string
+static void free_key(char* key) {
+    if (key) {
+        free(key);
+    }
+}
+
+// Create a new LRU cache
+LRUCache* lru_cache_create(size_t capacity, void (*free_value)(void*)) {
+    if (capacity == 0) return NULL;
+
+    LRUCache* cache = malloc(sizeof(LRUCache));
+    if (!cache) return NULL;
+
+    cache->hash_table = hash_table_create(capacity * 2); // Use larger hash table to reduce collisions
+    if (!cache->hash_table) {
+        free(cache);
+        return NULL;
+    }
+
+    cache->list = list_create();
+    if (!cache->list) {
+        hash_table_destroy(cache->hash_table, free_value);
+        free(cache);
+        return NULL;
+    }
+
+    cache->capacity = capacity;
+    cache->size = 0;
+    cache->free_value = free_value;
+
+    return cache;
+}
+
+// Destroy LRU cache
+void lru_cache_destroy(LRUCache* cache) {
+    if (!cache) return;
+
+    hash_table_destroy(cache->hash_table, cache->free_value);
+    list_destroy(cache->list, cache->free_value);
+    free(cache);
+}
+
+// Get value from cache
+void* lru_cache_get(LRUCache* cache, const char* key) {
+    if (!cache || !key) return NULL;
+
+    HashNode* hash_node = hash_table_get(cache->hash_table, key);
+    if (!hash_node) return NULL;
+
+    // Move accessed node to front of list
+    list_move_to_front(cache->list, hash_node->list_node);
+
+    return hash_node->value;
+}
+
+// Put key-value pair into cache
+int lru_cache_put(LRUCache* cache, const char* key, void* value) {
+    if (!cache || !key) return -1;
+
+    HashNode* existing_node = hash_table_get(cache->hash_table, key);
+
+    if (existing_node) {
+        // Update existing entry
+        if (cache->free_value && existing_node->value) {
+            cache->free_value(existing_node->value);
+        }
+        existing_node->value = value;
+        list_move_to_front(cache->list, existing_node->list_node);
+        return 0;
+    }
+
+    // Add new entry
+    if (cache->size >= cache->capacity) {
+        // Remove least recently used item
+        if (cache->list->tail) {
+            ListNode* lru_node = cache->list->tail;
+            hash_table_remove(cache->hash_table, lru_node->key);
+            list_remove_node(cache->list, lru_node);
+            cache->size--;
+        }
+    }
+
+    // Add new node to front of list
+    ListNode* new_list_node = list_insert_front(cache->list, key, value);
+    if (!new_list_node) return -1;
+
+    // Add to hash table
+    int result = hash_table_put(cache->hash_table, key, value, new_list_node);
+    if (result < 0) {
+        list_remove_node(cache->list, new_list_node);
+        return -1;
+    }
+
+    cache->size++;
+    return 1;
+}
+
+// Remove key from cache
+int lru_cache_remove(LRUCache* cache, const char* key) {
+    if (!cache || !key) return -1;
+
+    HashNode* hash_node = hash_table_get(cache->hash_table, key);
+    if (!hash_node) return -1;
+
+    // Remove from list
+    list_remove_node(cache->list, hash_node->list_node);
+
+    // Remove from hash table
+    hash_table_remove(cache->hash_table, key);
+
+    cache->size--;
+    return 0;
+}
+
+// Get current size of cache
+size_t lru_cache_size(LRUCache* cache) {
+    return cache ? cache->size : 0;
+}
+
+// Get capacity of cache
+size_t lru_cache_capacity(LRUCache* cache) {
+    return cache ? cache->capacity : 0;
+}

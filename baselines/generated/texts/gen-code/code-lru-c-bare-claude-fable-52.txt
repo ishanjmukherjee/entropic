@@ -1,0 +1,595 @@
+/*
+ * lru_cache.c - Fixed-capacity LRU (least recently used) cache.
+ *
+ * Design
+ * ------
+ *   - A hash table (separate chaining, power-of-two bucket count) maps keys
+ *     to entries, giving O(1) average lookup.
+ *   - A doubly linked list threads all entries in recency order: the head is
+ *     the most recently used entry and the tail is the least recently used,
+ *     giving O(1) promotion and eviction.
+ *
+ * Keys are arbitrary byte strings and are copied into the cache. Values are
+ * opaque pointers; if a free callback is supplied at creation time, the
+ * cache owns its values and invokes the callback whenever a value is
+ * evicted, replaced, removed, or the cache is cleared/destroyed.
+ *
+ * Thread safety: none. Callers must serialise access to a given cache.
+ * Note that even lru_cache_get() mutates the cache (it updates recency).
+ *
+ * Re-entrancy: the free callback must not call back into the same cache.
+ *
+ * Build the self-test with:
+ *     cc -std=c99 -Wall -Wextra -DLRU_CACHE_TEST lru_cache.c -o lru_test
+ */
+
+#include <errno.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+/* ------------------------------------------------------------------------
+ * Public API (move this section into lru_cache.h when used as a library)
+ * --------------------------------------------------------------------- */
+
+typedef struct lru_cache lru_cache;
+
+/* Called when the cache releases a value. `user_data` is the pointer passed
+ * to lru_cache_create(). */
+typedef void (*lru_free_fn)(void *value, void *user_data);
+
+/* Create a cache holding at most `capacity` entries (must be > 0).
+ * `free_fn` may be NULL if the cache does not own its values.
+ * Returns NULL and sets errno (EINVAL or ENOMEM) on failure. */
+lru_cache *lru_cache_create(size_t capacity, lru_free_fn free_fn,
+                            void *user_data);
+
+/* Destroy the cache, releasing all entries. NULL is a no-op. */
+void lru_cache_destroy(lru_cache *cache);
+
+/* Insert or replace the value for a key and mark it most recently used.
+ * If the cache is full, the least recently used entry is evicted.
+ * Returns 0 on success. On failure returns -1, sets errno (EINVAL or
+ * ENOMEM), leaves the cache unchanged, and does NOT take ownership of
+ * `value`. */
+int lru_cache_put(lru_cache *cache, const void *key, size_t key_len,
+                  void *value);
+
+/* Look up a key and mark it most recently used. On a hit, returns true and
+ * stores the value in *value_out (if non-NULL). The value remains owned by
+ * the cache and is valid only until the entry is evicted, replaced or
+ * removed. */
+bool lru_cache_get(lru_cache *cache, const void *key, size_t key_len,
+                   void **value_out);
+
+/* Like lru_cache_get() but does not affect recency order. */
+bool lru_cache_peek(const lru_cache *cache, const void *key, size_t key_len,
+                    void **value_out);
+
+/* Remove a key. Returns true if the key was present. */
+bool lru_cache_remove(lru_cache *cache, const void *key, size_t key_len);
+
+/* Remove all entries. */
+void lru_cache_clear(lru_cache *cache);
+
+/* Current number of entries / maximum number of entries. */
+size_t lru_cache_size(const lru_cache *cache);
+size_t lru_cache_capacity(const lru_cache *cache);
+
+/* ------------------------------------------------------------------------
+ * Implementation
+ * --------------------------------------------------------------------- */
+
+#define LRU_INITIAL_BUCKETS 16u /* must be a power of two */
+
+typedef struct lru_entry {
+    struct lru_entry *prev;  /* towards most recently used  */
+    struct lru_entry *next;  /* towards least recently used */
+    struct lru_entry *hnext; /* next entry in hash bucket   */
+    void *value;
+    uint64_t hash;
+    size_t key_len;
+    unsigned char key[]; /* key bytes stored inline */
+} lru_entry;
+
+struct lru_cache {
+    lru_entry **buckets;
+    size_t bucket_count; /* always a power of two */
+    size_t size;
+    size_t capacity;
+    lru_entry *head; /* most recently used  */
+    lru_entry *tail; /* least recently used */
+    lru_free_fn free_fn;
+    void *user_data;
+    uint64_t seed;
+};
+
+/* 64-bit finaliser (from MurmurHash3) to spread entropy to the low bits. */
+static uint64_t mix64(uint64_t h)
+{
+    h ^= h >> 33;
+    h *= UINT64_C(0xff51afd7ed558ccd);
+    h ^= h >> 33;
+    h *= UINT64_C(0xc4ceb9fe1a85ec53);
+    h ^= h >> 33;
+    return h;
+}
+
+/* Seeded FNV-1a with a final mix. Not cryptographic; the per-cache seed
+ * only makes bucket placement unpredictable across instances. */
+static uint64_t hash_bytes(const void *key, size_t len, uint64_t seed)
+{
+    const unsigned char *p = key;
+    uint64_t h = UINT64_C(0xcbf29ce484222325) ^ seed;
+
+    for (size_t i = 0; i < len; i++) {
+        h ^= p[i];
+        h *= UINT64_C(0x100000001b3);
+    }
+    return mix64(h);
+}
+
+static size_t bucket_index(const lru_cache *cache, uint64_t hash)
+{
+    return (size_t)(hash & (uint64_t)(cache->bucket_count - 1));
+}
+
+/* ---- recency list ---------------------------------------------------- */
+
+static void list_unlink(lru_cache *cache, lru_entry *e)
+{
+    if (e->prev != NULL)
+        e->prev->next = e->next;
+    else
+        cache->head = e->next;
+
+    if (e->next != NULL)
+        e->next->prev = e->prev;
+    else
+        cache->tail = e->prev;
+
+    e->prev = NULL;
+    e->next = NULL;
+}
+
+static void list_push_front(lru_cache *cache, lru_entry *e)
+{
+    e->prev = NULL;
+    e->next = cache->head;
+
+    if (cache->head != NULL)
+        cache->head->prev = e;
+    else
+        cache->tail = e;
+
+    cache->head = e;
+}
+
+static void list_promote(lru_cache *cache, lru_entry *e)
+{
+    if (cache->head != e) {
+        list_unlink(cache, e);
+        list_push_front(cache, e);
+    }
+}
+
+/* ---- hash table ------------------------------------------------------ */
+
+static lru_entry *table_find(const lru_cache *cache, const void *key,
+                             size_t key_len, uint64_t hash)
+{
+    lru_entry *e = cache->buckets[bucket_index(cache, hash)];
+
+    for (; e != NULL; e = e->hnext) {
+        if (e->hash == hash && e->key_len == key_len &&
+            (key_len == 0 || memcmp(e->key, key, key_len) == 0))
+            return e;
+    }
+    return NULL;
+}
+
+static void table_insert(lru_cache *cache, lru_entry *e)
+{
+    size_t idx = bucket_index(cache, e->hash);
+
+    e->hnext = cache->buckets[idx];
+    cache->buckets[idx] = e;
+}
+
+static void table_remove(lru_cache *cache, lru_entry *e)
+{
+    lru_entry **pp = &cache->buckets[bucket_index(cache, e->hash)];
+
+    while (*pp != e)
+        pp = &(*pp)->hnext;
+    *pp = e->hnext;
+    e->hnext = NULL;
+}
+
+/* Double the bucket array. Best effort: on allocation failure the table is
+ * left as is and the cache keeps working with longer chains. */
+static void table_grow(lru_cache *cache)
+{
+    size_t new_count;
+    lru_entry **new_buckets;
+
+    if (cache->bucket_count > SIZE_MAX / 2 / sizeof(*new_buckets))
+        return;
+    new_count = cache->bucket_count * 2;
+
+    new_buckets = calloc(new_count, sizeof(*new_buckets));
+    if (new_buckets == NULL)
+        return;
+
+    free(cache->buckets);
+    cache->buckets = new_buckets;
+    cache->bucket_count = new_count;
+
+    /* Every entry is on the recency list, so walk that to rehash. */
+    for (lru_entry *e = cache->head; e != NULL; e = e->next)
+        table_insert(cache, e);
+}
+
+/* ---- entries --------------------------------------------------------- */
+
+static void entry_destroy(lru_cache *cache, lru_entry *e)
+{
+    if (cache->free_fn != NULL)
+        cache->free_fn(e->value, cache->user_data);
+    free(e);
+}
+
+static void entry_detach_and_destroy(lru_cache *cache, lru_entry *e)
+{
+    table_remove(cache, e);
+    list_unlink(cache, e);
+    cache->size--;
+    entry_destroy(cache, e);
+}
+
+static bool key_args_valid(const void *key, size_t key_len)
+{
+    return key != NULL || key_len == 0;
+}
+
+/* ---- public functions ------------------------------------------------ */
+
+lru_cache *lru_cache_create(size_t capacity, lru_free_fn free_fn,
+                            void *user_data)
+{
+    lru_cache *cache;
+
+    if (capacity == 0) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    cache = malloc(sizeof(*cache));
+    if (cache == NULL) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    cache->buckets = calloc(LRU_INITIAL_BUCKETS, sizeof(*cache->buckets));
+    if (cache->buckets == NULL) {
+        free(cache);
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    cache->bucket_count = LRU_INITIAL_BUCKETS;
+    cache->size = 0;
+    cache->capacity = capacity;
+    cache->head = NULL;
+    cache->tail = NULL;
+    cache->free_fn = free_fn;
+    cache->user_data = user_data;
+    cache->seed = mix64((uint64_t)(uintptr_t)cache ^
+                        ((uint64_t)time(NULL) << 32) ^ (uint64_t)clock());
+    return cache;
+}
+
+void lru_cache_destroy(lru_cache *cache)
+{
+    if (cache == NULL)
+        return;
+
+    lru_cache_clear(cache);
+    free(cache->buckets);
+    free(cache);
+}
+
+int lru_cache_put(lru_cache *cache, const void *key, size_t key_len,
+                  void *value)
+{
+    uint64_t hash;
+    lru_entry *e;
+
+    if (cache == NULL || !key_args_valid(key, key_len)) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    hash = hash_bytes(key, key_len, cache->seed);
+    e = table_find(cache, key, key_len, hash);
+
+    if (e != NULL) {
+        /* Existing key: replace the value and promote. */
+        if (e->value != value) {
+            void *old = e->value;
+
+            e->value = value;
+            if (cache->free_fn != NULL)
+                cache->free_fn(old, cache->user_data);
+        }
+        list_promote(cache, e);
+        return 0;
+    }
+
+    /* Allocate before evicting so that failure leaves the cache intact. */
+    if (key_len > SIZE_MAX - sizeof(*e)) {
+        errno = ENOMEM;
+        return -1;
+    }
+    e = malloc(sizeof(*e) + key_len);
+    if (e == NULL) {
+        errno = ENOMEM;
+        return -1;
+    }
+
+    e->prev = NULL;
+    e->next = NULL;
+    e->hnext = NULL;
+    e->value = value;
+    e->hash = hash;
+    e->key_len = key_len;
+    if (key_len != 0)
+        memcpy(e->key, key, key_len);
+
+    if (cache->size == cache->capacity) {
+        entry_detach_and_destroy(cache, cache->tail);
+    } else if (cache->size + 1 >
+               cache->bucket_count - cache->bucket_count / 4) {
+        table_grow(cache); /* keep load factor <= 0.75 */
+    }
+
+    table_insert(cache, e);
+    list_push_front(cache, e);
+    cache->size++;
+    return 0;
+}
+
+bool lru_cache_get(lru_cache *cache, const void *key, size_t key_len,
+                   void **value_out)
+{
+    lru_entry *e;
+
+    if (cache == NULL || !key_args_valid(key, key_len))
+        return false;
+
+    e = table_find(cache, key, key_len,
+                   hash_bytes(key, key_len, cache->seed));
+    if (e == NULL)
+        return false;
+
+    list_promote(cache, e);
+    if (value_out != NULL)
+        *value_out = e->value;
+    return true;
+}
+
+bool lru_cache_peek(const lru_cache *cache, const void *key, size_t key_len,
+                    void **value_out)
+{
+    const lru_entry *e;
+
+    if (cache == NULL || !key_args_valid(key, key_len))
+        return false;
+
+    e = table_find(cache, key, key_len,
+                   hash_bytes(key, key_len, cache->seed));
+    if (e == NULL)
+        return false;
+
+    if (value_out != NULL)
+        *value_out = e->value;
+    return true;
+}
+
+bool lru_cache_remove(lru_cache *cache, const void *key, size_t key_len)
+{
+    lru_entry *e;
+
+    if (cache == NULL || !key_args_valid(key, key_len))
+        return false;
+
+    e = table_find(cache, key, key_len,
+                   hash_bytes(key, key_len, cache->seed));
+    if (e == NULL)
+        return false;
+
+    entry_detach_and_destroy(cache, e);
+    return true;
+}
+
+void lru_cache_clear(lru_cache *cache)
+{
+    lru_entry *e;
+
+    if (cache == NULL)
+        return;
+
+    /* Detach everything first so the cache is consistent (and empty)
+     * while the free callbacks run. */
+    e = cache->head;
+    cache->head = NULL;
+    cache->tail = NULL;
+    cache->size = 0;
+    memset(cache->buckets, 0, cache->bucket_count * sizeof(*cache->buckets));
+
+    while (e != NULL) {
+        lru_entry *next = e->next;
+
+        entry_destroy(cache, e);
+        e = next;
+    }
+}
+
+size_t lru_cache_size(const lru_cache *cache)
+{
+    return cache != NULL ? cache->size : 0;
+}
+
+size_t lru_cache_capacity(const lru_cache *cache)
+{
+    return cache != NULL ? cache->capacity : 0;
+}
+
+/* ------------------------------------------------------------------------
+ * Self-test
+ * --------------------------------------------------------------------- */
+
+#ifdef LRU_CACHE_TEST
+
+#include <stdio.h>
+
+#define CHECK(cond)                                                     \
+    do {                                                                \
+        if (!(cond)) {                                                  \
+            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__,      \
+                    __LINE__, #cond);                                   \
+            exit(EXIT_FAILURE);                                         \
+        }                                                               \
+    } while (0)
+
+static void counting_free(void *value, void *user_data)
+{
+    size_t *freed = user_data;
+
+    free(value);
+    (*freed)++;
+}
+
+static int *box_int(int v)
+{
+    int *p = malloc(sizeof(*p));
+
+    CHECK(p != NULL);
+    *p = v;
+    return p;
+}
+
+static int put_str(lru_cache *c, const char *key, int v)
+{
+    int *boxed = box_int(v);
+    int rc = lru_cache_put(c, key, strlen(key), boxed);
+
+    if (rc != 0)
+        free(boxed);
+    return rc;
+}
+
+static bool get_str(lru_cache *c, const char *key, int *out)
+{
+    void *v;
+
+    if (!lru_cache_get(c, key, strlen(key), &v))
+        return false;
+    *out = *(int *)v;
+    return true;
+}
+
+int main(void)
+{
+    size_t freed = 0;
+    int v = 0;
+    lru_cache *c;
+
+    /* Invalid arguments. */
+    CHECK(lru_cache_create(0, NULL, NULL) == NULL);
+    CHECK(errno == EINVAL);
+
+    /* Basic put/get and eviction order. */
+    c = lru_cache_create(3, counting_free, &freed);
+    CHECK(c != NULL);
+    CHECK(lru_cache_capacity(c) == 3);
+
+    CHECK(put_str(c, "a", 1) == 0);
+    CHECK(put_str(c, "b", 2) == 0);
+    CHECK(put_str(c, "c", 3) == 0);
+    CHECK(lru_cache_size(c) == 3);
+
+    CHECK(get_str(c, "a", &v) && v == 1); /* order: a c b */
+    CHECK(put_str(c, "d", 4) == 0);       /* evicts b     */
+    CHECK(freed == 1);
+    CHECK(!get_str(c, "b", &v));
+    CHECK(get_str(c, "c", &v) && v == 3);
+    CHECK(get_str(c, "d", &v) && v == 4);
+    CHECK(lru_cache_size(c) == 3);
+
+    /* Peek must not promote: a is now LRU and stays LRU. */
+    CHECK(lru_cache_peek(c, "a", 1, NULL));
+    CHECK(put_str(c, "e", 5) == 0); /* evicts a */
+    CHECK(freed == 2);
+    CHECK(!lru_cache_peek(c, "a", 1, NULL));
+
+    /* Replace existing key. */
+    CHECK(put_str(c, "c", 30) == 0);
+    CHECK(freed == 3);
+    CHECK(lru_cache_size(c) == 3);
+    CHECK(get_str(c, "c", &v) && v == 30);
+
+    /* Remove. */
+    CHECK(lru_cache_remove(c, "d", 1));
+    CHECK(!lru_cache_remove(c, "d", 1));
+    CHECK(freed == 4);
+    CHECK(lru_cache_size(c) == 2);
+
+    /* Zero-length key. */
+    CHECK(lru_cache_put(c, NULL, 0, box_int(99)) == 0);
+    CHECK(lru_cache_peek(c, "", 0, NULL));
+
+    /* Clear and destroy release everything. */
+    lru_cache_clear(c);
+    CHECK(lru_cache_size(c) == 0);
+    CHECK(freed == 7);
+    CHECK(put_str(c, "z", 26) == 0);
+    lru_cache_destroy(c);
+    CHECK(freed == 8);
+
+    /* Larger workload: exercises table growth and binary keys. */
+    freed = 0;
+    c = lru_cache_create(1000, counting_free, &freed);
+    CHECK(c != NULL);
+    for (int i = 0; i < 5000; i++)
+        CHECK(lru_cache_put(c, &i, sizeof(i), box_int(i)) == 0);
+    CHECK(lru_cache_size(c) == 1000);
+    CHECK(freed == 4000);
+    for (int i = 0; i < 5000; i++) {
+        void *p = NULL;
+        bool hit = lru_cache_peek(c, &i, sizeof(i), &p);
+
+        CHECK(hit == (i >= 4000));
+        if (hit)
+            CHECK(*(int *)p == i);
+    }
+    lru_cache_destroy(c);
+    CHECK(freed == 5000);
+
+    /* Cache that does not own its values. */
+    c = lru_cache_create(1, NULL, NULL);
+    CHECK(c != NULL);
+    CHECK(lru_cache_put(c, "k", 1, &v) == 0);
+    CHECK(lru_cache_put(c, "j", 1, &v) == 0);
+    CHECK(lru_cache_size(c) == 1);
+    lru_cache_destroy(c);
+    lru_cache_destroy(NULL);
+
+    puts("all tests passed");
+    return EXIT_SUCCESS;
+}
+
+#endif /* LRU_CACHE_TEST */

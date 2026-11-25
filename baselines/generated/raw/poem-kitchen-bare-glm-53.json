@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "bare",
+ "prompt": "Write a poem about a kitchen. Output only the poem, with no title.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-kitchen-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "The morning light spills gold across the counter,\nwhere coffee steam rises like a whispered prayer.\nThe kettle hums its small familiar anthem,\nand toast perfumes the stillness of the air.\n\nHere flour dusts the wooden board like snowfall,\nand onions weep their sharp and honest tears.\nThe window holds a slice of changing seasons—\nspring blossoms, autumn leaves, the winter's hush.\n\nThe fridge door swings, a keeper of leftovers,\nsmall archives of the meals we shared before.\nScratched pots and pans hang ready for tomorrow,\neach spoon a witness to the years gone by.\n\nAt dusk, the stove light glows a quiet amber,\ntransforming chopping boards to altars of care.\nFor every kitchen is a heart made visible,\nwhere love is measured out in cups and warmth.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 28,
+  "completion_tokens": 164,
+  "total_tokens": 192,
+  "cost": 0.0007608,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

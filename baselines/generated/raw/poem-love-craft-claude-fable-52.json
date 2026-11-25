@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: love. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-love-craft-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "5:40, the Greyhound depot on West Michigan Street, Duluth.\nThe vending machine keeps my dollar and gives nothing back.\nYou unscrew the thermos your father carried to the ore docks,\ngreen Stanley, dented at the shoulder,\nand pour into the cap because there is one cap.\nWe pass it. The coffee tastes of the soup\nit held on Sunday.\nBehind the glass the clerk reads out the times\nfor Hinckley, Minneapolis, to a room of four.\nYours is the 6:05. I am not going anywhere;\nI drove you here and will drive back\npast the lift bridge with the heat on your side still up.\nYou say, the furnace filter is the sixteen by twenty.\nYou say, don't let Carol take the ladder.\nI say I have never once known where we keep the ladder.\nA man asleep across three chairs\nlaughs at something inside the sleep.\nYour thumb finds the split seam in my glove\nand works it wider.\nWhen the driver calls it you stand,\nput the cap in my hand, still wet,\nand take the thermos with you.\nThrough the door the bus lights come on,\none row, then the next.\nOn the bench, a ring where the cap sat,\ndrying from the outside in.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

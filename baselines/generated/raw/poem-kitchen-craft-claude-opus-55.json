@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a kitchen. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-kitchen-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "At twenty to five in Hibbing the furnace kicks on\nand my father fills the thermos from the percolator,\nholding the cap in his teeth.\nThe radio on the breadbox reads the shift changes,\nnine below at Chisholm, a Lutheran funeral at ten.\nHe has already cut the bread. The knife\nlies on the board in its crumbs.\nMy mother in her housecoat counts pills\ninto the lid of a mayonnaise jar\nand keeps her back to the window,\nwhere the streetlight shows snow\nfilling the bed of his truck.\nHe screws the cup down, then a quarter turn more.\nIn 1921 the company moved half the town\na mile south on timbers and steel wheels,\nthe houses, the hotel, a church with its bell,\nbecause the ore was under it.\nHer grandmother's stove rode the whole way with the fire banked.\nHe wipes the counter with the flat of his hand,\nsweeps the crumbs into his other palm,\nand stands holding them\nwhile the truck idles in the drive\nand the thermos ticks on the table, taking the heat.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

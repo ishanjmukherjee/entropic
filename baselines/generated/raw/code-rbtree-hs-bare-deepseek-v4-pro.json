@@ -1,0 +1,27 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-rbtree-hs",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Haskell source file that implements a persistent red-black tree with insert, member and toList. Output only the code.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 3000,
+ "domain": "functional",
+ "language": "Haskell",
+ "id": "code-rbtree-hs-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "```haskell\n{-# LANGUAGE BangPatterns #-}\n{-# LANGUAGE ScopedTypeVariables #-}\n\n-- | A persistent (immutable) red-black tree implementation.\n--\n-- This module provides a binary search tree with guaranteed\n-- O(log n) worst-case time complexity for 'insert' and 'member'.\n-- The tree is persistent, meaning that each operation returns a\n-- new tree while preserving the old one, enabling safe structural sharing.\n\nmodule RedBlackTree\n  ( -- * Types\n    RBTree,\n\n    -- * Construction\n    empty,\n    singleton,\n\n    -- * Insertion\n    insert,\n\n    -- * Query\n    member,\n\n    -- * Conversion\n    toList,\n  )\nwhere\n\nimport Data.List (foldl')\n\n--------------------------------------------------------------------------------\n-- Types\n--------------------------------------------------------------------------------\n\n-- | A node color in the red-black tree.\ndata Color\n  = Red\n  | Black\n  deriving (Eq, Show)\n\n-- | A persistent red-black tree.\n-- The type parameter @a@ must be an instance of 'Ord'.\ndata RBTree a\n  = Leaf\n  | Node\n      { nodeColor :: {-# UNPACK #-} !Color\n      , nodeLeft  :: !(RBTree a)\n      , nodeValue :: !a\n      , nodeRight :: !(RBTree a)\n      }\n  deriving (Eq, Show)\n\n--------------------------------------------------------------------------------\n-- Public API\n--------------------------------------------------------------------------------\n\n-- | The empty tree.\nempty :: RBTree a\nempty = Leaf\n\n-- | Create a tree containing a single element.\nsingleton :: a -> RBTree a\nsingleton x = Node Black Leaf x Leaf\n\n-- | Insert a value into the tree.\n-- If the value is already present, a new tree is returned with no duplicates.\ninsert :: (Ord a) => a -> RBTree a -> RBTree a\ninsert x tree =\n  let Node _ left y right = ins tree\n  in Node Black left y right\n  where\n    ins Leaf = Node Red Leaf x Leaf\n    ins (Node color a y b)\n      | x < y = balance color (ins a) y b\n      | x > y = balance color a y (ins b)\n      | otherwise = Node color a y b\n\n-- | Check if a value is a member of the tree.\nmember :: (Ord a) => a -> RBTree a -> Bool\nmember _ Leaf = False\nmember x (Node _ left y right)\n  | x < y = member x left\n  | x > y = member x right\n  | otherwise = True\n\n-- | Convert the tree to a list in ascending order.\ntoList :: RBTree a -> [a]\ntoList = go []\n  where\n    go acc Leaf = acc\n    go acc (Node _ left x right) = go (x : go acc right) left\n\n--------------------------------------------------------------------------------\n-- Internal - Balancing (Okasaki-style red-black tree insertion)\n--------------------------------------------------------------------------------\n\n-- | Balance a node to maintain red-black tree invariants.\n-- This handles the four possible red-red violation patterns\n-- during insertion. The function receives a color, left child,\n-- value, and right child, and returns a balanced node.\nbalance\n  :: Color   -- ^ Color of the node being balanced\n  -> RBTree a -- ^ Left subtree\n  -> a        -- ^ Node value\n  -> RBTree a -- ^ Right subtree\n  -> RBTree a\nbalance Black (Node Red (Node Red a x b) y c) z d =\n  Node Red (Node Black a x b) y (Node Black c z d)  -- Pattern 1\nbalance Black (Node Red a x (Node Red b y c)) z d =\n  Node Red (Node Black a x b) y (Node Black c z d)  -- Pattern 2\nbalance Black a x (Node Red (Node Red b y c) z d) =\n  Node Red (Node Black a x b) y (Node Black c z d)  -- Pattern 3\nbalance Black a x (Node Red b y (Node Red c z d)) =\n  Node Red (Node Black a x b) y (Node Black c z d)  -- Pattern 4\nbalance color a x b = Node color a x b               -- No violation\n```",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 33,
+  "completion_tokens": 891,
+  "total_tokens": 924,
+  "cost": 0.002904,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

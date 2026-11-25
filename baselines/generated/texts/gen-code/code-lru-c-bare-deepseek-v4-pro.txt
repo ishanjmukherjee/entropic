@@ -1,0 +1,351 @@
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdbool.h>
+
+/* Public types -------------------------------------------------------------- */
+typedef struct lru_cache lru_cache_t;
+
+typedef uint32_t (*lru_hash_fn)(const void *key);
+typedef bool     (*lru_key_eq_fn)(const void *a, const void *b);
+typedef void     (*lru_dtor_fn)(void *key, void *value, void *user_data);
+
+/* Internal types ------------------------------------------------------------ */
+typedef struct lru_node {
+    struct lru_node *prev;
+    struct lru_node *next;
+    void            *key;
+    void            *value;
+} lru_node_t;
+
+typedef struct lru_bucket {
+    lru_node_t *head;          /* singly-linked for hash chain */
+} lru_bucket_t;
+
+struct lru_cache {
+    lru_hash_fn    hash_fn;
+    lru_key_eq_fn  key_eq_fn;
+    lru_dtor_fn    dtor_fn;
+    void          *dtor_user_data;
+
+    lru_node_t    *head;       /* most-recently used (dummy) */
+    lru_node_t    *tail;       /* least-recently used (dummy) */
+
+    lru_bucket_t  *buckets;
+    size_t         bucket_count;
+    size_t         size;       /* current item count */
+    size_t         capacity;   /* maximum items before eviction */
+    size_t         key_size;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Internal helpers                                                           */
+/* -------------------------------------------------------------------------- */
+
+static void list_remove(lru_node_t *node)
+{
+    node->prev->next = node->next;
+    node->next->prev = node->prev;
+}
+
+static void list_push_front(lru_node_t *head, lru_node_t *node)
+{
+    node->next = head->next;
+    node->prev = head;
+    head->next->prev = node;
+    head->next = node;
+}
+
+static void list_move_to_front(lru_node_t *head, lru_node_t *node)
+{
+    list_remove(node);
+    list_push_front(head, node);
+}
+
+static inline size_t hash_to_index(lru_cache_t *cache, uint32_t hash)
+{
+    return (size_t)(hash % (uint32_t)cache->bucket_count);
+}
+
+/* Allocate and copy key – the cache owns the key memory */
+static void *key_dup(lru_cache_t *cache, const void *key)
+{
+    void *k = malloc(cache->key_size);
+    if (k) {
+        memcpy(k, key, cache->key_size);
+    }
+    return k;
+}
+
+/* Find a node in the bucket chain; returns NULL if not found */
+static lru_node_t *bucket_find(lru_bucket_t *bucket, lru_cache_t *cache,
+                               const void *key)
+{
+    lru_node_t *cur = bucket->head;
+    while (cur) {
+        if (cache->key_eq_fn(cur->key, key)) {
+            return cur;
+        }
+        cur = cur->next;
+    }
+    return NULL;
+}
+
+/* Remove node from its bucket's singly-linked list */
+static void bucket_remove(lru_bucket_t *bucket, lru_cache_t *cache,
+                          lru_node_t *target)
+{
+    lru_node_t **indirect = &bucket->head;
+    while (*indirect) {
+        if (*indirect == target) {
+            *indirect = target->next;
+            return;
+        }
+        indirect = &(*indirect)->next;
+    }
+}
+
+/* Prepend node to bucket's chain */
+static void bucket_prepend(lru_bucket_t *bucket, lru_node_t *node)
+{
+    node->next = bucket->head;
+    bucket->head = node;
+}
+
+/* Evict the least-recently-used item (tail->prev) */
+static void evict_lru(lru_cache_t *cache)
+{
+    lru_node_t *victim = cache->tail->prev;
+    if (victim == cache->head) {
+        return;  /* empty */
+    }
+
+    list_remove(victim);
+
+    size_t idx = hash_to_index(cache, cache->hash_fn(victim->key));
+    bucket_remove(&cache->buckets[idx], cache, victim);
+
+    if (cache->dtor_fn) {
+        cache->dtor_fn(victim->key, victim->value, cache->dtor_user_data);
+    }
+
+    free(victim->key);
+    free(victim->value);
+    free(victim);
+
+    cache->size--;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Public API                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Create a new LRU cache.
+ *
+ * @param capacity      Maximum number of items.  Must be > 0.
+ * @param key_size      Size in bytes of each key (keys are copied internally).
+ * @param hash_fn       Hash function (must be deterministic).
+ * @param key_eq_fn     Key equality predicate.
+ * @param dtor_fn       Optional destructor called on evicted/removed items
+ *                      (may be NULL).
+ * @param dtor_user_data User pointer forwarded to dtor_fn.
+ * @return              Pointer to cache, or NULL on allocation failure.
+ */
+lru_cache_t *lru_cache_create(size_t capacity,
+                              size_t key_size,
+                              lru_hash_fn hash_fn,
+                              lru_key_eq_fn key_eq_fn,
+                              lru_dtor_fn dtor_fn,
+                              void *dtor_user_data)
+{
+    if (capacity == 0 || key_size == 0 || !hash_fn || !key_eq_fn) {
+        return NULL;
+    }
+
+    lru_cache_t *cache = calloc(1, sizeof(*cache));
+    if (!cache) return NULL;
+
+    /* Dummy head and tail for the LRU list */
+    cache->head = calloc(1, sizeof(lru_node_t));
+    cache->tail = calloc(1, sizeof(lru_node_t));
+    if (!cache->head || !cache->tail) {
+        free(cache->head);
+        free(cache->tail);
+        free(cache);
+        return NULL;
+    }
+    cache->head->next = cache->tail;
+    cache->tail->prev = cache->head;
+
+    /* Pick a reasonable prime bucket count based on capacity */
+    size_t bucket_count = capacity * 2;
+    if (bucket_count < 16) bucket_count = 16;
+    /* make odd for better modulo distribution */
+    bucket_count |= 1;
+
+    cache->buckets = calloc(bucket_count, sizeof(lru_bucket_t));
+    if (!cache->buckets) {
+        free(cache->head);
+        free(cache->tail);
+        free(cache);
+        return NULL;
+    }
+
+    cache->hash_fn        = hash_fn;
+    cache->key_eq_fn      = key_eq_fn;
+    cache->dtor_fn        = dtor_fn;
+    cache->dtor_user_data = dtor_user_data;
+    cache->bucket_count   = bucket_count;
+    cache->capacity       = capacity;
+    cache->key_size       = key_size;
+    cache->size           = 0;
+
+    return cache;
+}
+
+/**
+ * Destroy the cache, freeing all memory.
+ * Destructors are called for every remaining item if provided.
+ */
+void lru_cache_destroy(lru_cache_t *cache)
+{
+    if (!cache) return;
+
+    lru_node_t *cur = cache->head->next;
+    while (cur != cache->tail) {
+        lru_node_t *next = cur->next;
+        if (cache->dtor_fn) {
+            cache->dtor_fn(cur->key, cur->value, cache->dtor_user_data);
+        }
+        free(cur->key);
+        free(cur->value);
+        free(cur);
+        cur = next;
+    }
+
+    free(cache->head);
+    free(cache->tail);
+    free(cache->buckets);
+    free(cache);
+}
+
+/**
+ * Look up a key in the cache.
+ *
+ * @param cache  The cache.
+ * @param key    Pointer to key.
+ * @return       Pointer to the associated value, or NULL if not found.
+ */
+void *lru_cache_get(lru_cache_t *cache, const void *key)
+{
+    if (!cache || !key) return NULL;
+
+    size_t idx = hash_to_index(cache, cache->hash_fn(key));
+    lru_node_t *node = bucket_find(&cache->buckets[idx], cache, key);
+    if (!node) return NULL;
+
+    /* Move to front (most-recently used) */
+    list_move_to_front(cache->head, node);
+    return node->value;
+}
+
+/**
+ * Insert or update a key-value pair.
+ *
+ * Ownership of value is transferred to the cache; the caller-provided
+ * value pointer is stored directly (the value is NOT copied).  The key
+ * is always copied internally.
+ *
+ * @param cache  The cache.
+ * @param key    Pointer to key (copied).
+ * @param value  Pointer to value (stored as-is; must be freeable if dtor
+ *               is set).
+ * @return       0 on success, -1 if key is NULL or memory allocation fails.
+ */
+int lru_cache_put(lru_cache_t *cache, const void *key, void *value)
+{
+    if (!cache || !key) return -1;
+
+    size_t idx = hash_to_index(cache, cache->hash_fn(key));
+    lru_node_t *node = bucket_find(&cache->buckets[idx], cache, key);
+
+    if (node) {
+        /* Key exists – update value and move to front */
+        if (cache->dtor_fn) {
+            cache->dtor_fn(node->key, node->value, cache->dtor_user_data);
+        }
+        void *old_value = node->value;
+        node->value = value;
+        free(old_value);  /* dtor already called, free the pointer itself */
+        list_move_to_front(cache->head, node);
+        return 0;
+    }
+
+    /* Evict if at capacity */
+    while (cache->size >= cache->capacity) {
+        evict_lru(cache);
+    }
+
+    /* Allocate new node */
+    lru_node_t *new_node = calloc(1, sizeof(*new_node));
+    if (!new_node) return -1;
+
+    new_node->key = key_dup(cache, key);
+    if (!new_node->key) {
+        free(new_node);
+        return -1;
+    }
+    new_node->value = value;
+
+    bucket_prepend(&cache->buckets[idx], new_node);
+    list_push_front(cache->head, new_node);
+    cache->size++;
+
+    return 0;
+}
+
+/**
+ * Remove a key from the cache if present.
+ *
+ * @param cache  The cache.
+ * @param key    Pointer to key.
+ * @return       0 if the key was present, -1 if not found.
+ */
+int lru_cache_remove(lru_cache_t *cache, const void *key)
+{
+    if (!cache || !key) return -1;
+
+    size_t idx = hash_to_index(cache, cache->hash_fn(key));
+    lru_node_t *node = bucket_find(&cache->buckets[idx], cache, key);
+    if (!node) return -1;
+
+    list_remove(node);
+    bucket_remove(&cache->buckets[idx], cache, node);
+
+    if (cache->dtor_fn) {
+        cache->dtor_fn(node->key, node->value, cache->dtor_user_data);
+    }
+    free(node->key);
+    free(node->value);
+    free(node);
+    cache->size--;
+
+    return 0;
+}
+
+/**
+ * Return current number of items in the cache.
+ */
+size_t lru_cache_size(const lru_cache_t *cache)
+{
+    return cache ? cache->size : 0;
+}
+
+/**
+ * Return capacity of the cache.
+ */
+size_t lru_cache_capacity(const lru_cache_t *cache)
+{
+    return cache ? cache->capacity : 0;
+}

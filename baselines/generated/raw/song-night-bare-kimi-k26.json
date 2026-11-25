@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "bare",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city. Output only the lyrics.",
+ "model": "kimi-k2.6",
+ "max_tokens": 900,
+ "id": "song-night-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Verse 1:\nYeah, neon buzzing on the avenue\nMe and my crew, we something like a wrecking crew\nMoon hanging low, got that silver glow\nPulse of the city, yeah, we moving slow\n\nJacket leather black, shadows on the concrete\nEvery corner promise, every intersection's unique\nLisa says she knows a spot behind the old warehouse\nBass leaking through the bricks, shaking all the power out\n\nHook:\nThis is the night, we live forever\nStreetlights burning, we rise together\nNo last train, no curfew calling\nWhole world spinning, yeah, we balling\n\nVerse 2:\nStep through the door, wall of heat and bodies grinding\nDJ scratching time, everybody unwinding\nRooftop later, where the skyline breathes\nSomebody pulled a bottle from the sleeves of the trees\n\nConversations rapid, laughs come staccato\nCigarette smoke ribbons, freestyle verso, bravado\nCameras flashing double, we don't pose, we just are\nEvery tattooed knuckle dreaming on a distant star\n\nHook:\nThis is the night, we live forever\nStreetlights burning, we rise together\nNo last train, no curfew calling\nWhole world spinning, yeah, we balling\n\nVerse 3:\n3 AM diner, vinyl seats sticking\nPoetry in the grease, the rhythm's still ticking\nMarcus serves coffee, calls everybody \"chief\"\nWe plot revolutions, nurse our disbelief\n\nWalk 'til the shoes talk back, pavement still warm\nCity never sleeps, we just borrowing its form\nSun cracks the horizon, paint it bourbon and blood\nAnother night swallowed by the river and the mud\n\nOutro:\nSo here's to the transient, the temporarily free\nThe beautiful, the broke, the everlastingly we\nFading into morning on the last taxi home\nCity in our pockets, never leaving us alone",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 30,
+  "completion_tokens": 395,
+  "total_tokens": 425,
+  "cost": 0.001367,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

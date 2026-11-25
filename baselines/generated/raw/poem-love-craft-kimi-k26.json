@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: love. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-love-craft-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "The bakery on Károlyi utca opens at five.\nYou are already in the queue.\nI watch flour settle on your wrists,\nthe same unbleached flour they bag\nby the kilo and sell to restaurants\nthat do not open for breakfast.\n\nA man carries out trays of buns.\nThe steam makes one window\na country you could get lost in.\nYou buy two. Hand me one.\nThe apricot inside is still too hot\nto taste. We eat on the steps\nof a church locked until seven.\n\nYour sleeve catches the wind.\nThe Danube is not visible from here\nbut you insist you can smell it,\nthe gas station on the corner,\nsomeone's diesel starting.\nA cat crosses the square twice,\nthe same cat or two cats.\n\nBy six the light has changed\nenough to show dust on the railings.\nYou pinch a crumb from my collar.\nThe baker now arranges cakes\nin tiers, each circle smaller\nthan the one beneath, until\nthe top holds only a single\nmarzipan rose, pale as dough,\nuntouched by any tongue\nsince the ingredient laws changed.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 185,
+  "completion_tokens": 234,
+  "total_tokens": 419,
+  "cost": 0.0009436,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "bare",
+ "prompt": "Write a poem about a city bus at night. Output only the poem, with no title.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-bus-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "The long day’s fever has finally broken,\nits heat a memory the shadows hold.\nThe engine’s hum, a low and lulling token,\na story in the cooling dark retold.\n\nFluorescent lights, a pale and sterile river,\nwash over empty seats of hardened cloth,\nand make the scratches on the window shiver,\na secret language spelling out a loss.\n\nThe doors sigh open at a vacant corner,\nadmitting drafts and one forgotten soul,\na tired-eyed and solitary mourner\ndisembarking from a vanished role.\n\nThen, gathering itself with diesel breathing,\nit lumbers on, a beacon in the gloom,\na slow, terrestrial and heavy-leaving\n Leviathan that owns the empty room.\n\nPast shuttered shops and traffic lights that hover,\nunblinking yellow eyes above the lane,\nit carries its own light from stop to cover,\nand gently rocks against the sleeping pain.\n\nA mobile island briefly at the curbside,\na sanctuary for the ones who ride\nthrough the long dark, content to let the outside\nunspool its silent film, nowhere to hide.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 23,
+  "completion_tokens": 223,
+  "total_tokens": 246,
+  "cost": 0.0007504,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

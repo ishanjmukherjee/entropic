@@ -1,0 +1,27 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-rbtree-hs",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Haskell source file that implements a persistent red-black tree with insert, member and toList. Output only the code.",
+ "model": "glm-5.3",
+ "max_tokens": 3000,
+ "domain": "functional",
+ "language": "Haskell",
+ "id": "code-rbtree-hs-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "```haskell\n{-# LANGUAGE ScopedTypeVariables #-}\n\n-- | A persistent (purely functional) red-black tree implementing an\n-- ordered set of elements.  All operations are total and persistent:\n-- no operation modifies or invalidates existing trees.\n--\n-- Invariants maintained by this implementation:\n--\n--   * Red-black invariant: a red node never has a red child.\n--   * Black-height invariant: every path from a node to a leaf\n--     (empty subtree) contains the same number of black nodes.\n--   * Ordering invariant: for every node with element @e@, all\n--     elements in the left subtree are @< e@ and all elements in\n--     the right subtree are @> e@ (duplicates are discarded).\n--\n-- The delete operation is intentionally omitted per the required\n-- interface; insert restores the invariants using the classic\n-- Okasaki rebalancing scheme.\nmodule Data.RBTree\n    ( RBTree\n    , empty\n    , null\n    , singleton\n    , insert\n    , member\n    , toList\n    , fromList\n    , size\n    ) where\n\nimport Prelude hiding (null)\nimport qualified Prelude\n\n-- | A red-black tree over elements of type @a@.\ndata RBTree a\n    = E                          -- ^ Empty (black) leaf sentinel.\n    | B (RBTree a) a (RBTree a)  -- ^ Black node.\n    | R (RBTree a) a (RBTree a)  -- ^ Red node.\n    deriving (Eq, Show)\n\n-- | /O(1)/. The empty tree.\nempty :: RBTree a\nempty = E\n\n-- | /O(1)/. Is the tree empty?\nnull :: RBTree a -> Bool\nnull E = True\nnull _ = False\n\n-- | /O(1)/. A tree with a single element.\nsingleton :: a -> RBTree a\nsingleton x = B E x E\n\n-- | /O(log n)/. Insert an element into the tree.  If the element is\n-- already present, the original tree is returned unchanged.\n-- Insertion is persistent: the input tree remains valid.\ninsert :: Ord a => a -> RBTree a -> RBTree a\ninsert x t =\n    case ins t of\n        -- Reblacken the root to preserve the black-height invariant.\n        R l y r -> B l y r\n        t'      -> t'\n  where\n    ins E = R E x E\n    ins (B l y r) =\n        case compare x y of\n            LT -> balance (ins l) y r\n            GT -> balance l y (ins r)\n            EQ -> B l y r\n    ins (R l y r) =\n        case compare x y of\n            LT -> R (ins l) y r\n            GT -> R l y (ins r)\n            EQ -> R l y r\n\n    -- Okasaki's balance: repair a possible red-red violation introduced\n    -- by 'ins' at a black node.  Pattern matching on the four shapes that\n    -- can host a violation keeps the common case (no violation) cheap.\n    balance :: RBTree a -> a -> RBTree a -> RBTree a\n    balance (R a y (R b z c)) x d = R (B a y b) z (B c x d)\n    balance (R (R a y b) z c) x d = R (B a y b) z (B c x d)\n    balance a y (R (R b z c) x d) = R (B a y b) z (B c x d)\n    balance a y (R b z (R c x d)) = R (B a y b) z (B c x d)\n    balance l y r = B l y r\n\n-- | /O(log n)/. Is the element a member of the tree?\nmember :: Ord a => a -> RBTree a -> Bool\nmember _ E = False\nmember x (B l y r) =\n    case compare x y of\n        LT -> member x l\n        GT -> member x r\n        EQ -> True\nmember x (R l y r) =\n    case compare x y of\n        LT -> member x l\n        GT -> member x r\n        EQ -> True\n\n-- | /O(n)/. Convert the tree to an ascending list of its elements.\n-- Implemented iteratively (CPS-free) so it runs in constant stack\n-- space and linear heap space.\ntoList :: RBTree a -> [a]\ntoList = go []\n  where\n    go acc E = acc\n    go acc (B l x r) = go (x : go acc r) l\n    go acc (R l x r) = go (x : go acc r) l\n\n-- | /O(n log n)/. Build a tree from a list of elements.\nfromList :: Ord a => [a] -> RBTree a\nfromList = foldr insert empty\n\n-- | /O(n)/. The number of elements in the tree.\nsize :: RBTree a -> Int\nsize E = 0\nsize (B l _ r) = 1 + size l + size r\nsize (R l _ r) = 1 + size l + size r\n```\n\nThis implementation uses Okasaki's \"Purely Functional Data Structures\" (1993) rebalancing scheme: insertion recurses to the appropriate leaf, creating a red node in place, and propagates any red-red violation upward via pattern-match-driven rotations in `balance`, finishing by blackening the root once at the top. Because the trees are purely functional, `insert` shares structure with the old tree (persistent) and each operation costs O(log n). `toList` is written so the Haskell runtime evaluates it in constant stack space. Note that `member` can also be written by dispatching through a helper to avoid the three-branch duplication, but the two-case form compiles to the same core without relying on `EmptyCase`/` alim` extensions.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 41,
+  "completion_tokens": 1289,
+  "total_tokens": 1330,
+  "cost": 0.005729,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

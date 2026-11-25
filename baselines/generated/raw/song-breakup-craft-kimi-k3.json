@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "craft",
+ "prompt": "Write the lyrics of a pop song about a breakup.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "kimi-k3",
+ "max_tokens": 900,
+ "id": "song-breakup-craft-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The kettle whistle shook me while I\nread the gas card twice – your mother's\nname still on the lease, the letter\nfolded in your winter coat you left\nbehind the spare room door. The bus\nswerved on Jasper, splashed my jeans,\nand I thought you'd laugh, you always\nlaughed when plans fell through.\n\nYou wound the cord around that lamp,\nthe one we stole from Rick's garage,\nits plastic shade cracked from the move,\nit flickered like a pulse. I stood there\nholding both our winter gloves,\nwondering which pairs you'd take.\n\nThe kettle whistles different now – I\nlet it scream until the neighbour\nthumps the wall. Your bus pass\nexpired yesterday, I found it\ntucked behind the microwave. The\nlamp cord hangs straight down,\nuntwisted, cold. I bought new bulbs\nbut haven't changed the shade.\n\nYour bike still chained outside the\nco-op, rust blooming through the\nlock. The cashier asked me Tuesday\nwhere you've been – I said you're\nsiccing big in Calgary, the lie came\neasy as your name off my tongue.\n\nI walked past Rick's last night, the\ngarage door yawning dark, that same\nold oil stain like a map of nowhere.\nMy pockets full of nothing heavy\nnow, the glove drawer empty, the\nkettle quiet, the cord straight down –\nI left my spare key on the sill\nwhere yours used to gleam.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 153,
+  "completion_tokens": 311,
+  "total_tokens": 464,
+  "cost": 0.005124,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

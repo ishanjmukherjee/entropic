@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "bare",
+ "prompt": "Write the lyrics of a folk song about a river being dammed. Output only the lyrics.",
+ "model": "kimi-k3",
+ "max_tokens": 900,
+ "id": "song-river-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "I remember the river when she ran wild and free,\nCutting through the canyon, bringing life to the sea,\nThe salmon came riding on the silver crest,\nAnd the cottonwoods whispered on her western breast.\n\nShe carried the lovers on her moonlit tide,\nShe carried the farmers where the fields were wide,\nShe carried the children on the summer days,\nAnd she carried the old ones to their final rest.\n\nNow the concrete is rising where she used to roll,\nThey're sealing up her canyons, they're taming her soul,\nShe'll sleep in the stillness of the reservoir,\nAnd forget how she thundered when the spring rains roared.\n\nGoodbye to the rapids, goodbye to the foam,\nGoodbye to the winding that carried us home,\nThe water's still rising and the valley is gone,\nAnd the river lies silent while the concrete lives on.\n\nThey say we need power, they say we need grain,\nTo light up the cities through the windowpane,\nBut I stand on the shoreline where the water grows deep,\nAnd I weep for the river that's fallen asleep.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 37,
+  "completion_tokens": 228,
+  "total_tokens": 265,
+  "cost": 0.003531,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

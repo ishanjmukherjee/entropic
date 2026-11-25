@@ -1,0 +1,116 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- | A persistent (immutable) red-black tree implementation.
+--
+-- This module provides a binary search tree with guaranteed
+-- O(log n) worst-case time complexity for 'insert' and 'member'.
+-- The tree is persistent, meaning that each operation returns a
+-- new tree while preserving the old one, enabling safe structural sharing.
+
+module RedBlackTree
+  ( -- * Types
+    RBTree,
+
+    -- * Construction
+    empty,
+    singleton,
+
+    -- * Insertion
+    insert,
+
+    -- * Query
+    member,
+
+    -- * Conversion
+    toList,
+  )
+where
+
+import Data.List (foldl')
+
+--------------------------------------------------------------------------------
+-- Types
+--------------------------------------------------------------------------------
+
+-- | A node color in the red-black tree.
+data Color
+  = Red
+  | Black
+  deriving (Eq, Show)
+
+-- | A persistent red-black tree.
+-- The type parameter @a@ must be an instance of 'Ord'.
+data RBTree a
+  = Leaf
+  | Node
+      { nodeColor :: {-# UNPACK #-} !Color
+      , nodeLeft  :: !(RBTree a)
+      , nodeValue :: !a
+      , nodeRight :: !(RBTree a)
+      }
+  deriving (Eq, Show)
+
+--------------------------------------------------------------------------------
+-- Public API
+--------------------------------------------------------------------------------
+
+-- | The empty tree.
+empty :: RBTree a
+empty = Leaf
+
+-- | Create a tree containing a single element.
+singleton :: a -> RBTree a
+singleton x = Node Black Leaf x Leaf
+
+-- | Insert a value into the tree.
+-- If the value is already present, a new tree is returned with no duplicates.
+insert :: (Ord a) => a -> RBTree a -> RBTree a
+insert x tree =
+  let Node _ left y right = ins tree
+  in Node Black left y right
+  where
+    ins Leaf = Node Red Leaf x Leaf
+    ins (Node color a y b)
+      | x < y = balance color (ins a) y b
+      | x > y = balance color a y (ins b)
+      | otherwise = Node color a y b
+
+-- | Check if a value is a member of the tree.
+member :: (Ord a) => a -> RBTree a -> Bool
+member _ Leaf = False
+member x (Node _ left y right)
+  | x < y = member x left
+  | x > y = member x right
+  | otherwise = True
+
+-- | Convert the tree to a list in ascending order.
+toList :: RBTree a -> [a]
+toList = go []
+  where
+    go acc Leaf = acc
+    go acc (Node _ left x right) = go (x : go acc right) left
+
+--------------------------------------------------------------------------------
+-- Internal - Balancing (Okasaki-style red-black tree insertion)
+--------------------------------------------------------------------------------
+
+-- | Balance a node to maintain red-black tree invariants.
+-- This handles the four possible red-red violation patterns
+-- during insertion. The function receives a color, left child,
+-- value, and right child, and returns a balanced node.
+balance
+  :: Color   -- ^ Color of the node being balanced
+  -> RBTree a -- ^ Left subtree
+  -> a        -- ^ Node value
+  -> RBTree a -- ^ Right subtree
+  -> RBTree a
+balance Black (Node Red (Node Red a x b) y c) z d =
+  Node Red (Node Black a x b) y (Node Black c z d)  -- Pattern 1
+balance Black (Node Red a x (Node Red b y c)) z d =
+  Node Red (Node Black a x b) y (Node Black c z d)  -- Pattern 2
+balance Black a x (Node Red (Node Red b y c) z d) =
+  Node Red (Node Black a x b) y (Node Black c z d)  -- Pattern 3
+balance Black a x (Node Red b y (Node Red c z d)) =
+  Node Red (Node Black a x b) y (Node Black c z d)  -- Pattern 4
+balance color a x b = Node color a x b               -- No violation

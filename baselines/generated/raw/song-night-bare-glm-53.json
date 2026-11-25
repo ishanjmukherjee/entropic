@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "bare",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city. Output only the lyrics.",
+ "model": "glm-5.3",
+ "max_tokens": 900,
+ "id": "song-night-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "**\"City Lights\"**\n\n(Verse 1)\nSun goes down, I lace my kicks up tight,\nSneakers clean, fresh fit, ready for the night,\nSubway rumble underneath the neon glow,\nWhole city's waking up, watch the traffic flow,\nMet my crew on the corner, bass boomin' out the car,\nEverybody movin', we ain't goin' far,\nStreetlights flicker like the stars came down,\nConcrete jungle tangle, this is my town,\n\n(Hook)\nCity lights, city nights, we ride 'til the break of dawn,\nNeon dreams on these streets, we keep movin' on,\nSkyline shine, bassline climb, we own this sound,\nThis is our night in the city, we hold it down,\n\n(Verse 2)\nSpot's on five, line wrapped around the corner,\nVIP dreams, but we ready for the order,\nSlip past the rope, hit the floor, feel the heat,\nDJ dropped the beat, now the crowd's on its feet,\nSweat on the walls, the whole room vibrates,\nStrangers turn to family when the record rotates,\nHands up high when the baseline drops,\nNobody sleeps, this momentum never stops,\n\n(Hook)\n\n(Verse 3)\nThree a.m. now, cheap pizza on a fold,\nStories with the crew 'bout the night that we strolled,\nLaughin' at the memories, moments that we made,\nGlow of the city never really fades,\nWalk home slow while the sun starts to peek,\nCity never sleeps but the people catch a sleep,\nSame block tomorrow, but tonight was the one,\nNight out in the city 'til we do it again, son,\n\n(Outro)\nCity lights... 'til the break of dawn,\nWe keep movin' on... this is our town",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 33,
+  "completion_tokens": 385,
+  "total_tokens": 418,
+  "cost": 0.0017402,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

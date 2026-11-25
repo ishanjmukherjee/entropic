@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "craft",
+ "prompt": "Write the lyrics of a pop song about a breakup.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "kimi-k2.6",
+ "max_tokens": 900,
+ "id": "song-breakup-craft-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Parked the Nissan by the loading dock\nwhere we used to watch the FedEx trucks\nback in at four a.m. The smell\nof diesel and your father's cigarettes.\nYou wore my hoodie with the torn cuff.\nI never fixed it. That was the year\nwe measured everything in Waffle House\nchecks and half-empty tanks of gas.\n\nStill got your locker key from the Y\non Claremont, the one with the rusted hinge.\nNumber 847. I should mail it.\n\nThe chorus earns its repetition.\n\nIt's just the freeway now, the same five signs,\nthe same Chevron where you bought those tapes.\nI play them sometimes. Sides B and C\nwarped past the words I knew by heart.\n\nYour mother called in March. She'd found\na picture from the aquarium trip—\nyou touching glass, the octopus\nreaching back, its one smart eye.\n\nThe chorus earns it differently now.\n\nThe new job's in a building with no view.\nLunch at twelve. I set a phone alarm,\nthe same chime you hated, birds in spring.\nI never changed it. That is the sound\nof someone walking to a meeting,\nnothing more, nothing less than walking.\n\nThe chorus comes back empty, full, your call.\n\nLast Tuesday, rain, I drove past our exit\njust to see the closed Cineplex,\nthe SOLD sign at the Kroger lot.\nThe Nissan died at the light. I sat.\nA bus sprayed water on my door.\nI counted Mississippis. Seventeen.\nSomeone honked. The world went on\nknowing nothing, which was fair.\n\nThe chorus earns it final, meaning all the ways\na thing can last past wanting,\npast the person it belonged to,\npast the belonging itself,\njust this shape the mouth makes twice,\njust the making, just the twice.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 144,
+  "completion_tokens": 381,
+  "total_tokens": 525,
+  "cost": 0.0014106,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

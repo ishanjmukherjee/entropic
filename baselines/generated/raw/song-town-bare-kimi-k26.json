@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "bare",
+ "prompt": "Write the lyrics of a country song about leaving a small town. Output only the lyrics.",
+ "model": "kimi-k2.6",
+ "max_tokens": 900,
+ "id": "song-town-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Two-lane blacktop, dust in the mirror\nMama waving till she disappears\nGot a full tank, half a plan, and this old guitar\nLeaving everything I know and everything we are\n\nCornfields turn to skyline, stars fade into dawn\nWondering what I'm running from or what I'm running on\nMaybe there's a me out there I ain't found yet\nMaybe I just gotta leave to finally forget\n\nThat screen door slamming, your summer dress\nThe way you said forever, the way I answered yes\nBut forever's just a word in a town this small\nWhere everybody's waiting and nothing changes at all\n\nGoodbye water tower, goodbye church bell hum\nGoodbye to being somebody's hometown son\nI'm chasing down a feeling I can't name\nPraying leaving leads to something more than blame\n\nMaybe Nashville, maybe nowhere, maybe anywhere but here\nWhere the ghosts of who we were are always too near\nSo here's to open highway, here's to the unknown\nHere's to finding out if I can make it on my own\n\nTwo-lane blacktop, middle of the night\nRearview holding everything I've ever tried to fight\nSmall town in the dark, getting small behind me\nGuess you gotta lose yourself before you ever find what you could be\n\nGoodbye front porch light, goodbye faded sign\nGoodbye to the only world that ever wanted to be mine\nIf you're listening, darling, know I couldn't stay\nBut I took you with me anyway\nEvery single mile, every single mile\nEvery single mile of the wide highway",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 27,
+  "completion_tokens": 318,
+  "total_tokens": 345,
+  "cost": 0.0011028,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

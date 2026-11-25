@@ -1,0 +1,224 @@
+"""
+N-body gravitational simulation using a leapfrog (kick-drift-kick)
+integrator with direct O(N^2) force summation, implemented with NumPy.
+
+Suitable for small-to-moderate particle counts (N up to a few thousand).
+Units are arbitrary but should be internally consistent (e.g., SI).
+"""
+
+from __future__ import annotations
+
+import numpy as np
+from dataclasses import dataclass, field
+from typing import Callable, Optional
+
+
+G_CONST = 6.67430e-11  # Gravitational constant, SI units (m^3 kg^-1 s^-2)
+
+
+@dataclass
+class SimulationConfig:
+    """Configuration for the N-body simulation."""
+    n_particles: int = 128
+    n_steps: int = 1000
+    dt: float = 1.0e3                  # Time step in seconds (adjust per setup)
+    softening: float = 1.0e8           # Softening length to avoid singularities
+    output_every: int = 50             # Emit a snapshot every N steps
+    seed: int = 42
+    box_size: float = 1.0e11           # Half-width of the initial particle cube
+    total_mass: float = 2.0e30         # Total mass distributed among particles
+    initial_max_speed: float = 1.0e2   # Max randomized initial velocity component
+    snapshot_file: Optional[str] = "snapshots.npz"
+
+
+class NBodySystem:
+    """State and dynamics of an N-body self-gravitating system."""
+
+    def __init__(self, config: SimulationConfig) -> None:
+        self.config = config
+        self.rng = np.random.default_rng(config.seed)
+        self.time = 0.0
+
+        # positions, velocities: (N, 3); masses: (N,)
+        self.positions = self._init_positions()
+        self.velocities = self._init_velocities()
+        self.masses = self._init_masses()
+
+        self._precompute_mass_products()
+        self._snapshots: list[dict[str, np.ndarray]] = []
+
+    # ------------------------------------------------------------------
+    # Initialization
+    # ------------------------------------------------------------------
+    def _init_positions(self) -> np.ndarray:
+        rng = self.rng
+        cfg = self.config
+        return rng.uniform(-cfg.box_size, cfg.box_size, size=(cfg.n_particles, 3))
+
+    def _init_velocities(self) -> np.ndarray:
+        rng = self.rng
+        return rng.uniform(
+            -self.config.initial_max_speed,
+            self.config.initial_max_speed,
+            size=(self.config.n_particles, 3),
+        )
+
+    def _init_masses(self) -> np.ndarray:
+        # Random masses summing to total_mass.
+        weights = self.rng.uniform(0.5, 1.5, size=self.config.n_particles)
+        weights /= weights.sum()
+        return weights * self.config.total_mass
+
+    def _precompute_mass_products(self) -> None:
+        # Useful for potential energy: M_i * M_j matrix.
+        self._mass_matrix = np.outer(self.masses, self.masses)
+
+    # ------------------------------------------------------------------
+    # Dynamics
+    # ------------------------------------------------------------------
+    def compute_accelerations(self) -> np.ndarray:
+        """Direct-sum gravitational accelerations with Plummer softening.
+
+        Returns
+        -------
+        acc : (N, 3) ndarray of accelerations.
+        """
+        pos = self.positions
+        eps2 = self.config.softening ** 2
+
+        # Pairwise displacement vectors: dr[i, j] = pos[j] - pos[i], shape (N, N, 3)
+        dr = pos[np.newaxis, :, :] - pos[:, np.newaxis, :]
+
+        # Distances (avoid zeros via softening)
+        r2 = np.einsum("ijk,ijk->ij", dr, dr) + eps2
+        inv_r3 = r2 ** -1.5
+
+        # a_i = G * sum_j m_j * (r_j - r_i) / (|r_ij|^2 + eps^2)^(3/2)
+        acc = G_CONST * np.einsum("j,ij,ijk->ik", self.masses, inv_r3, dr)
+        return acc
+
+    def potential_energy(self) -> float:
+        """Total gravitational potential energy (softened)."""
+        pos = self.positions
+        eps2 = self.config.softening ** 2
+        dr = pos[np.newaxis, :, :] - pos[:, np.newaxis, :]
+        r = np.sqrt(np.einsum("ijk,ijk->ij", dr, dr) + eps2)
+        # Avoid double counting and self-terms.
+        np.fill_diagonal(r, np.inf)
+        return -0.5 * G_CONST * np.sum(self._mass_matrix / r)
+
+    def kinetic_energy(self) -> float:
+        return 0.5 * np.sum(self.masses * np.einsum("ij,ij->i", self.velocities, self.velocities))
+
+    def total_energy(self) -> float:
+        return self.kinetic_energy() + self.potential_energy()
+
+    def center_of_mass_velocity(self) -> np.ndarray:
+        total_m = self.masses.sum()
+        return (self.masses[:, None] * self.velocities).sum(axis=0) / total_m
+
+    # ------------------------------------------------------------------
+    # Integrator: leapfrog kick-drift-kick
+    # ------------------------------------------------------------------
+    def step(self) -> None:
+        """Advance the system by one timestep using leapfrog (KDK)."""
+        dt = self.config.dt
+
+        # First half-kick.
+        acc = self.compute_accelerations()
+        self.velocities += 0.5 * dt * acc
+
+        # Drift.
+        self.positions += dt * self.velocities
+        self.time += dt
+
+        # Second half-kick with updated accelerations.
+        acc = self.compute_accelerations()
+        self.velocities += 0.5 * dt * acc
+
+    # ------------------------------------------------------------------
+    # Diagnostics and output
+    # ------------------------------------------------------------------
+    def _record_snapshot(self) -> None:
+        self._snapshots.append(
+            {
+                "time": np.array(self.time),
+                "positions": self.positions.copy(),
+                "velocities": self.velocities.copy(),
+                "masses": self.masses.copy(),
+            }
+        )
+
+    def run(
+        self,
+        progress_callback: Optional[Callable[[int, "NBodySystem"], None]] = None,
+    ) -> list[dict[str, np.ndarray]]:
+        """Run the full simulation; returns collected snapshots."""
+        cfg = self.config
+        self._record_snapshot()
+
+        e0 = self.total_energy()
+        for step_idx in range(1, cfg.n_steps + 1):
+            self.step()
+
+            if step_idx % cfg.output_every == 0:
+                self._record_snapshot()
+                e_rel = abs((self.total_energy() - e0) / e0)
+                if progress_callback is not None:
+                    progress_callback(step_idx, self)
+                print(
+                    f"step {step_idx:6d}  t = {self.time:.6e}  "
+                    f"E = {self.total_energy():.6e}  |dE/E0| = {e_rel:.3e}"
+                )
+
+        if cfg.snapshot_file is not None:
+            self.save_snapshots(cfg.snapshot_file)
+
+        return self._snapshots
+
+    def save_snapshots(self, filename: str) -> None:
+        """Save all snapshots to a compressed NumPy archive."""
+        if not self._snapshots:
+            return
+        # Stack along a new leading axis; all snapshots share shapes here.
+        arrays = {
+            "time": np.array([s["time"] for s in self._snapshots]),
+            "positions": np.stack([s["positions"] for s in self._snapshots]),
+            "velocities": np.stack([s["velocities"] for s in self._snapshots]),
+            "masses": np.stack([s["masses"] for s in self._snapshots]),
+        }
+        np.savez_compressed(filename, **arrays)
+        print(f"Saved {len(self._snapshots)} snapshots to '{filename}'.")
+
+
+# ----------------------------------------------------------------------
+# CLI entry point
+# ----------------------------------------------------------------------
+def main() -> None:
+    cfg = SimulationConfig(
+        n_particles=256,
+        n_steps=500,
+        dt=5.0e3,
+        softening=1.0e9,
+        box_size=1.0e11,
+        total_mass=2.0e31,     # ~10 solar masses
+        output_every=25,
+        snapshot_file="nbody_snapshots.npz",
+        seed=1234,
+    )
+    system = NBodySystem(cfg)
+
+    print(f"Particles: {cfg.n_particles}")
+    print(f"Initial energy: {system.total_energy():.6e}")
+    print(f"COM velocity : {system.center_of_mass_velocity()}")
+    print("-" * 60)
+
+    system.run()
+
+    print("-" * 60)
+    print(f"Final energy: {system.total_energy():.6e}")
+    print(f"Final COM velocity: {system.center_of_mass_velocity()}")
+
+
+if __name__ == "__main__":
+    main()

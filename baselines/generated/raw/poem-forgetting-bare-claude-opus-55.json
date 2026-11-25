@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "bare",
+ "prompt": "Write a villanelle about forgetting. Output only the poem, with no title.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-forgetting-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "The names go first, and then the faces fade.\nI knew a street once; now I'm turned around.\nI keep the little light the evening made.\n\nMy mother's kitchen, yellow, unafraid,\nthe radio turned low, the kettle's sound.\nThe names go first, and then the faces fade.\n\nI set the table out of habit, laid\na place for someone nowhere to be found.\nI keep the little light the evening made.\n\nThe letters in the drawer are creased and frayed,\ntheir loops and crosses blurring, ink half-drowned.\nThe names go first, and then the faces fade.\n\nI am not grieving. I am not afraid.\nThe mind lets go the way rain finds the ground.\nI keep the little light the evening made.\n\nAnd if you come to visit, half-dismayed\nto find me smiling, gentle, and unbound,\nthe names go first, and then the faces fade.\nI keep the little light the evening made.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

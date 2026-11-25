@@ -1,0 +1,424 @@
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useId,
+  useEffect,
+  type KeyboardEvent,
+  type ChangeEvent,
+  type FocusEvent,
+  type MouseEvent,
+} from 'react';
+
+/**
+ * Props for the ComboBox component.
+ * @template T - The type of the items in the options list.
+ */
+interface ComboBoxProps<T> {
+  /** Array of options to display in the dropdown. */
+  options: T[];
+  /** Callback fired when the selected value changes. */
+  onChange: (value: T | null) => void;
+  /** Function to extract a unique string identifier from an option. */
+  getOptionKey: (option: T) => string;
+  /** Function to extract the display label from an option. */
+  getOptionLabel: (option: T) => string;
+  /** Function to extract searchable text from an option for filtering. */
+  getOptionFilterText?: (option: T) => string;
+  /** Placeholder text for the input element. */
+  placeholder?: string;
+  /** Label for the combobox (visible only to screen readers if srOnly is true). */
+  label: string;
+  /** If true, visually hide the label but keep it accessible to screen readers. */
+  srOnlyLabel?: boolean;
+  /** Controlled value (optional external control). */
+  value?: T | null;
+  /** Custom class name for the container element. */
+  className?: string;
+  /** Text displayed when no options match the filter. */
+  noOptionsMessage?: string;
+  /** If true, the combobox is disabled. */
+  disabled?: boolean;
+  /** If true, shows a clear button when a value is selected. */
+  isClearable?: boolean;
+  /** Aria-describedby ID for associating help text. */
+  describedby?: string;
+  /** ID for the input element. Overrides auto-generation. */
+  id?: string;
+  /** Error state for styling. */
+  error?: string;
+}
+
+/**
+ * A fully accessible, production-ready autocomplete combobox component.
+ * Implements ARIA combobox pattern with keyboard navigation and filtering.
+ *
+ * @template T - The type of the items in the options list.
+ */
+function ComboBox<T>({
+  options,
+  onChange,
+  getOptionKey,
+  getOptionLabel,
+  getOptionFilterText = getOptionLabel,
+  placeholder = 'Select an option...',
+  label,
+  srOnlyLabel = false,
+  value: controlledValue,
+  className = '',
+  noOptionsMessage = 'No options found.',
+  disabled = false,
+  isClearable = false,
+  describedby,
+  id: externalId,
+  error,
+}: ComboBoxProps<T>): React.ReactElement {
+  const autoId = useId();
+  const id = externalId ?? `combobox-${autoId}`;
+  const listboxId = `${id}-listbox`;
+  const labelId = `${id}-label`;
+  const errorId = `${id}-error`;
+
+  const isControlled = controlledValue !== undefined;
+  const [internalValue, setInternalValue] = useState<T | null>(null);
+  const currentValue = isControlled ? controlledValue : internalValue;
+
+  const [inputValue, setInputValue] = useState<string>(
+    currentValue ? getOptionLabel(currentValue) : ''
+  );
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
+  const optionRefs = useRef<Map<number, HTMLLIElement>>(new Map());
+  const ignoreBlurRef = useRef<boolean>(false);
+  const isComposingRef = useRef<boolean>(false);
+
+  // Filter options based on input value
+  const filteredOptions = React.useMemo(() => {
+    if (!inputValue.trim()) return options;
+    const lowerQuery = inputValue.toLowerCase();
+    return options.filter((option) =>
+      getOptionFilterText(option).toLowerCase().includes(lowerQuery)
+    );
+  }, [options, inputValue, getOptionFilterText]);
+
+  // Update input value when controlled value changes externally
+  useEffect(() => {
+    if (isControlled) {
+      setInputValue(controlledValue ? getOptionLabel(controlledValue) : '');
+    }
+  }, [isControlled, controlledValue, getOptionLabel]);
+
+  // Keep active index in view
+  useEffect(() => {
+    if (isOpen && activeIndex >= 0 && listboxRef.current) {
+      const optionElement = optionRefs.current.get(activeIndex);
+      if (optionElement) {
+        optionElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [isOpen, activeIndex]);
+
+  const notifyChange = useCallback(
+    (newValue: T | null) => {
+      if (!isControlled) {
+        setInternalValue(newValue);
+      }
+      onChange(newValue);
+    },
+    [isControlled, onChange]
+  );
+
+  const selectOption = useCallback(
+    (option: T) => {
+      notifyChange(option);
+      setInputValue(getOptionLabel(option));
+      setIsOpen(false);
+      setActiveIndex(-1);
+      inputRef.current?.focus();
+    },
+    [getOptionLabel, notifyChange]
+  );
+
+  const clearSelection = useCallback(() => {
+    notifyChange(null);
+    setInputValue('');
+    setIsOpen(false);
+    setActiveIndex(-1);
+    inputRef.current?.focus();
+  }, [notifyChange]);
+
+  const openList = useCallback(() => {
+    if (!disabled) {
+      setIsOpen(true);
+      const idx = currentValue
+        ? filteredOptions.findIndex(
+            (opt) => getOptionKey(opt) === getOptionKey(currentValue)
+          )
+        : -1;
+      setActiveIndex(idx >= 0 ? idx : 0);
+    }
+  }, [disabled, currentValue, filteredOptions, getOptionKey]);
+
+  const closeList = useCallback(() => {
+    setIsOpen(false);
+    setActiveIndex(-1);
+    // Restore input to reflect the actual value; useful on blur without selection
+    setInputValue(currentValue ? getOptionLabel(currentValue) : '');
+  }, [currentValue, getOptionLabel]);
+
+  const adjustActiveIndex = useCallback(
+    (delta: number) => {
+      setActiveIndex((prev) => {
+        if (filteredOptions.length === 0) return -1;
+        const next = prev + delta;
+        if (next < 0) return filteredOptions.length - 1;
+        if (next >= filteredOptions.length) return 0;
+        return next;
+      });
+    },
+    [filteredOptions.length]
+  );
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    setInputValue(e.target.value);
+    if (!isOpen) {
+      setIsOpen(true);
+    }
+    setActiveIndex(0);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
+
+    // Handle IME composition
+    if (isComposingRef.current) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        if (!isOpen) {
+          openList();
+        } else {
+          adjustActiveIndex(1);
+        }
+        break;
+
+      case 'ArrowUp':
+        e.preventDefault();
+        if (isOpen) {
+          adjustActiveIndex(-1);
+        }
+        break;
+
+      case 'Enter':
+        if (isOpen && activeIndex >= 0 && activeIndex < filteredOptions.length) {
+          e.preventDefault();
+          selectOption(filteredOptions[activeIndex]);
+        }
+        break;
+
+      case 'Escape':
+        e.preventDefault();
+        closeList();
+        break;
+
+      case 'Tab':
+        closeList();
+        break;
+
+      case 'Home':
+        if (isOpen && filteredOptions.length > 0) {
+          e.preventDefault();
+          setActiveIndex(0);
+        }
+        break;
+
+      case 'End':
+        if (isOpen && filteredOptions.length > 0) {
+          e.preventDefault();
+          setActiveIndex(filteredOptions.length - 1);
+        }
+        break;
+
+      default:
+        break;
+    }
+  };
+
+  const handleInputFocus = (_e: FocusEvent<HTMLInputElement>) => {
+    if (!disabled) {
+      openList();
+    }
+  };
+
+  const handleInputBlur = (_e: FocusEvent<HTMLInputElement>) => {
+    if (ignoreBlurRef.current) {
+      ignoreBlurRef.current = false;
+      inputRef.current?.focus();
+      return;
+    }
+    closeList();
+  };
+
+  const handleOptionMouseDown = (e: MouseEvent<HTMLLIElement>) => {
+    // Prevent input blur when clicking on option
+    e.preventDefault();
+  };
+
+  const handleOptionClick = (option: T) => {
+    selectOption(option);
+  };
+
+  const handleClearMouseDown = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleClearClick = () => {
+    clearSelection();
+  };
+
+  const handleComboboxMouseDown = () => {
+    // Prevent closing when clicking inside the combobox wrapper
+    ignoreBlurRef.current = true;
+  };
+
+  const handleCompositionStart = () => {
+    isComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    isComposingRef.current = false;
+  };
+
+  const hasValue = currentValue !== null && currentValue !== undefined;
+
+  return (
+    <div
+      className={`combobox-container ${className} ${disabled ? 'combobox-disabled' : ''}`}
+      onMouseDown={handleComboboxMouseDown}
+    >
+      {/* Hidden label for screen readers if srOnly, otherwise visible */}
+      <label
+        id={labelId}
+        htmlFor={id}
+        className={srOnlyLabel ? 'sr-only' : 'combobox-label'}
+      >
+        {label}
+      </label>
+
+      <div className="combobox-input-wrapper">
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          role="combobox"
+          autoComplete="off"
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          aria-controls={listboxId}
+          aria-labelledby={labelId}
+          aria-activedescendant={
+            activeIndex >= 0 && isOpen
+              ? `${id}-option-${activeIndex}`
+              : undefined
+          }
+          aria-describedby={error ? errorId : describedby ?? undefined}
+          aria-invalid={error ? 'true' : undefined}
+          aria-required="false"
+          aria-disabled={disabled}
+          placeholder={placeholder}
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
+          disabled={disabled}
+          className="combobox-input"
+        />
+
+        {isClearable && hasValue && !disabled && (
+          <button
+            type="button"
+            className="combobox-clear-button"
+            onMouseDown={handleClearMouseDown}
+            onClick={handleClearClick}
+            aria-label="Clear selection"
+            tabIndex={-1}
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
+        )}
+
+        <span
+          className={`combobox-arrow ${isOpen ? 'open' : ''}`}
+          aria-hidden="true"
+        >
+          ▼
+        </span>
+      </div>
+
+      {isOpen && (
+        <ul
+          ref={listboxRef}
+          id={listboxId}
+          role="listbox"
+          aria-labelledby={labelId}
+          className="combobox-listbox"
+        >
+          {filteredOptions.length === 0 ? (
+            <li className="combobox-no-options" role="option" aria-selected={false}>
+              {noOptionsMessage}
+            </li>
+          ) : (
+            filteredOptions.map((option, index) => {
+              const isSelected =
+                currentValue != null &&
+                getOptionKey(currentValue) === getOptionKey(option);
+              const isActive = index === activeIndex;
+              const optionId = `${id}-option-${index}`;
+
+              return (
+                <li
+                  key={getOptionKey(option)}
+                  id={optionId}
+                  ref={(el) => {
+                    if (el) {
+                      optionRefs.current.set(index, el);
+                    } else {
+                      optionRefs.current.delete(index);
+                    }
+                  }}
+                  role="option"
+                  aria-selected={isSelected}
+                  className={`combobox-option ${isActive ? 'active' : ''} ${
+                    isSelected ? 'selected' : ''
+                  }`}
+                  onMouseDown={handleOptionMouseDown}
+                  onClick={() => handleOptionClick(option)}
+                  onMouseEnter={() => setActiveIndex(index)}
+                >
+                  {getOptionLabel(option)}
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+
+      {error && (
+        <div id={errorId} className="combobox-error" role="alert">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ComboBox;

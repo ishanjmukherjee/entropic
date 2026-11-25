@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "bare",
+ "prompt": "Write the lyrics of a folk song about a river being dammed. Output only the lyrics.",
+ "model": "kimi-k2.6",
+ "max_tokens": 900,
+ "id": "song-river-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Where the Wataonce flowed clear and cold\nDown from the hills where the stories are told\nThere's concrete now where the salmon would leap\nAnd the water's been swallowed by the valleys of sleep\n\nOh the dam rose up in the summer of '59\nThe company men said it'd be done in no time\nThey promised us power and they promised us light\nBut they sold us the darkness and called it the night\n\nMy grandfather's orchard lies under the lake\nWhere the divers go down when the water's still and baked\nYou can hear the church bell if the summer runs low\nIt rings for the fields that the flooded still know\n\nThey moved us to houses on the ridge by the turn\nWhere the old folks would sit and the young folks would burn\nTo get back to something, to get back to the sound\nOf the river speaking where no speaking is found\n\n(Chorus)\nHold back the water, hold back the year\nHold what you cannot keep\nThe river's a memory, the valley's a mirror\nThe people are walking in their sleep\n\nMary Archer said on the day they came through\nYou can measure the water but not what it knew\nShe stayed in her doorway when they loaded her trunk\nAnd she sleeps with the catfish where the preacher once dunked\n\nI met a girl once at the dam overlook\nHer grandfather's bones were tied up in the brook\nThat they stopped with their backhoes, that they strangled with spill-\nways and penstocks and the ache of the killed\n\nNow the tourists come down with their boats in July\nAnd they don't ask the lake what it's covering or why\nThere's a gift shop where Granger's Delivery stood\nAnd they sell you the postcard, but not the true good\n\n(Chorus)\nHold back the water, hold back the year\nHold what you cannot keep\nThe river's a memory, the valley's a mirror\nThe people are walking in their sleep\n\nLast night I dreamed I was down by the race\nWhere the water still ran to some earlier place\nAnd I woke with the taste of the iron and the stone\nAnd the towns that exist now in no living soul's home\n\nSo raise up your voices where the turbines still hum\nFor the flooded, the moved, for the total and some\nWho remember the river in the valley's dark heart\nWhere the water still runs, where the water must start\n\n(Chorus)\nHold back the water, hold back the year\nHold what you cannot keep\nThe river's a memory, the valley's a mirror\nThe people are walking in their sleep",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 28,
+  "completion_tokens": 537,
+  "total_tokens": 565,
+  "cost": 0.0018482,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

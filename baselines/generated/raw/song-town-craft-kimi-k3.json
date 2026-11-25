@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "craft",
+ "prompt": "Write the lyrics of a country song about leaving a small town.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "kimi-k3",
+ "max_tokens": 900,
+ "id": "song-town-craft-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "Costa's diner shuts at nine but Darla works till ten\nI'm at her counter picking at the third-try cinnamon bun\nShe's spilling high-school stories now and then\nPainted on the window: \"BUCK-N-BIRD's, next exit 1\"\n\nWalter's selling Ernie's Tractor on the Fourth Street lot\nSaid he'd knock two hundred off the Caddy if I came by today\nOsmond skipped his shift, he keeps on talkin' 'bout what he's not\nMe, I fold my map and wonder which way's east of Buffalo Bay\n\nSo throw my flannel in the flat-bed, lock the latch and leave the key\nTell the bellman up in Rapid I'm a-comin', don't wait tea\nMama keeps her lamp on in the window, keeps her prayers tucked in her sleeve\nIf it's just to get to somewhere else, then somewhere else is where I'm gonna be\n\nDaddy's fixed his own transmission since the day I learned to drive\nBut the clutch keeps slipping every time I try to leave the gravel road\nRuthie says the stars look different with a tall boy by your side\nLast night I stood on Black Squirrel Creek and counted every light I knowed\n\nNow the morning's got a smell I cannot place, like rain without the clouds\nAnd the silhouettes of feeder hats are startin' to parade\nThere's a thermos full of cocoa waitin' where the porch light's burned out\nI could stay another season, but I've stayed too long in the shade\n\nSo throw my flannel in the flat-bed, lock the latch and leave the key\nTell the bellman up in Rapid I'm a-comin', don't wait tea\nMama keeps her lamp on in the window, keeps her prayers tucked in her sleeve\nIf it's just to get to somewhere else, then somewhere else is where I'm gonna be\n\nIf the sky's a different color where they're burnin' new terrain\nAnd if my hands are tired and empty and my boots are worn and won\nI'll be hummin' Ruthie's melody and darlin' I'll be fine\n'Cause the home I keep is anyplace that I ain't gotten stuck yet, hon\n\nSo throw my flannel in the flat-bed, lock the latch and leave the key\nTell the bellman up in Rapid I'm a-comin', don't wait tea\nMama keeps her lamp on in the window, keeps her prayers tucked in her sleeve\nIf it's just to get to somewhere else, then somewhere else is where I'm gonna be\n\nYeah, Mama keeps her lamp on in the window, keeps her prayers tucked in her sleeve\nIf it's just to get to somewhere else, then somewhere else is where I'm gonna be\nOoh, somewhere else, somewhere else\nThat's where I'm gonna be",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 154,
+  "completion_tokens": 583,
+  "total_tokens": 737,
+  "cost": 0.009207,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

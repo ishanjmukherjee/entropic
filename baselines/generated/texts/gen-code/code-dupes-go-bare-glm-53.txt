@@ -1,0 +1,392 @@
+// dupfind walks a directory tree and reports duplicate files grouped by content hash.
+//
+// Usage:
+//
+//	dupfind [-v] [-workers N] [-minsize BYTES] [-hash sha256|xxh64] dir [dir...]
+//
+// Files are grouped by (size, content hash) and groups with more than one
+// member are printed, along with a summary of wasted bytes.
+package main
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+)
+
+const (
+	bufSize     = 256 * 1024
+	defaultHash = "sha256"
+)
+
+type result struct {
+	path  string
+	size  int64
+	hash  string
+	fixed bool // recovered from a partial-digest collision candidate set
+}
+
+func main() {
+	log.SetFlags(0)
+	log.SetPrefix("dupfind: ")
+
+	var (
+		verbose  = flag.Bool("v", false, "verbose output")
+		workers  = flag.Int("workers", runtime.NumCPU(), "number of hashing worker goroutines")
+		minSize  = flag.Int64("minsize", 1, "ignore files smaller than this many bytes (0 disables)")
+		hashAlgo = flag.String("hash", defaultHash, "hash algorithm: sha256 or xxh64")
+		follow   = flag.Bool("follow-symlinks", false, "follow symbolic links (off by default; may loop)")
+	)
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: %s [options] dir [dir...]\n\noptions:\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	roots := flag.Args()
+	if len(roots) == 0 {
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	newHash, err := hashByName(*hashAlgo)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if *workers < 1 {
+		log.Fatalf("workers must be >= 1, got %d", *workers)
+	}
+
+	files, err := collectFiles(roots, *minSize, *follow, *verbose)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dups := findDuplicates(files, newHash, *workers, *verbose)
+	printGroups(dups)
+
+	if *verbose {
+		log.Printf("scanned %d files, %d duplicate groups", len(files), len(dups))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// File collection
+// ---------------------------------------------------------------------------
+
+type fileInfo struct {
+	path string
+	size int64
+}
+
+func collectFiles(roots []string, minSize int64, follow, verbose bool) ([]fileInfo, error) {
+	seenRoots := make(map[string]bool)
+	var files []fileInfo
+
+	for _, root := range roots {
+		abs, err := filepath.Abs(root)
+		if err != nil {
+			return nil, fmt.Errorf("resolving %q: %w", root, err)
+		}
+		if seenRoots[abs] {
+			if verbose {
+				log.Printf("skipping duplicate root %s", abs)
+			}
+			continue
+		}
+		seenRoots[abs] = true
+
+		walkErr := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				log.Printf("walk: %s: %v", path, err)
+				if info != nil && info.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if info.IsDir() {
+				return nil
+			}
+			if !follow && info.Mode()&os.ModeSymlink != 0 {
+				return nil
+			}
+			if !info.Mode().IsRegular() {
+				if verbose {
+					log.Printf("skipping non-regular file %s", path)
+				}
+				return nil
+			}
+			if minSize > 0 && info.Size() < minSize {
+				return nil
+			}
+			files = append(files, fileInfo{path: path, size: info.Size()})
+			return nil
+		})
+		if walkErr != nil && !errors.Is(walkErr, filepath.SkipDir) {
+			// Errors were already logged per-entry; Walk only returns the
+			// first hard error, which we don't generate. Be defensive anyway.
+			return files, walkErr
+		}
+	}
+	return files, nil
+}
+
+// ---------------------------------------------------------------------------
+// Duplicate detection
+// ---------------------------------------------------------------------------
+
+type hashFunc func() hash.Writer
+
+// Group by size first: files with unique sizes cannot be duplicates.
+func findDuplicates(files []fileInfo, newHash func() hash.Writer, workers int, verbose bool) [][]result {
+	bySize := make(map[int64][]fileInfo)
+	for _, f := range files {
+		bySize[f.size] = append(bySize[f.size], f)
+	}
+
+	var candidates []fileInfo
+	for _, group := range bySize {
+		if len(group) > 1 {
+			candidates = append(candidates, group...)
+		}
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+	if verbose {
+		log.Printf("%d candidate files sharing sizes; hashing them", len(candidates))
+	}
+
+	// Hash everything, streaming through a bounded worker pool.
+	results := make([]result, len(candidates))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, workers)
+	var next int64
+	var mu sync.Mutex
+
+	for i := range candidates {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			f := candidates[i]
+			h, err := hashFile(f.path, newHash)
+			if err != nil {
+				log.Printf("hash: %s: %v", f.path, err)
+				return // path stays empty; filtered later
+			}
+			results[i] = result{path: f.path, size: f.size, hash: h}
+		}(i)
+	}
+	wg.Wait()
+	_ = next
+	mu.Lock()
+	_ = mu
+	mu.Unlock()
+
+	groups := make(map[string][]result)
+	for _, r := range results {
+		if r.path != "" {
+			key := fmt.Sprintf("%d:%s", r.size, r.hash)
+			groups[key] = append(groups[key], r)
+		}
+	}
+
+	dups := make([][]result, 0, len(groups))
+	for _, g := range groups {
+		if len(g) > 1 {
+			sortResults(g)
+			dups = append(dups, g)
+		}
+	}
+	sort.Slice(dups, func(i, j int) bool {
+		return dups[i][0].size > dups[j][0].size // largest waste first
+	})
+	return dups
+}
+
+func sortResults(g []result) {
+	sort.Slice(g, func(i, j int) bool { return g[i].path < g[j].path })
+}
+
+func hashFile(path string, newHash func() hash.Writer) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := newHash()
+	buf := make([]byte, bufSize)
+	if _, err := io.CopyBuffer(h, f, buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// ---------------------------------------------------------------------------
+// Algorithms
+// ---------------------------------------------------------------------------
+
+type hashWriter interface {
+	io.Writer
+	Sum(b []byte) []byte
+}
+
+func hashByName(name string) (func() hash.Writer, error) {
+	switch strings.ToLower(name) {
+	case "sha256":
+		return func() hashWriter { return sha256.New() }, nil
+	case "xxh64":
+		return func() hashWriter { return newXXH64() }, nil
+	default:
+		return nil, fmt.Errorf("unknown hash algorithm %q (want sha256 or xxh64)", name)
+	}
+}
+
+// xxh64 is a small, self-contained implementation of XXH64 for fast
+// non-cryptographic fingerprinting. For production use you may prefer
+// github.com/cespare/xxhash, but this keeps the tool dependency-free.
+type xxh64 struct {
+	v1, v2, v3, v4 uint64
+	total          uint64
+	mem            [32]byte
+	memLen         int
+	buf            []byte // pending tail (len < 32)
+}
+
+var xxhPrimes = [5]uint64{
+	0x9E3779B185EBCA87, 0xC2B2AE3D27D4EB4F, 0x165667B19E3779F9,
+	0x85EBCA77C2B2AE63, 0x27D4EB2F165667C5,
+}
+
+func newXXH64() hashWriter {
+	x := &xxh64{buf: make([]byte, 0, 32)}
+	x.reset()
+	return x
+}
+
+func (x *xxh64) reset() {
+	x.v1 = xxhPrimes[0] + xxhPrimes[1]
+	x.v2 = xxhPrimes[1]
+	x.v3 = 0
+	x.v4 = -xxhPrimes[0]
+	x.total = 0
+	x.memLen = 0
+	x.buf = x.buf[:0]
+}
+
+func rotl64(v uint64, n uint) uint64 { return v<<n | v>>(64-n) }
+
+func xxhRound(acc, val uint64) uint64 {
+	acc += val * xxhPrimes[1]
+	acc = rotl64(acc, 31)
+	acc *= xxhPrimes[0]
+	return acc
+}
+
+func xxhMergeRound(acc, val uint64) uint64 {
+	val = xxhRound(0, val)
+	acc ^= val
+	acc = acc*xxhPrimes[0] + xxhPrimes[3]
+	return acc
+}
+
+func (x *xxh64) Write(p []byte) (int, error) {
+	n := len(p)
+	x.total += uint64(n)
+
+	if x.memLen+len(p) < 32 {
+		x.buf = append(x.buf, p...)
+		x.memLen = len(x.buf)
+		return n, nil
+	}
+
+	if x.memLen > 0 {
+		fill := 32 - x.memLen
+		x.buf = append(x.buf, p[:fill]...)
+		copy(x.mem[:], x.buf)
+		x.consume32()
+		p = p[fill:]
+		x.buf = x.buf[:0]
+		x.memLen = 0
+	}
+
+	for len(p) >= 32 {
+		copy(x.mem[:], p[:32])
+		x.consume32()
+		p = p[32:]
+	}
+
+	if len(p) > 0 {
+		x.buf = append(x.buf, p...)
+		x.memLen = len(x.buf)
+	}
+	return n, nil
+}
+
+func (x *xxh64) consume32() {
+	x.v1 = xxhRound(x.v1, le64(x.mem[0:]))
+	x.v2 = xxhRound(x.v2, le64(x.mem[8:]))
+	x.v3 = xxhRound(x.v3, le64(x.mem[16:]))
+	x.v4 = xxhRound(x.v4, le64(x.mem[24:]))
+}
+
+func le64(b []byte) uint64 {
+	return uint64(b[0]) | uint64(b[1])<<8 | uint64(b[2])<<16 | uint64(b[3])<<24 |
+		uint64(b[4])<<32 | uint64(b[5])<<40 | uint64(b[6])<<48 | uint64(b[7])<<56
+}
+
+func le32(b []byte) uint64 {
+	return uint64(b[0]) | uint64(b[1])<<8 | uint64(b[2])<<16 | uint64(b[3])<<24
+}
+
+func (x *xxh64) Sum(b []byte) []byte {
+	h := x.sum64()
+	var out [8]byte
+	for i := 0; i < 8; i++ {
+		out[i] = byte(h >> (8 * i))
+	}
+	return append(b, out[:]...)
+}
+
+func (x *xxh64) sum64() uint64 {
+	var h uint64
+	if x.total >= 32 {
+		h = rotl64(x.v1, 1) + rotl64(x.v2, 7) + rotl64(x.v3, 12) + rotl64(x.v4, 18)
+		h = xxhMergeRound(h, x.v1)
+		h = xxhMergeRound(h, x.v2)
+		h = xxhMergeRound(h, x.v3)
+		h = xxhMergeRound(h, x.v4)
+	} else {
+		h = x.v3 + xxhPrimes[4]
+	}
+	h += x.total
+
+	switch x.memLen {
+	case 31:
+		h ^= xxhRound(0, le32(x.buf[x.memLen-4:x.memLen]))
+		h ^= le64(x.buf[x.memLen-31:]) * xxhPrimes[3]
+		h = rotl64(h, 17) * xxhPrimes[4]
+		fallthrough
+	case 27:
+		h ^= le32(x.buf[x.memLen-27:x.memLen-23]) * xxhPrimes[3]
+		h = rotl64(h, 17) * xxhPrimes[4]
+		fallthrough
+	case 23:
+		h ^= le32(x.buf[x.memLen-23:x.memLen-19]) * xxhPrimes[3]
+		h = rotl64(h, 17) * xxhPrimes[4]
+		fallthrough
+	case 19:
+		h ^= le32(x.buf[x.memLen-19:x.memLen-15]) *

@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "bare",
+ "prompt": "Write a poem about a father's hands. Output only the poem, with no title.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-father-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "My father's hands were maps of weathered land,\nwith rivers running blue beneath the skin,\na scar across one knuckle, pale and thin,\nfrom some old work I'd never understand.\n\nThey smelled of sawdust, coffee, motor oil.\nThey fixed the bike chain, steadied the first ride,\nthen let go without telling me, and I'd\ngone half a block before I felt the toil\n\nof balance was my own. They thumped ripe melons,\nshuffled cards, turned pages, tied my tie,\nand once, just once, I saw them wipe his eye.\n\nNow mine have grown the same rough constellations.\nI catch them resting, folded, on my knee,\nand find him there, still holding on to me.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

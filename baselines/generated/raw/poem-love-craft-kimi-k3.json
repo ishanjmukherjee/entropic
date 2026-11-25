@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: love. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-love-craft-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The café on Via dei Giubbonari opens at seven.\nYou arrive with flour on your sleeve\nfrom the bakery where you hold your night shift,\nsay nothing about the ovens,\nask if I've eaten.\n\nThe man at the counter counts coins\nslowly, as if each centesimo\nhad lived a small life.\nYou order two caffè lunghi\nand one cornetto, split it\nwith a butter knife you brought from home.\n\nOutside, a dog barks at a motorino.\nYou tell me your sister's wedding dress\ncaught fire on a radiator\nand they married anyway,\nsmelling of burnt lace.\n\nAt the corner table, an old woman\nfeeds a pigeon from her purse.\nThe waiter lets her.\n\nYou take my wrist, turn it over,\npress your thumb to the blue veins\nas if checking the time.\nThen you begin reading aloud\nfrom yesterday's newspaper,\nthe horoscope section only,\nyours declaring \"a stranger will\nchange your afternoon.\"\n\nThe pigeon hobbles closer.\nYou tear the last corner of cornetto,\nhold it out on your open palm.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 194,
+  "completion_tokens": 236,
+  "total_tokens": 430,
+  "cost": 0.004122,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

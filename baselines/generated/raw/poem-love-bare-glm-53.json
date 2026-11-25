@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "bare",
+ "prompt": "Write a love poem. Output only the poem, with no title.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-love-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "Your laughter spills like morning light\nthrough curtains I forgot to close,\nand every ordinary night\nbecomes a place where wildflowers grow.\n\nI know the way your coffee cools,\nthe songs you hum when you're not aware,\nthe quiet language of your rules,\nthe way you brush unruly hair.\n\nTime moves like honey, slow and gold,\nwhenever you are standing near.\nAt forty, sixty, growing old,\nI'll still find wonders waiting here—\n\nyour hand in mine, a borrowed coat,\nthe door you always leave unlocked,\na love that needs no grander note\nthan footsteps sharing one sidewalk.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 26,
+  "completion_tokens": 130,
+  "total_tokens": 156,
+  "cost": 0.0006084,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

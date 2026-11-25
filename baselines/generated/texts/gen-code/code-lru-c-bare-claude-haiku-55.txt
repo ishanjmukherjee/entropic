@@ -1,0 +1,335 @@
+/*
+ * lru_cache.c - Generic LRU cache implemented with a chained hash table
+ * and a doubly linked list. O(1) average get/put/remove.
+ *
+ * Compile: cc -std=c11 -Wall -Wextra -Werror -O2 -c lru_cache.c
+ */
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "lru_cache.h"
+
+/* ---------- Internal types ---------- */
+
+typedef struct lru_node {
+    /* Doubly linked list (recency order: head = MRU, tail = LRU) */
+    struct lru_node *prev;
+    struct lru_node *next;
+    /* Hash chain */
+    struct lru_node *hash_next;
+
+    uint64_t         hash;
+    void            *key;
+    size_t           key_len;
+    void            *value;
+} lru_node;
+
+struct lru_cache {
+    lru_node       **buckets;
+    size_t           bucket_count;   /* always a power of two */
+    size_t           size;
+    size_t           capacity;
+
+    lru_node        *head;           /* most recently used */
+    lru_node        *tail;           /* least recently used */
+
+    lru_key_hash_fn  hash_fn;
+    lru_key_eq_fn    eq_fn;
+    lru_free_fn      key_free;
+    lru_free_fn      value_free;
+};
+
+/* ---------- Default hash (FNV-1a, 64-bit) ---------- */
+
+static uint64_t default_hash(const void *key, size_t len)
+{
+    const unsigned char *p = key;
+    uint64_t h = 0xcbf29ce484222325ULL;
+    for (size_t i = 0; i < len; i++) {
+        h ^= p[i];
+        h *= 0x100000001b3ULL;
+    }
+    return h;
+}
+
+static bool default_eq(const void *a, size_t alen,
+                       const void *b, size_t blen)
+{
+    return alen == blen && memcmp(a, b, alen) == 0;
+}
+
+/* ---------- Internal helpers ---------- */
+
+static size_t next_pow2(size_t n)
+{
+    size_t p = 1;
+    while (p < n) {
+        if (p > SIZE_MAX / 2) return SIZE_MAX; /* overflow guard */
+        p <<= 1;
+    }
+    return p;
+}
+
+static void list_unlink(lru_cache *c, lru_node *n)
+{
+    if (n->prev) n->prev->next = n->next;
+    else         c->head = n->next;
+
+    if (n->next) n->next->prev = n->prev;
+    else         c->tail = n->prev;
+
+    n->prev = n->next = NULL;
+}
+
+static void list_push_front(lru_cache *c, lru_node *n)
+{
+    n->prev = NULL;
+    n->next = c->head;
+    if (c->head) c->head->prev = n;
+    c->head = n;
+    if (!c->tail) c->tail = n;
+}
+
+static void list_move_to_front(lru_cache *c, lru_node *n)
+{
+    if (c->head == n) return;
+    list_unlink(c, n);
+    list_push_front(c, n);
+}
+
+static lru_node **find_slot(const lru_cache *c, uint64_t hash,
+                            const void *key, size_t key_len)
+{
+    size_t idx = (size_t)hash & (c->bucket_count - 1);
+    lru_node **pp = &c->buckets[idx];
+    while (*pp) {
+        lru_node *n = *pp;
+        if (n->hash == hash && c->eq_fn(n->key, n->key_len, key, key_len))
+            return pp;
+        pp = &n->hash_next;
+    }
+    return pp; /* points to the NULL terminator of the chain */
+}
+
+static lru_node *find_node(const lru_cache *c, uint64_t hash,
+                           const void *key, size_t key_len)
+{
+    lru_node **pp = find_slot(c, hash, key, key_len);
+    return *pp;
+}
+
+static void hash_remove_node(lru_cache *c, lru_node *n)
+{
+    size_t idx = (size_t)n->hash & (c->bucket_count - 1);
+    lru_node **pp = &c->buckets[idx];
+    while (*pp && *pp != n)
+        pp = &(*pp)->hash_next;
+    if (*pp == n)
+        *pp = n->hash_next;
+    n->hash_next = NULL;
+}
+
+static void hash_insert_node(lru_cache *c, lru_node *n)
+{
+    size_t idx = (size_t)n->hash & (c->bucket_count - 1);
+    n->hash_next = c->buckets[idx];
+    c->buckets[idx] = n;
+}
+
+static int rehash(lru_cache *c, size_t new_count)
+{
+    lru_node **nb = calloc(new_count, sizeof *nb);
+    if (!nb) return -1;
+
+    lru_node **old = c->buckets;
+    size_t old_count = c->bucket_count;
+
+    c->buckets = nb;
+    c->bucket_count = new_count;
+
+    for (size_t i = 0; i < old_count; i++) {
+        lru_node *n = old[i];
+        while (n) {
+            lru_node *next = n->hash_next;
+            hash_insert_node(c, n);
+            n = next;
+        }
+    }
+    free(old);
+    return 0;
+}
+
+static void destroy_node(lru_cache *c, lru_node *n)
+{
+    if (c->key_free)   c->key_free(n->key);
+    if (c->value_free) c->value_free(n->value);
+    free(n);
+}
+
+/* Evict the least recently used entry. Caller guarantees size > 0. */
+static void evict_lru(lru_cache *c)
+{
+    lru_node *victim = c->tail;
+    list_unlink(c, victim);
+    hash_remove_node(c, victim);
+    destroy_node(c, victim);
+    c->size--;
+}
+
+/* ---------- Public API ---------- */
+
+lru_cache *lru_create(size_t capacity, const lru_config *cfg)
+{
+    if (capacity == 0) return NULL;
+
+    lru_cache *c = calloc(1, sizeof *c);
+    if (!c) return NULL;
+
+    /* Aim for load factor <= 0.75 */
+    size_t want = capacity + capacity / 3 + 1;
+    c->bucket_count = next_pow2(want);
+    if (c->bucket_count == SIZE_MAX) {
+        free(c);
+        return NULL;
+    }
+
+    c->buckets = calloc(c->bucket_count, sizeof *c->buckets);
+    if (!c->buckets) {
+        free(c);
+        return NULL;
+    }
+
+    c->capacity = capacity;
+
+    if (cfg) {
+        c->hash_fn   = cfg->hash_fn   ? cfg->hash_fn   : NULL;
+        c->eq_fn     = cfg->eq_fn     ? cfg->eq_fn     : NULL;
+        c->key_free  = cfg->key_free;
+        c->value_free = cfg->value_free;
+    }
+    if (!c->hash_fn) c->hash_fn = default_hash;
+    if (!c->eq_fn)   c->eq_fn   = default_eq;
+
+    return c;
+}
+
+void lru_destroy(lru_cache *c)
+{
+    if (!c) return;
+    lru_node *n = c->head;
+    while (n) {
+        lru_node *next = n->next;
+        destroy_node(c, n);
+        n = next;
+    }
+    free(c->buckets);
+    free(c);
+}
+
+size_t lru_size(const lru_cache *c)     { return c ? c->size : 0; }
+size_t lru_capacity(const lru_cache *c) { return c ? c->capacity : 0; }
+
+int lru_put(lru_cache *c, const void *key, size_t key_len,
+            void *value)
+{
+    if (!c || !key) return LRU_EINVAL;
+
+    uint64_t h = c->hash_fn(key, key_len);
+    lru_node **slot = find_slot(c, h, key, key_len);
+
+    if (*slot) {
+        /* Update existing entry: replace value, refresh recency. */
+        lru_node *n = *slot;
+        if (c->value_free && n->value != value)
+            c->value_free(n->value);
+        n->value = value;
+        list_move_to_front(c, n);
+        return LRU_OK;
+    }
+
+    /* Make room if needed. */
+    if (c->size >= c->capacity)
+        evict_lru(c);
+
+    /* Rehash if load factor would exceed 0.75. */
+    if ((c->size + 1) * 4 > c->bucket_count * 3) {
+        size_t new_count = c->bucket_count * 2;
+        if (new_count > c->bucket_count) {
+            /* Ignore rehash failure: table still works, just slower. */
+            (void)rehash(c, new_count);
+        }
+    }
+
+    lru_node *n = malloc(sizeof *n);
+    if (!n) return LRU_ENOMEM;
+
+    n->key = malloc(key_len ? key_len : 1);
+    if (!n->key) {
+        free(n);
+        return LRU_ENOMEM;
+    }
+    memcpy(n->key, key, key_len);
+    n->key_len = key_len;
+    n->value = value;
+    n->hash = h;
+    n->prev = n->next = NULL;
+    n->hash_next = NULL;
+
+    hash_insert_node(c, n);
+    list_push_front(c, n);
+    c->size++;
+    return LRU_OK;
+}
+
+int lru_get(lru_cache *c, const void *key, size_t key_len, void **out)
+{
+    if (!c || !key) return LRU_EINVAL;
+
+    uint64_t h = c->hash_fn(key, key_len);
+    lru_node *n = find_node(c, h, key, key_len);
+    if (!n) return LRU_ENOTFOUND;
+
+    list_move_to_front(c, n);
+    if (out) *out = n->value;
+    return LRU_OK;
+}
+
+bool lru_contains(const lru_cache *c, const void *key, size_t key_len)
+{
+    if (!c || !key) return false;
+    uint64_t h = c->hash_fn(key, key_len);
+    return find_node(c, h, key, key_len) != NULL;
+}
+
+int lru_remove(lru_cache *c, const void *key, size_t key_len)
+{
+    if (!c || !key) return LRU_EINVAL;
+
+    uint64_t h = c->hash_fn(key, key_len);
+    lru_node *n = find_node(c, h, key, key_len);
+    if (!n) return LRU_ENOTFOUND;
+
+    list_unlink(c, n);
+    hash_remove_node(c, n);
+    destroy_node(c, n);
+    c->size--;
+    return LRU_OK;
+}
+
+void lru_clear(lru_cache *c)
+{
+    if (!c) return;
+    lru_node *n = c->head;
+    while (n) {
+        lru_node *next = n->next;
+        destroy_node(c, n);
+        n = next;
+    }
+    memset(c->buckets, 0, c->bucket_count * sizeof *c->buckets);
+    c->head = c->tail = NULL;
+    c->size = 0;
+}

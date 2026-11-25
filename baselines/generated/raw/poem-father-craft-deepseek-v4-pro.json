@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a father's hands. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-father-craft-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Thumbs like mismatched doorknobs,\nthe left one from a house north of Medicine Hat\nwhere the screen door never latched.\nOn the back of that hand, a pale hook of scar\nfrom a barbed-wire fence he held for a brother.\nThe right thumbnail is permanently ridged\nfrom a hammer that glanced off a spike in December.\nOne knuckle won’t straighten.\n\nAt four o’clock he comes in\ncarrying a basin of early tomatoes\nand sets it on the kitchen floor.\nHis fingers sort them blind, grading by weight.\nA wasp on the windowsill grooms its front legs\nand the refrigerator cycles on.\nHe tells my mother to leave the skins on for sauce.\n\nWhen he talks his hands stall\nin the air above the table\nas if holding a tiller steady in a crosswind\nthat never reaches the kitchen.\nLater, tying a blood knot in new tippet,\nhe borrows light from the window over the sink\nand the line goes quiet against his palm.\nThe pulse in the hollow of his wrist\nmoves the feather on the hook.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 182,
+  "completion_tokens": 231,
+  "total_tokens": 413,
+  "cost": 0.0010304,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

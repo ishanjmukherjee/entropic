@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: forgetting. Form: a villanelle; the refrains may shift slightly each time they return if that serves the poem.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-forgetting-craft-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "She asks again what time the ferry goes.\nFour, I tell her. Four. She hunts the chain\nof glasses hanging at her chest. It snows\n\non Stonington, on lobster traps in rows\nalong the pier, the co-op's yellow crane.\nShe asks me what time the ferry goes\n\nand who I am to stand there in her clothes.\nThe coat is mine. Salt trucks grind up Main.\nThe glasses swing against her chest. It snows\n\ninto the dog's dish by the step. Nobody knows\nto bring it in. We dug that grave in rain\nten Aprils back. What time the ferry goes\n\nis taped beside the phone. She reads it, slows,\nreads it aloud, then reads it once again,\nher glasses, found, low on her nose. It snows.\n\nThe horn. She lifts her purse, sets it down, stows\none mitten in the breadbox. At the pane\nshe asks the glass what time the ferry goes.\nThe tape curls. Wharf lights come on. It snows.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

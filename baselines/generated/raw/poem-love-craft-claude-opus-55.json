@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: love. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-love-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "At a quarter to five on Fourth Street in Duluth\nyou are already in the kitchen,\nrunning the tap until it comes hot\nso the thermos won't crack when the coffee goes in.\nI hear the lid grind on its bad thread\nbefore I hear you. It has never closed right\nsince the February it rolled under the truck\nat the ore docks. You wrap the neck\nin electrical tape and change the tape\non the first of every month.\nDown the hill the lift bridge sounds twice\nfor a laker nobody we know is on.\nYou set my gloves on the register to warm\nand the left one, as always, slides off.\nIn 1987 my father told me never to marry a man\nwho whistles indoors. You are whistling\nfour notes from the gas station radio,\nwrong, the same wrong way as yesterday.\nSteam fogs the window over the sink.\nThe coffee climbs brown inside the glass liner.\nWhen I come down you are holding the thermos\nagainst your chest with both hands,\nthe way you'd hold a bird you found in the road\nwhile you decide whether it will live.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

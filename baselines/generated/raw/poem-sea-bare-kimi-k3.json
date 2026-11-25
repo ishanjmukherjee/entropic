@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "bare",
+ "prompt": "Write a poem about the sea. Output only the poem, with no title.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-sea-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The tide writes whispers on the sand,\nIn silver scripts, then takes them back—\nA million years of breath and sigh\nAre stored inside each wave’s blue arc.\n\nThe gulls are specks against the glass\nOf light that shatters on the crest,\nWhile deep below, the darkness dreams\nOf ships that sank and found their rest.\n\nThe salt is heavy on the lips,\nThe horizon bends to meet the sky,\nAnd in the pause between the swells\nWe hear the earth’s eternal cry—\n\nNot grief, not joy, but something older,\nThe pulse that moves the blood in veins,\nThe sea that cradles us and breaks us,\nAnd gathers us back home again.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 34,
+  "completion_tokens": 149,
+  "total_tokens": 183,
+  "cost": 0.002337,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

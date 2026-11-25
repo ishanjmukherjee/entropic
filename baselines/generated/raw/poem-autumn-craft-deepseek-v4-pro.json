@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: autumn. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-autumn-craft-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Across the railroad siding in Hokkaido\na boy unwinds a scarf and hangs it\non the rusted chain-link fence by the freight dock.\nIt is half past four. The last of the sun\nflattens against the warehouse tin\nlike a thumb on a bruise.\n\nTwo men in quilted vests\nare stacking persimmon crates inside the open car.\nOne counts under his breath—*nijūgo, nijūroku*—\nthe other wipes his forehead with the back of his glove\nand leaves a smear of newsprint.\nThe fruit gives off a thin medicinal sweetness\nthat troubles the air but does not warm it.\n\nAn empty bottle rolls in the gravel\neach time a gust hits the lot,\nnudging a flattened cigarette pack\nwith the blue and white of the Hokkaido map\nstill legible on the foil.\n\nThe boy’s hands are chapped. He cups them\nand blows, and the sound is not a whistle\nbut the low hoot a glass gallon jug makes\nwhen you strike the rim.\nNobody looks up. The scarf stirs once\nand hangs dead. A crow lands on the coupling\nbetween two tankers, folds its wings\nexactly once, and stays there.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 179,
+  "completion_tokens": 261,
+  "total_tokens": 440,
+  "cost": 0.0011216,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "bare",
+ "prompt": "Write a love poem. Output only the poem, with no title.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-love-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "In the quiet before dawn,  \nwhen the world forgets its weight,  \nI find you in the steam of coffee,  \nin the creases of the bed we made,  \nin the way my name becomes  \nsomething sacred on your tongue.  \n\nYou are the pause in my chaos,  \nthe steady drum beneath the static,  \nthe reason maps no longer frighten me—  \nfor every road now leads  \nto where you are.  \n\nI have loved you in a thousand lives:  \nas watercolor bleeding into canvas,  \nas the space between stars  \nthat somehow burns brighter than the light,  \nas the breath I didn’t know I was holding  \nuntil you exhaled.  \n\nStay with me.  \nNot as an anchor,  \nbut as the tide that teaches the shore  \nit is allowed to move.  \n\nStay with me.  \nNot forever—  \nthat is too small a word—  \nbut for every moment  \nafter.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 32,
+  "completion_tokens": 197,
+  "total_tokens": 229,
+  "cost": 0.003051,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

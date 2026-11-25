@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "bare",
+ "prompt": "Write a love poem. Output only the poem, with no title.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-love-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Before I knew the arithmetic of loss,\nor the slow erosion of a name,\nI found the map of my becoming\nfolded in the atlas of your frame.\n\nYour hands, two anchors in the deepening dusk,\nyour voice, the timber of a waking bell—\nI learned the language of a quieter trust,\na syntax where no syllables befell.\n\nNot flame that feeds on air and dies from hunger,\nbut the low, persistent burning of the earth—\nthe patient geology of wonder\nthat knows no famine, only dearth\nwhen you are absent from the morning’s breaking,\nwhen I must build the daylight on my own.\nAll other suns are imitations, faking\nthe warmth I have exclusively known.\n\nIf time should carve our statues out of silence,\nand leave our names for wind to overwrite,\nI’ll find you in the particles and islands,\nthe single, indivisible, shared light.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 18,
+  "completion_tokens": 186,
+  "total_tokens": 204,
+  "cost": 0.000624,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

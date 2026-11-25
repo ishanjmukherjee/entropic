@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: insomnia. Form: a sonnet: keep the fourteen lines and the turn; rhyme only if the rhymes surprise.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-insomnia-craft-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "At 3:40 the radiator knocks twice\nand an ore boat answers from the ship canal,\none long, two short. The lift bridge goes up for it.\nFrom the bed I count the deck lights, nine of them,\nsliding behind the Hendersons' chimney.\nThe water glass on the sill has grown a skin of dust.\nI have turned the pillow four times. The clock\nlies face-down under a sock, so I take the hour\nfrom the bridge. My mother kept her teeth\nin a glass like this one, and spoke to them.\nDownstairs the refrigerator starts, then quits.\nA plow climbs Lake Avenue with its blade raised,\nscraping nothing, and its amber light crosses\nthe ceiling, the dresser, the back of my hand.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

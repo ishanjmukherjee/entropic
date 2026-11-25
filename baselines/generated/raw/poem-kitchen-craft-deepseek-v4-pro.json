@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a kitchen. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-kitchen-craft-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Heat comes off the iron grill of the floor register\nand the cat is a bolster dropped on it.\nAt the back of the house the kitchen holds\nthe last of the 2 a.m. dark that Bangor\nforgets by morning. The bulb over the sink\nis not on. A dishcloth, half-folded, makes\na cairn by the cold tap. In the stillness\na refrigerator cycles its coolant through copper\nand a moth, pale as a cuticle, revises its course\nalong the ceiling. It will not find the window.\nThe boy comes down for water. His feet sound\nseparately on each tread. He does not trouble the switch.\nBy the glow of the clock radio he fills a glass\nand drinks until his throat moves a shadow.\nSomewhere else in the building a cough is a dry stick.\nWhen he sets the glass on the counter\nit sounds one ceramic note. The fly-spots\non the shade of the standing lamp are not words\nbut a scatter of ink that I read and read.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 180,
+  "completion_tokens": 217,
+  "total_tokens": 397,
+  "cost": 0.0009824,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

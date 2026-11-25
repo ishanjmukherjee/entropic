@@ -1,0 +1,240 @@
+#include <vector>
+#include <array>
+#include <random>
+#include <algorithm>
+#include <cstdint>
+
+class TetrisGame {
+public:
+    static constexpr int BOARD_WIDTH = 10;
+    static constexpr int BOARD_HEIGHT = 20;
+
+    enum class PieceType : uint8_t {
+        I, O, T, S, Z, J, L, NONE
+    };
+
+    struct Position {
+        int x, y;
+        Position() : x(0), y(0) {}
+        Position(int x, int y) : x(x), y(y) {}
+    };
+
+    struct Piece {
+        PieceType type;
+        std::vector<Position> blocks;
+        Position position;
+
+        Piece() : type(PieceType::NONE) {}
+        Piece(PieceType t, const std::vector<Position>& b)
+            : type(t), blocks(b), position(0, 0) {}
+    };
+
+private:
+    std::array<std::array<uint8_t, BOARD_WIDTH>, BOARD_HEIGHT> board_;
+    Piece current_piece_;
+    Piece next_piece_;
+    std::mt19937 rng_;
+    bool game_over_;
+
+    static const std::array<Piece, 7> PIECE_SHAPES;
+
+public:
+    TetrisGame() : rng_(std::random_device{}()) {
+        reset();
+    }
+
+    void reset() {
+        // Clear board
+        for (auto& row : board_) {
+            row.fill(0);
+        }
+
+        game_over_ = false;
+        next_piece_ = generateRandomPiece();
+        spawnNewPiece();
+    }
+
+    bool movePiece(int dx, int dy) {
+        if (game_over_) return false;
+
+        Piece new_piece = current_piece_;
+        new_piece.position.x += dx;
+        new_piece.position.y += dy;
+
+        if (!checkCollision(new_piece)) {
+            current_piece_ = new_piece;
+            return true;
+        }
+        return false;
+    }
+
+    bool rotatePiece() {
+        if (game_over_) return false;
+        if (current_piece_.type == PieceType::O) return true; // No rotation needed
+
+        Piece rotated_piece = current_piece_;
+        rotateBlocks(rotated_piece.blocks);
+
+        // Try basic rotation
+        if (!checkCollision(rotated_piece)) {
+            current_piece_ = rotated_piece;
+            return true;
+        }
+
+        // Wall kick attempts
+        const std::array<int, 4> kicks = {-1, 1, -2, 2};
+        for (int kick : kicks) {
+            rotated_piece.position.x = current_piece_.position.x + kick;
+            if (!checkCollision(rotated_piece)) {
+                current_piece_ = rotated_piece;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool dropPiece() {
+        if (game_over_) return false;
+
+        while (movePiece(0, 1)) {
+            // Continue dropping until collision
+        }
+        lockPiece();
+        return true;
+    }
+
+    void update() {
+        if (game_over_) return;
+
+        if (!movePiece(0, 1)) {
+            lockPiece();
+        }
+    }
+
+    int clearLines() {
+        if (game_over_) return 0;
+
+        int lines_cleared = 0;
+        int write_row = BOARD_HEIGHT - 1;
+
+        // Check from bottom to top
+        for (int y = BOARD_HEIGHT - 1; y >= 0; --y) {
+            bool is_full_line = true;
+            for (int x = 0; x < BOARD_WIDTH; ++x) {
+                if (board_[y][x] == 0) {
+                    is_full_line = false;
+                    break;
+                }
+            }
+
+            if (!is_full_line) {
+                if (write_row != y) {
+                    board_[write_row] = board_[y];
+                }
+                --write_row;
+            } else {
+                lines_cleared++;
+            }
+        }
+
+        // Clear remaining rows at the top
+        for (int y = write_row; y >= 0; --y) {
+            board_[y].fill(0);
+        }
+
+        return lines_cleared;
+    }
+
+    bool isGameOver() const {
+        return game_over_;
+    }
+
+    const decltype(board_)& getBoard() const {
+        return board_;
+    }
+
+    const Piece& getCurrentPiece() const {
+        return current_piece_;
+    }
+
+    PieceType getNextPieceType() const {
+        return next_piece_.type;
+    }
+
+private:
+    Piece generateRandomPiece() {
+        static std::uniform_int_distribution<> piece_dist(0, 6);
+        PieceType type = static_cast<PieceType>(piece_dist(rng_));
+        return PIECE_SHAPES[static_cast<int>(type)];
+    }
+
+    void spawnNewPiece() {
+        current_piece_ = next_piece_;
+        next_piece_ = generateRandomPiece();
+
+        // Center the piece horizontally
+        current_piece_.position.x = (BOARD_WIDTH - 4) / 2;
+        current_piece_.position.y = 0;
+
+        // Check for game over condition
+        if (checkCollision(current_piece_)) {
+            game_over_ = true;
+        }
+    }
+
+    void lockPiece() {
+        // Place piece on board
+        for (const auto& block : current_piece_.blocks) {
+            int x = current_piece_.position.x + block.x;
+            int y = current_piece_.position.y + block.y;
+
+            if (y >= 0 && y < BOARD_HEIGHT && x >= 0 && x < BOARD_WIDTH) {
+                board_[y][x] = static_cast<uint8_t>(current_piece_.type) + 1;
+            }
+        }
+
+        clearLines();
+        spawnNewPiece();
+    }
+
+    bool checkCollision(const Piece& piece) const {
+        for (const auto& block : piece.blocks) {
+            int x = piece.position.x + block.x;
+            int y = piece.position.y + block.y;
+
+            // Check bounds
+            if (x < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT) {
+                return true;
+            }
+
+            // Check collision with existing blocks (only if within board)
+            if (y >= 0 && board_[y][x] != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void rotateBlocks(std::vector<Position>& blocks) {
+        // Standard rotation matrix: [0,-1]
+        //                           [1, 0]
+        for (auto& block : blocks) {
+            int new_x = -block.y;
+            int new_y = block.x;
+            block.x = new_x;
+            block.y = new_y;
+        }
+    }
+};
+
+// Static piece definitions
+const std::array<TetrisGame::Piece, 7> TetrisGame::PIECE_SHAPES = {{
+    {TetrisGame::PieceType::I, {{0,0}, {1,0}, {2,0}, {3,0}}},  // I-piece
+    {TetrisGame::PieceType::O, {{0,0}, {1,0}, {0,1}, {1,1}}},  // O-piece
+    {TetrisGame::PieceType::T, {{0,0}, {1,0}, {2,0}, {1,1}}},  // T-piece
+    {TetrisGame::PieceType::S, {{1,0}, {2,0}, {0,1}, {1,1}}},  // S-piece
+    {TetrisGame::PieceType::Z, {{0,0}, {1,0}, {1,1}, {2,1}}},  // Z-piece
+    {TetrisGame::PieceType::J, {{0,0}, {0,1}, {1,1}, {2,1}}},  // J-piece
+    {TetrisGame::PieceType::L, {{2,0}, {0,1}, {1,1}, {2,1}}}   // L-piece
+}};

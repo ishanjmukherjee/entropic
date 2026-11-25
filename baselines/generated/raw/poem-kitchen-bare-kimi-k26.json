@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "bare",
+ "prompt": "Write a poem about a kitchen. Output only the poem, with no title.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-kitchen-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Steam sighs against the window's cold,\na kettle's slow exhalation.\nThe cutting board bears its scars—\nonion, garlic, the ghost of rosemary.\n\nCopper pans hang like harvest moons,\ndulled by decades of flame.\nThe refrigerator hums its single note,\nkeeping time.\n\nFlour ghosts the counter's edge,\nfingerprints of bread still rising somewhere.\nThe oven light: a small sun\nwatching dough become crust.\n\nHere the spoons rest in their drawer,\nwood worn to the grain of countless hands.\nHere the faucet drips its mathematics,\ncounting the nights no one came.\n\nAt 3 AM the toaster ticks,\ncooling from no one knows what.\nThe kitchen stands without witness—\nfloor tiles holding the weight of standing still,\n\nthe avocado's blackened stem,\nthe milk three days uncertain,\nthe single bulb over the stove\nthat sometimes works, sometimes doesn't,\n\nand still someone will enter\nbarefoot, searching,\nrefrigerator door thrown wide\nagainst the dark,\n\nits pale stage light catching\nonly this hunger,\nthis ordinary miracle\nof wanting.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 25,
+  "completion_tokens": 225,
+  "total_tokens": 250,
+  "cost": 0.000785,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

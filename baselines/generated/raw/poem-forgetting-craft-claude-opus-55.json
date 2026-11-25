@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: forgetting. Form: a villanelle; the refrains may shift slightly each time they return if that serves the poem.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-forgetting-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "She winds his watch at five and sets it wrong.\nDown the hill, a laker eases in with ore;\nthe bridge at Ashtabula rings its bell too long.\n\nShe lays out forks for three. She salts the strong\nblack coffee he took sweet. A knock. The door\nis someone's son. She winds the watch. It's wrong.\n\nHe shows her how the crown pulls out, a prong\nto turn eleven clicks. She counts to four.\nThe bridge at Ashtabula rings its bell too long.\n\nShe asks if his father's working still among\nthe night crew at the Huletts. \"Till before\ndark,\" he says. She winds the watch and sets it wrong.\n\nShe bangs the dog's dish with a spoon, a gong\nfor supper, though there's been no dog since '94.\nThe bridge at Ashtabula rings its bell too long.\n\nHe goes. She drops the watch in with the tongs\nto soak, and dries her hands, and locks the door.\nTomorrow she'll wind it at five and set it wrong.\nThe bridge at Ashtabula rings its bell too long.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

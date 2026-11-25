@@ -1,0 +1,332 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# PostgreSQL Backup to S3 with Rotation
+# Usage: ./pg_backup_s3.sh [config_file]
+# Author: System Administrator
+# Version: 1.0
+
+# Configuration defaults
+CONFIG_FILE="${1:-/etc/pg_backup_s3.conf}"
+LOG_FILE="/var/log/pg_backup_s3.log"
+LOCK_FILE="/var/run/pg_backup_s3.lock"
+
+# Global variables
+SCRIPT_NAME="$(basename "$0")"
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+BACKUP_DIR=""
+TEMP_DIR=""
+DB_HOST=""
+DB_PORT="5432"
+DB_NAME=""
+DB_USER=""
+DB_PASS=""
+S3_BUCKET=""
+S3_PREFIX=""
+S3_REGION=""
+RETENTION_DAYS=""
+AWS_PROFILE=""
+COMPRESS="true"
+ENCRYPTION_KEY=""
+
+# Logging functions
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+log_info() {
+    log "INFO: $*"
+}
+
+log_warn() {
+    log "WARN: $*"
+}
+
+log_error() {
+    log "ERROR: $*" >&2
+}
+
+log_fatal() {
+    log "FATAL: $*" >&2
+    exit 1
+}
+
+# Cleanup function
+cleanup() {
+    local exit_code=$?
+
+    # Remove lock file
+    if [[ -f "$LOCK_FILE" ]]; then
+        rm -f "$LOCK_FILE"
+    fi
+
+    # Clean up temporary files
+    if [[ -n "${TEMP_DIR:-}" ]] && [[ -d "$TEMP_DIR" ]]; then
+        rm -rf "$TEMP_DIR"
+    fi
+
+    exit $exit_code
+}
+
+trap cleanup EXIT INT TERM
+
+# Check if another instance is running
+check_lock() {
+    if [[ -f "$LOCK_FILE" ]]; then
+        local pid
+        pid=$(cat "$LOCK_FILE")
+        if kill -0 "$pid" 2>/dev/null; then
+            log_fatal "Another instance is already running (PID: $pid)"
+        else
+            log_warn "Stale lock file found, removing it"
+            rm -f "$LOCK_FILE"
+        fi
+    fi
+
+    echo $$ > "$LOCK_FILE"
+}
+
+# Load configuration file
+load_config() {
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        log_fatal "Configuration file not found: $CONFIG_FILE"
+    fi
+
+    # Source the config file
+    # shellcheck source=/dev/null
+    source "$CONFIG_FILE"
+
+    # Validate required configuration
+    local required_vars=(
+        "BACKUP_DIR"
+        "DB_HOST"
+        "DB_NAME"
+        "DB_USER"
+        "S3_BUCKET"
+        "RETENTION_DAYS"
+    )
+
+    local var
+    for var in "${required_vars[@]}"; do
+        if [[ -z ${!var:-} ]]; then
+            log_fatal "Required configuration variable '$var' is not set"
+        fi
+    done
+
+    # Set defaults for optional variables
+    DB_PORT="${DB_PORT:-5432}"
+    S3_PREFIX="${S3_PREFIX:-backups/postgresql}"
+    COMPRESS="${COMPRESS:-true}"
+    AWS_PROFILE="${AWS_PROFILE:-default}"
+}
+
+# Create backup directory structure
+setup_directories() {
+    TEMP_DIR=$(mktemp -d "${BACKUP_DIR}/backup_${TIMESTAMP}_XXXXXX")
+    if [[ ! -d "$TEMP_DIR" ]]; then
+        log_fatal "Failed to create temporary directory"
+    fi
+
+    chmod 700 "$TEMP_DIR"
+    log_info "Created temporary directory: $TEMP_DIR"
+}
+
+# Export database
+export_database() {
+    local backup_file="$TEMP_DIR/${DB_NAME}_${TIMESTAMP}.sql"
+
+    log_info "Starting database export for $DB_NAME"
+
+    # Set environment variables for pg_dump
+    export PGPASSWORD="$DB_PASS"
+
+    # Build pg_dump command
+    local pg_dump_cmd=(
+        "pg_dump"
+        "--host=$DB_HOST"
+        "--port=$DB_PORT"
+        "--username=$DB_USER"
+        "--dbname=$DB_NAME"
+        "--verbose"
+        "--clean"
+        "--if-exists"
+        "--create"
+    )
+
+    # Execute pg_dump
+    if ! "${pg_dump_cmd[@]}" > "$backup_file"; then
+        log_fatal "Database export failed"
+    fi
+
+    # Compress if enabled
+    if [[ "$COMPRESS" == "true" ]]; then
+        log_info "Compressing backup file"
+        if ! gzip "$backup_file"; then
+            log_fatal "Compression failed"
+        fi
+        backup_file="${backup_file}.gz"
+    fi
+
+    log_info "Database export completed: $(du -h "$backup_file" | cut -f1)"
+    echo "$backup_file"
+}
+
+# Encrypt backup file if encryption key is provided
+encrypt_backup() {
+    local backup_file="$1"
+
+    if [[ -n "${ENCRYPTION_KEY:-}" ]]; then
+        log_info "Encrypting backup file"
+        local encrypted_file="${backup_file}.enc"
+
+        if ! openssl enc -aes-256-cbc -salt -in "$backup_file" -out "$encrypted_file" -k "$ENCRYPTION_KEY"; then
+            log_fatal "Encryption failed"
+        fi
+
+        rm -f "$backup_file"
+        backup_file="$encrypted_file"
+        log_info "Encryption completed"
+    fi
+
+    echo "$backup_file"
+}
+
+# Upload to S3
+upload_to_s3() {
+    local backup_file="$1"
+    local s3_key="${S3_PREFIX}/${DB_NAME}_$(basename "$backup_file")"
+
+    log_info "Uploading to S3: s3://$S3_BUCKET/$s3_key"
+
+    local aws_cmd=(
+        "aws"
+        "--profile=$AWS_PROFILE"
+    )
+
+    if [[ -n "${S3_REGION:-}" ]]; then
+        aws_cmd+=("--region=$S3_REGION")
+    fi
+
+    aws_cmd+=(
+        "s3"
+        "cp"
+        "$backup_file"
+        "s3://$S3_BUCKET/$s3_key"
+        "--storage-class=STANDARD_IA"
+    )
+
+    if ! "${aws_cmd[@]}"; then
+        log_fatal "S3 upload failed"
+    fi
+
+    log_info "Upload completed successfully"
+}
+
+# Rotate old backups
+rotate_backups() {
+    log_info "Rotating old backups (retention: $RETENTION_DAYS days)"
+
+    local aws_cmd=(
+        "aws"
+        "--profile=$AWS_PROFILE"
+    )
+
+    if [[ -n "${S3_REGION:-}" ]]; then
+        aws_cmd+=("--region=$S3_REGION")
+    fi
+
+    # List objects with prefix
+    local objects_json
+    objects_json=$("${aws_cmd[@]}" s3api list-objects-v2 \
+        --bucket "$S3_BUCKET" \
+        --prefix "$S3_PREFIX/" \
+        --query 'Contents[?LastModified < `'"$(date -d "$RETENTION_DAYS days ago" -u +%Y-%m-%dT%H:%M:%SZ)"'`].[Key]' \
+        --output json 2>/dev/null)
+
+    if [[ "$objects_json" == "[]" ]] || [[ -z "$objects_json" ]]; then
+        log_info "No old backups to delete"
+        return
+    fi
+
+    # Parse JSON and delete old objects
+    local keys_to_delete
+    keys_to_delete=$(echo "$objects_json" | jq -r '.[] | .[0]' 2>/dev/null)
+
+    if [[ -n "$keys_to_delete" ]]; then
+        local key
+        while IFS= read -r key; do
+            if [[ -n "$key" ]]; then
+                log_info "Deleting old backup: $key"
+                if ! "${aws_cmd[@]}" s3 rm "s3://$S3_BUCKET/$key"; then
+                    log_warn "Failed to delete: $key"
+                fi
+            fi
+        done <<< "$keys_to_delete"
+    fi
+
+    log_info "Backup rotation completed"
+}
+
+# Health check
+health_check() {
+    # Check if required commands are available
+    local required_commands=("pg_dump" "aws" "jq")
+    local cmd
+
+    for cmd in "${required_commands[@]}"; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            log_fatal "Required command '$cmd' not found"
+        fi
+    done
+
+    # Test AWS credentials
+    if ! aws sts get-caller-identity --profile "$AWS_PROFILE" >/dev/null 2>&1; then
+        log_fatal "AWS credentials invalid or inaccessible"
+    fi
+
+    # Test database connectivity
+    export PGPASSWORD="$DB_PASS"
+    if ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
+        log_fatal "Cannot connect to PostgreSQL database"
+    fi
+}
+
+# Main execution
+main() {
+    # Initialize logging
+    touch "$LOG_FILE"
+    chmod 644 "$LOG_FILE"
+
+    log_info "=== PostgreSQL Backup to S3 Started ==="
+
+    # Check for concurrent execution
+    check_lock
+
+    # Load configuration
+    load_config
+
+    # Perform health checks
+    health_check
+
+    # Setup directories
+    setup_directories
+
+    # Export database
+    local backup_file
+    backup_file=$(export_database)
+
+    # Encrypt if configured
+    backup_file=$(encrypt_backup "$backup_file")
+
+    # Upload to S3
+    upload_to_s3 "$backup_file"
+
+    # Rotate old backups
+    rotate_backups
+
+    log_info "=== PostgreSQL Backup to S3 Completed Successfully ==="
+}
+
+# Run main function
+main "$@"

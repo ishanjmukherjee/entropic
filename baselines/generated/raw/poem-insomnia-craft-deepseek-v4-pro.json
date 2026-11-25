@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: insomnia. Form: a sonnet: keep the fourteen lines and the turn; rhyme only if the rhymes surprise.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-insomnia-craft-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Down Greenwich Street the halogen is leaking\nthrough warehouse windows onto a stack of tires.\nA tugboat’s diesel mutters all the way over.\nI am counting the holes in the ceiling tile.\nThirteen, plus half a tile. The clock says three\nand then it says a little after.\nThe tiles\nhave no opinion. Inside the wall, a pipe\ngulps once and stops.\nA month ago at lunch\nI found a magpie skull near a basketball court,\nbleached to a chalk-print on the asphalt, paper-\nlight, eye socket still holding a shadow.\nThat shadow’s here now, riding the ceiling’s grain;\nthe truck that backed up beeping at four-fifteen\nstalled in my chest and will not start again.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 188,
+  "completion_tokens": 160,
+  "total_tokens": 348,
+  "cost": 0.0008128,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

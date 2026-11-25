@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "bare",
+ "prompt": "Write the lyrics of a country song about leaving a small town. Output only the lyrics.",
+ "model": "kimi-k3",
+ "max_tokens": 900,
+ "id": "song-town-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "**[Verse 1]**  \nDust on the dashboard, same sky I’ve always known  \nCounting fence posts one last time, this gravel road I’ve grown  \nMama’s at the screen door, crying dry-eyed in the porch light  \nI left my heart on Main Street in the rear-view mirror tonight  \n\n**[Chorus]**  \nTail lights on the horizon, burning out small  \nGonna chase down tomorrow where the wild winds call  \nYeah, the highway takes its time, but I’m taking it all  \nLeaving this small town, learning how to fall  \n\n**[Verse 2]**  \nThirty miles of nothing, radio fading out  \nSuitcase full of maybes, pockets full of doubt  \nBut the city’s got a promise that these fields never made  \nI’m trading Friday football for a neon, brighter day  \n\n**[Chorus]**  \nTail lights on the horizon, burning out small  \nGonna chase down tomorrow where the wild winds call  \nYeah, the highway takes its time, but I’m taking it all  \nLeaving this small town, learning how to fall  \n\n**[Bridge]**  \nI’ll miss the sound of Sunday bells  \nThe way the harvest moon would tell  \nSecrets that the harvest never tells  \nBut I’ve got a one-way ticket to myself  \n\n**[Verse 3]**  \nTopographic tan lines, different time zone soon  \nHear that diesel engine humming like a different tune  \nI’m a ghost in my hometown before I’m even gone  \nBut I’ll be back at Christmas if the money holds on  \n\n**[Chorus]**  \nTail lights on the horizon, burning out small  \nGonna chase down tomorrow where the wild winds call  \nYeah, the highway takes its time, but I’m taking it all  \nLeaving this small town, learning how to fall  \n\n**[Outro]**  \nLearning how to fall…  \nInto something bigger than us all  \nLeaving this small town  \n(Engine fades out)  \nLeaving this small town",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 36,
+  "completion_tokens": 414,
+  "total_tokens": 450,
+  "cost": 0.006318,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

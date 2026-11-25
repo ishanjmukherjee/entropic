@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-town",
+ "style": "bare",
+ "prompt": "Write the lyrics of a country song about leaving a small town. Output only the lyrics.",
+ "model": "glm-5.3",
+ "max_tokens": 900,
+ "id": "song-town-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "**Dust on the Tires**\n\nVerse 1:\nThis one-light town's been my Whole life, so I know\nEvery crack in the sidewalk, every face that says hello\nMama's on the porch swing, wringing hands in the night air\nShe said, \"Boy, that city'll eat you up, but I'll be praying you get there\"\n\nChorus:\nThere's dust on the tires and a map on the dash\nA full tank of gas and a heart beating fast\nThese two-lane roads are calling my name\nSmall town, I love you, but I can't stay\nSomeday I'll come back when I've found my own way\nBut tonight there's dust on the tires and I'm gone\n\nVerse 2:\nDaddy worked that factory for forty years and change\nGave his hands and all his Sundays, died with nothing to his name\nI promised at his gravestone, underneath the老 oak tree\nI'd get out or get buried trying to live a life that's free\n\nChorus:\nThere's dust on the tires and a map on the dash\nA full tank of gas and a heart beating fast\nThese two-lane roads are calling my name\nSmall town, I love you, but I can't stay\nSomeday I'll come back when I've found my own way\nBut tonight there's dust on the tires and I'm gone\n\nBridge:\nThe water tower fades in the rearview glow\nEvery mile marker's a memory, some I'll hold and some I'll let go\nMain Street's just a whisper on the midnight wind\nThis town raised me up, but it can't keep me in\n\nFinal Chorus:\nThere's dust on the tires and tears on my face\nA full tank of gas and I'm leaving this place\nThese two-lane roads are calling my name\nSmall town, I love you, but I can't stay\nYeah, I'll come back when I've found my own way\nBut tonight there's dust on the tires and I'm gone\nTonight, I'm moving on...",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 30,
+  "completion_tokens": 438,
+  "total_tokens": 468,
+  "cost": 0.0019692,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

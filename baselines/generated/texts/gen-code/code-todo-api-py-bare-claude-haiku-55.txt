@@ -1,0 +1,417 @@
+#!/usr/bin/env python3
+"""A small JSON REST API for a to-do list, built on the Python standard library.
+
+Endpoints
+---------
+GET     /health            -> {"status": "ok"}
+GET     /todos             -> [ {to-do}, ... ]
+POST    /todos             -> create; body: {"title": str, "completed": bool (optional)}
+GET     /todos/<id>        -> fetch one
+PATCH   /todos/<id>        -> partial update; body: {"title"?: str, "completed"?: bool}
+DELETE  /todos/<id>        -> delete (204 No Content)
+
+A to-do is: {"id": str, "title": str, "completed": bool,
+             "created_at": str, "updated_at": str}
+
+Usage
+-----
+    python todo_api.py --host 127.0.0.1 --port 8000
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import signal
+import sys
+import threading
+import uuid
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
+from urllib.parse import urlsplit
+
+MAX_BODY_BYTES = 64 * 1024
+MAX_TITLE_LENGTH = 200
+REQUEST_TIMEOUT_SECONDS = 10.0
+TODOS_PREFIX = "/todos/"
+
+log = logging.getLogger("todo_api")
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+class ApiError(Exception):
+    """An error that maps directly to an HTTP error response."""
+
+    def __init__(
+        self,
+        status: int,
+        message: str,
+        *,
+        headers: dict[str, str] | None = None,
+        close: bool = False,
+    ) -> None:
+        super().__init__(message)
+        self.status = status
+        self.message = message
+        self.headers = headers or {}
+        self.close = close
+
+
+# --------------------------------------------------------------------------- #
+# Storage
+# --------------------------------------------------------------------------- #
+
+@dataclass
+class TodoItem:
+    id: str
+    title: str
+    completed: bool
+    created_at: str
+    updated_at: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+class TodoStore:
+    """Thread-safe in-memory storage. Methods return plain-dict snapshots so
+    callers never hold references to mutable shared state."""
+
+    def __init__(self) -> None:
+        self._items: dict[str, TodoItem] = {}
+        self._lock = threading.Lock()
+
+    def list(self) -> list[dict[str, Any]]:
+        with self._lock:
+            return [item.to_dict() for item in self._items.values()]
+
+    def create(self, title: str, completed: bool) -> dict[str, Any]:
+        now = utc_now()
+        item = TodoItem(
+            id=str(uuid.uuid4()),
+            title=title,
+            completed=completed,
+            created_at=now,
+            updated_at=now,
+        )
+        with self._lock:
+            self._items[item.id] = item
+            return item.to_dict()
+
+    def get(self, item_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            item = self._items.get(item_id)
+            return item.to_dict() if item is not None else None
+
+    def update(self, item_id: str, changes: dict[str, Any]) -> dict[str, Any] | None:
+        with self._lock:
+            item = self._items.get(item_id)
+            if item is None:
+                return None
+            for name, value in changes.items():
+                setattr(item, name, value)
+            item.updated_at = utc_now()
+            return item.to_dict()
+
+    def delete(self, item_id: str) -> bool:
+        with self._lock:
+            return self._items.pop(item_id, None) is not None
+
+
+# --------------------------------------------------------------------------- #
+# Validation
+# --------------------------------------------------------------------------- #
+
+def _check_fields(data: dict[str, Any], allowed: set[str]) -> None:
+    unknown = set(data) - allowed
+    if unknown:
+        raise ApiError(422, f"unknown field(s): {', '.join(sorted(unknown))}")
+
+
+def _validate_title(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ApiError(422, "'title' must be a string")
+    title = value.strip()
+    if not title:
+        raise ApiError(422, "'title' must not be empty")
+    if len(title) > MAX_TITLE_LENGTH:
+        raise ApiError(422, f"'title' must be at most {MAX_TITLE_LENGTH} characters")
+    return title
+
+
+def _validate_completed(value: Any) -> bool:
+    if not isinstance(value, bool):
+        raise ApiError(422, "'completed' must be a boolean")
+    return value
+
+
+def parse_create(data: dict[str, Any]) -> tuple[str, bool]:
+    _check_fields(data, {"title", "completed"})
+    if "title" not in data:
+        raise ApiError(422, "'title' is required")
+    title = _validate_title(data["title"])
+    completed = _validate_completed(data.get("completed", False))
+    return title, completed
+
+
+def parse_update(data: dict[str, Any]) -> dict[str, Any]:
+    _check_fields(data, {"title", "completed"})
+    changes: dict[str, Any] = {}
+    if "title" in data:
+        changes["title"] = _validate_title(data["title"])
+    if "completed" in data:
+        changes["completed"] = _validate_completed(data["completed"])
+    if not changes:
+        raise ApiError(422, "no updatable fields supplied")
+    return changes
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _method_not_allowed(allowed: tuple[str, ...]) -> ApiError:
+    return ApiError(
+        405,
+        "method not allowed",
+        headers={"Allow": ", ".join(allowed)},
+    )
+
+
+# --------------------------------------------------------------------------- #
+# HTTP layer
+# --------------------------------------------------------------------------- #
+
+class TodoRequestHandler(BaseHTTPRequestHandler):
+    server_version = "TodoAPI/1.0"
+    protocol_version = "HTTP/1.1"
+    timeout = REQUEST_TIMEOUT_SECONDS  # guards against slow/stalled clients
+
+    server: TodoHTTPServer  # for type checkers; set by the server
+
+    # Dispatch every supported verb through one code path.
+    def do_GET(self) -> None:
+        self._handle("GET")
+
+    def do_POST(self) -> None:
+        self._handle("POST")
+
+    def do_PUT(self) -> None:
+        self._handle("PUT")
+
+    def do_PATCH(self) -> None:
+        self._handle("PATCH")
+
+    def do_DELETE(self) -> None:
+        self._handle("DELETE")
+
+    def log_message(self, format: str, *args: Any) -> None:
+        log.info("%s %s", self.address_string(), format % args)
+
+    # ---- request lifecycle ------------------------------------------------ #
+
+    def _handle(self, method: str) -> None:
+        try:
+            body = self._read_body()
+            status, payload, headers = self._route(method, body)
+        except ApiError as exc:
+            if exc.close:
+                self.close_connection = True
+            self._send(exc.status, {"error": exc.message}, exc.headers)
+            return
+        except Exception:
+            log.exception("unhandled error during %s %s", method, self.path)
+            self.close_connection = True
+            self._send(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "internal server error"})
+            return
+
+        self._send(status, payload, headers)
+
+    def _read_body(self) -> bytes:
+        if self.headers.get("Transfer-Encoding"):
+            raise ApiError(501, "chunked transfer encoding is not supported", close=True)
+
+        raw_length = self.headers.get("Content-Length")
+        if raw_length is None:
+            return b""
+        try:
+            length = int(raw_length)
+        except ValueError:
+            raise ApiError(400, "invalid Content-Length header", close=True)
+        if length < 0:
+            raise ApiError(400, "invalid Content-Length header", close=True)
+        if length > MAX_BODY_BYTES:
+            raise ApiError(
+                413, f"request body exceeds {MAX_BODY_BYTES} bytes", close=True
+            )
+        if length == 0:
+            return b""
+
+        body = self.rfile.read(length)
+        if len(body) != length:
+            raise ApiError(400, "incomplete request body", close=True)
+        return body
+
+    def _json_body(self, body: bytes) -> dict[str, Any]:
+        if self.headers.get_content_type() != "application/json":
+            raise ApiError(415, "Content-Type must be application/json")
+        if not body:
+            raise ApiError(400, "request body is required")
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
+            raise ApiError(400, "malformed JSON body")
+        if not isinstance(data, dict):
+            raise ApiError(400, "JSON body must be an object")
+        return data
+
+    # ---- routing ---------------------------------------------------------- #
+
+    def _route(
+        self, method: str, body: bytes
+    ) -> tuple[int, Any, dict[str, str] | None]:
+        path = urlsplit(self.path).path
+        if len(path) > 1:
+            path = path.rstrip("/")
+        store = self.server.store
+
+        if path == "/health":
+            if method != "GET":
+                raise _method_not_allowed(("GET",))
+            return 200, {"status": "ok"}, None
+
+        if path == "/todos":
+            if method == "GET":
+                return 200, store.list(), None
+            if method == "POST":
+                title, completed = parse_create(self._json_body(body))
+                todo = store.create(title, completed)
+                return 201, todo, {"Location": f"/todos/{todo['id']}"}
+            raise _method_not_allowed(("GET", "POST"))
+
+        if path.startswith(TODOS_PREFIX):
+            item_id = path[len(TODOS_PREFIX):]
+            if not _is_uuid(item_id):
+                raise ApiError(404, "to-do not found")
+
+            if method == "GET":
+                todo = store.get(item_id)
+                if todo is None:
+                    raise ApiError(404, "to-do not found")
+                return 200, todo, None
+
+            if method == "PATCH":
+                changes = parse_update(self._json_body(body))
+                todo = store.update(item_id, changes)
+                if todo is None:
+                    raise ApiError(404, "to-do not found")
+                return 200, todo, None
+
+            if method == "DELETE":
+                if not store.delete(item_id):
+                    raise ApiError(404, "to-do not found")
+                return 204, None, None
+
+            raise _method_not_allowed(("GET", "PATCH", "DELETE"))
+
+        raise ApiError(404, "not found")
+
+    # ---- response --------------------------------------------------------- #
+
+    def _send(
+        self,
+        status: int,
+        payload: Any,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        body = b""
+        if payload is not None:
+            body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+
+        self.send_response(status)
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
+        self.send_header("Cache-Control", "no-store")
+        if payload is not None:
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+        # RFC 9110: a 204 response must not carry Content-Length.
+        if status != HTTPStatus.NO_CONTENT:
+            self.send_header("Content-Length", str(len(body)))
+        if self.close_connection:
+            self.send_header("Connection", "close")
+        self.end_headers()
+
+        if body:
+            self.wfile.write(body)
+
+
+class TodoHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+    request_queue_size = 128
+
+    def __init__(self, server_address: tuple[str, int], store: TodoStore) -> None:
+        self.store = store
+        super().__init__(server_address, TodoRequestHandler)
+
+
+# --------------------------------------------------------------------------- #
+# Entry point
+# --------------------------------------------------------------------------- #
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="JSON to-do list API (standard library only).")
+    parser.add_argument("--host", default="127.0.0.1", help="interface to bind (default: %(default)s)")
+    parser.add_argument("--port", type=int, default=8000, help="port to bind (default: %(default)s)")
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="logging verbosity (default: %(default)s)",
+    )
+    args = parser.parse_args(argv)
+    if not 0 <= args.port <= 65535:
+        parser.error("--port must be between 0 and 65535")
+    return args
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    logging.basicConfig(
+        level=args.log_level,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+    server = TodoHTTPServer((args.host, args.port), TodoStore())
+
+    def _request_shutdown(signum: int, _frame: Any) -> None:
+        log.info("received signal %s, shutting down", signum)
+        # shutdown() must not be called from the thread running serve_forever().
+        threading.Thread(target=server.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, _request_shutdown)
+    signal.signal(signal.SIGINT, _request_shutdown)
+
+    host, port = server.server_address[:2]
+    log.info("to-do API listening on http://%s:%s", host, port)
+
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
+        log.info("server stopped")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

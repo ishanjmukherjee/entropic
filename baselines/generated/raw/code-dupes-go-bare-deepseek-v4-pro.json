@@ -1,0 +1,27 @@
+{
+ "set": "code",
+ "kind": "code",
+ "prompt_id": "code-dupes-go",
+ "style": "bare",
+ "prompt": "Write a complete, production-quality Go source file that is a command-line tool that walks a directory tree and reports duplicate files by content hash. Output only the code.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 3000,
+ "domain": "tooling",
+ "language": "Go",
+ "id": "code-dupes-go-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "```go\npackage main\n\nimport (\n\t\"crypto/sha256\"\n\t\"encoding/hex\"\n\t\"flag\"\n\t\"fmt\"\n\t\"io\"\n\t\"os\"\n\t\"path/filepath\"\n\t\"runtime\"\n\t\"sort\"\n\t\"sync\"\n)\n\nfunc main() {\n\tflag.Usage = usage\n\tminSize := flag.Int64(\"min-size\", 0, \"minimum file size in bytes to consider\")\n\tworkers := flag.Int(\"workers\", runtime.NumCPU(), \"number of parallel hashing workers\")\n\tverbose := flag.Bool(\"v\", false, \"verbose output while scanning\")\n\tflag.Parse()\n\n\troots := flag.Args()\n\tif len(roots) == 0 {\n\t\troots = []string{\".\"}\n\t}\n\n\tpaths := walk(roots, *minSize, *verbose)\n\tif len(paths) == 0 {\n\t\treturn\n\t}\n\n\thashes := hashFiles(paths, *workers, *verbose)\n\tgroups := groupByHash(hashes)\n\tprintDuplicates(groups)\n}\n\nfunc usage() {\n\tfmt.Fprintf(os.Stderr, \"Usage: %s [flags] [directory...]\\n\", filepath.Base(os.Args[0]))\n\tfmt.Fprintf(os.Stderr, \"Find duplicate files by SHA-256 content hash.\\n\\n\")\n\tfmt.Fprintf(os.Stderr, \"Flags:\\n\")\n\tflag.PrintDefaults()\n}\n\n// walk recursively collects all regular file paths under the provided roots.\n// Files smaller than minSize bytes are skipped.\nfunc walk(roots []string, minSize int64, verbose bool) []string {\n\tvar paths []string\n\tfor _, root := range roots {\n\t\t_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {\n\t\t\tif err != nil {\n\t\t\t\tfmt.Fprintf(os.Stderr, \"warning: %s: %v\\n\", path, err)\n\t\t\t\treturn nil\n\t\t\t}\n\t\t\tif !d.Type().IsRegular() {\n\t\t\t\treturn nil\n\t\t\t}\n\t\t\tinfo, err := d.Info()\n\t\t\tif err != nil {\n\t\t\t\tfmt.Fprintf(os.Stderr, \"warning: %s: %v\\n\", path, err)\n\t\t\t\treturn nil\n\t\t\t}\n\t\t\tif info.Size() < minSize {\n\t\t\t\treturn nil\n\t\t\t}\n\t\t\tpaths = append(paths, path)\n\t\t\treturn nil\n\t\t})\n\t}\n\tif verbose {\n\t\tfmt.Fprintf(os.Stderr, \"Scanned %d files (min size %d bytes)\\n\", len(paths), minSize)\n\t}\n\treturn paths\n}\n\n// fileHash holds the result of hashing a single file.\ntype fileHash struct {\n\tPath string\n\tHash string // hex-encoded SHA-256\n\tErr  error\n}\n\n// hashFiles hashes files concurrently and returns a slice of results.\nfunc hashFiles(paths []string, workers int, verbose bool) []fileHash {\n\tqueue := make(chan string, len(paths))\n\tresults := make(chan fileHash, len(paths))\n\tvar wg sync.WaitGroup\n\n\tfor i := 0; i < workers; i++ {\n\t\twg.Add(1)\n\t\tgo func() {\n\t\t\tdefer wg.Done()\n\t\t\tfor p := range queue {\n\t\t\t\tresults <- hashFile(p)\n\t\t\t}\n\t\t}()\n\t}\n\n\tfor _, p := range paths {\n\t\tqueue <- p\n\t}\n\tclose(queue)\n\twg.Wait()\n\tclose(results)\n\n\tvar out []fileHash\n\tfor r := range results {\n\t\tout = append(out, r)\n\t}\n\tif verbose {\n\t\tfmt.Fprintf(os.Stderr, \"Hashed %d files using %d workers\\n\", len(out), workers)\n\t}\n\treturn out\n}\n\n// hashFile computes the SHA-256 digest of a file's contents.\nfunc hashFile(path string) fileHash {\n\tf, err := os.Open(path)\n\tif err != nil {\n\t\treturn fileHash{Path: path, Err: err}\n\t}\n\tdefer f.Close()\n\n\th := sha256.New()\n\tif _, err := io.Copy(h, f); err != nil {\n\t\treturn fileHash{Path: path, Err: err}\n\t}\n\treturn fileHash{Path: path, Hash: hex.EncodeToString(h.Sum(nil))}\n}\n\n// groupByHash collects files that share an identical hash.\nfunc groupByHash(files []fileHash) map[string][]fileHash {\n\tgroups := make(map[string][]fileHash)\n\tfor _, fh := range files {\n\t\tif fh.Err != nil {\n\t\t\tfmt.Fprintf(os.Stderr, \"error: %s: %v\\n\", fh.Path, fh.Err)\n\t\t\tcontinue\n\t\t}\n\t\tif fh.Hash == \"\" {\n\t\t\tcontinue\n\t\t}\n\t\tgroups[fh.Hash] = append(groups[fh.Hash], fh)\n\t}\n\treturn groups\n}\n\n// printDuplicates outputs groups that contain more than one file.\nfunc printDuplicates(groups map[string][]fileHash) {\n\tduplicates := 0\n\thashes := make([]string, 0, len(groups))\n\tfor h, files := range groups {\n\t\tif len(files) < 2 {\n\t\t\tcontinue\n\t\t}\n\t\thashes = append(hashes, h)\n\t}\n\tsort.Strings(hashes)\n\n\tfor _, h := range hashes {\n\t\tfiles := groups[h]\n\t\tsort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })\n\t\tfirst := files[0]\n\t\ttotalSize := fileSize(first.Path)\n\t\tfmt.Printf(\"SHA256: %s  (%d files, %d bytes each):\\n\", h, len(files), totalSize)\n\t\tfor _, f := range files {\n\t\t\tfmt.Printf(\"  %s\\n\", f.Path)\n\t\t}\n\t\tfmt.Println()\n\t\tduplicates++\n\t}\n\n\tif duplicates == 0 {\n\t\tfmt.Println(\"No duplicate files found.\")\n\t}\n}\n\n// fileSize returns the size of the file in bytes, or 0 on error.\nfunc fileSize(path string) int64 {\n\tinfo, err := os.Stat(path)\n\tif err != nil {\n\t\treturn 0\n\t}\n\treturn info.Size()\n}\n```",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 37,
+  "completion_tokens": 1318,
+  "total_tokens": 1355,
+  "cost": 0.0042768,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

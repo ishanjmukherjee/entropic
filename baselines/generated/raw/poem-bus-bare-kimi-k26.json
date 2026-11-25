@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "bare",
+ "prompt": "Write a poem about a city bus at night. Output only the poem, with no title.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-bus-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Neon streaks across its flanks,\na caterpillar of steel and glass,\ncarrying the city's last wishes home.\n\nEmpty seats hold the ghosts\nof nine-to-five, the perfume\nof someone else's morning.\n\nThe driver wears his route\nlike a monk's devotion—\nthese stops, his litany,\nthese doors, his benediction.\n\nAt each corner, souls rise\nfrom shadow, feed their coins\ninto the hunger of the box,\nsubmit to the fluorescent shrine.\n\nThrough tunnel and bridge\nthe bus inhales exhaust,\nexhales the warm fug\nof humanity still persisting.\n\nA man sleeps against the window,\nhis cheek flattening against\nthe cold, entire cities\npassing through his dreaming.\n\nDawn will find this vessel\ncurled in its depot, breathing\ndiesel, growing clean again—\nbut now it swims the dark,\na whale with windows,\nminor god of the in-between,\ngathering all who have nowhere\nto be but moving.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 28,
+  "completion_tokens": 204,
+  "total_tokens": 232,
+  "cost": 0.000716,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

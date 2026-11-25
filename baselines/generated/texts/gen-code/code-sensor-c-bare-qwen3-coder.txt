@@ -1,0 +1,330 @@
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+// Hardware register definitions
+#define I2C_BASE_ADDR           0x40005400
+#define I2C_CR1_OFFSET          0x00
+#define I2C_CR2_OFFSET          0x04
+#define I2C_OAR1_OFFSET         0x08
+#define I2C_DR_OFFSET           0x10
+#define I2C_SR1_OFFSET          0x14
+#define I2C_SR2_OFFSET          0x18
+#define I2C_CCR_OFFSET          0x20
+#define I2C_TRISE_OFFSET       0x24
+
+#define GPIOB_BASE_ADDR        0x40020400
+#define GPIOB_MODER_OFFSET     0x00
+#define GPIOB_AFRL_OFFSET      0x20
+
+#define RCC_BASE_ADDR          0x40023800
+#define RCC_APB1ENR_OFFSET     0x30
+#define RCC_AHB1ENR_OFFSET     0x30
+
+// SHT3x sensor addresses and commands
+#define SHT3X_ADDR             0x44
+#define SHT3X_CMD_MEASURE_HIGH 0x2C06
+#define SHT3X_CMD_READ_STATUS  0xF32D
+
+// Register access macros
+#define REG32(addr)            (*(volatile uint32_t*)(addr))
+#define I2C_REG(offset)        REG32(I2C_BASE_ADDR + offset)
+#define GPIOB_REG(offset)      REG32(GPIOB_BASE_ADDR + offset)
+#define RCC_REG(offset)        REG32(RCC_BASE_ADDR + offset)
+
+// Bit manipulation macros
+#define SET_BIT(reg, bit)       ((reg) |= (1U << (bit)))
+#define CLEAR_BIT(reg, bit)    ((reg) &= ~(1U << (bit)))
+#define READ_BIT(reg, bit)     (((reg) >> (bit)) & 1U)
+
+// I2C status flags
+#define I2C_SR1_SB             (1U << 0)
+#define I2C_SR1_ADDR           (1U << 1)
+#define I2C_SR1_TXE            (1U << 7)
+#define I2C_SR1_RXNE           (1U << 6)
+#define I2C_SR1_BTF            (1U << 2)
+
+// Ring buffer configuration
+#define SENSOR_BUFFER_SIZE     64
+
+// Data structures
+typedef struct {
+    uint16_t temperature_raw;
+    uint16_t humidity_raw;
+    uint32_t timestamp_ms;
+} sensor_reading_t;
+
+typedef struct {
+    sensor_reading_t buffer[SENSOR_BUFFER_SIZE];
+    volatile uint32_t head;
+    volatile uint32_t tail;
+    volatile uint32_t count;
+} sensor_buffer_t;
+
+// Global variables
+static sensor_buffer_t g_sensor_buffer = {0};
+static volatile uint32_t g_system_ticks = 0;
+
+// Function prototypes
+static void i2c_init(void);
+static bool i2c_start(uint8_t address, bool read);
+static bool i2c_write_byte(uint8_t data);
+static uint8_t i2c_read_byte(bool ack);
+static void i2c_stop(void);
+static bool sht3x_read_measurement(uint16_t* temp, uint16_t* humidity);
+static void buffer_push_reading(sensor_reading_t* reading);
+static float sht3x_convert_temperature(uint16_t raw_temp);
+static float sht3x_convert_humidity(uint16_t raw_humidity);
+
+/**
+ * @brief Initialize GPIO pins for I2C operation
+ */
+static void gpio_init(void) {
+    // Enable GPIOB clock
+    SET_BIT(RCC_REG(RCC_AHB1ENR_OFFSET), 1);
+
+    // Configure PB6 (SCL) and PB7 (SDA) as alternate function
+    uint32_t moder = GPIOB_REG(GPIOB_MODER_OFFSET);
+    moder &= ~(0xFFU << 12);  // Clear bits 12-19
+    moder |= (0xAAU << 12);   // Set alternate function mode
+    GPIOB_REG(GPIOB_MODER_OFFSET) = moder;
+
+    // Set alternate function 4 for both pins
+    uint32_t afrl = GPIOB_REG(GPIOB_AFRL_OFFSET);
+    afrl &= ~((0xFU << 24) | (0xFU << 28));  // Clear AFRH[7:6]
+    afrl |= ((4U << 24) | (4U << 28));       // Set AF4
+    GPIOB_REG(GPIOB_AFRL_OFFSET) = afrl;
+
+    // Configure open drain output type
+    // Assuming OTYPER register at offset 0x04 (not defined in this example)
+}
+
+/**
+ * @brief Initialize I2C peripheral
+ */
+static void i2c_init(void) {
+    // Enable I2C1 clock
+    SET_BIT(RCC_REG(RCC_APB1ENR_OFFSET), 21);
+
+    // Reset I2C peripheral
+    SET_BIT(I2C_REG(I2C_CR1_OFFSET), 15);  // SWRST bit
+    CLEAR_BIT(I2C_REG(I2C_CR1_OFFSET), 15);
+
+    // Configure I2C timing for 100kHz standard mode
+    // Assuming 16MHz system clock
+    I2C_REG(I2C_CCR_OFFSET) = 80;  // CCR = 16MHz / (2 * 100kHz)
+    I2C_REG(I2C_TRISE_OFFSET) = 17;  // TRISE = (16MHz * 1us) + 1
+
+    // Configure I2C control registers
+    I2C_REG(I2C_CR2_OFFSET) = 16000000 / 1000000;  // FREQ field for 16MHz PCLK
+
+    // Enable I2C peripheral
+    SET_BIT(I2C_REG(I2C_CR1_OFFSET), 0);  // PE bit
+}
+
+/**
+ * @brief Generate I2C start condition
+ * @param address 7-bit device address
+ * @param read true for read operation, false for write
+ * @return true if successful, false otherwise
+ */
+static bool i2c_start(uint8_t address, bool read) {
+    uint32_t timeout = 10000;
+
+    // Generate START condition
+    SET_BIT(I2C_REG(I2C_CR1_OFFSET), 8);  // START bit
+
+    // Wait for start condition to be generated
+    while (!(I2C_REG(I2C_SR1_OFFSET) & I2C_SR1_SB)) {
+        if (--timeout == 0) return false;
+    }
+
+    // Send slave address
+    uint8_t addr_byte = (address << 1) | (read ? 1 : 0);
+    I2C_REG(I2C_DR_OFFSET) = addr_byte;
+
+    // Wait for address to be sent
+    timeout = 10000;
+    while (!(I2C_REG(I2C_SR1_OFFSET) & I2C_SR1_ADDR)) {
+        if (--timeout == 0) return false;
+    }
+
+    // Clear ADDR flag by reading SR1 and SR2
+    volatile uint32_t dummy = I2C_REG(I2C_SR1_OFFSET);
+    dummy = I2C_REG(I2C_SR2_OFFSET);
+    (void)dummy;
+
+    return true;
+}
+
+/**
+ * @brief Write a byte over I2C
+ * @param data Byte to write
+ * @return true if successful, false otherwise
+ */
+static bool i2c_write_byte(uint8_t data) {
+    uint32_t timeout = 10000;
+
+    // Wait for transmit buffer empty
+    while (!(I2C_REG(I2C_SR1_OFFSET) & I2C_SR1_TXE)) {
+        if (--timeout == 0) return false;
+    }
+
+    // Send data
+    I2C_REG(I2C_DR_OFFSET) = data;
+
+    // Wait for byte transfer finished
+    timeout = 10000;
+    while (!(I2C_REG(I2C_SR1_OFFSET) & I2C_SR1_BTF)) {
+        if (--timeout == 0) return false;
+    }
+
+    return true;
+}
+
+/**
+ * @brief Read a byte from I2C
+ * @param ack Whether to send ACK after reading
+ * @return The received byte
+ */
+static uint8_t i2c_read_byte(bool ack) {
+    uint32_t timeout = 10000;
+
+    // Configure ACK/NACK
+    if (ack) {
+        SET_BIT(I2C_REG(I2C_CR1_OFFSET), 10);  // ACK bit
+    } else {
+        CLEAR_BIT(I2C_REG(I2C_CR1_OFFSET), 10);
+    }
+
+    // Wait for data to be received
+    while (!(I2C_REG(I2C_SR1_OFFSET) & I2C_SR1_RXNE)) {
+        if (--timeout == 0) break;
+    }
+
+    // Read data
+    return I2C_REG(I2C_DR_OFFSET);
+}
+
+/**
+ * @brief Generate I2C stop condition
+ */
+static void i2c_stop(void) {
+    SET_BIT(I2C_REG(I2C_CR1_OFFSET), 9);  // STOP bit
+
+    // Wait for stop condition to be generated
+    uint32_t timeout = 10000;
+    while (READ_BIT(I2C_REG(I2C_CR1_OFFSET), 9)) {
+        if (--timeout == 0) break;
+    }
+}
+
+/**
+ * @brief Read temperature and humidity measurement from SHT3x sensor
+ * @param temp Pointer to store raw temperature value
+ * @param humidity Pointer to store raw humidity value
+ * @return true if successful, false otherwise
+ */
+static bool sht3x_read_measurement(uint16_t* temp, uint16_t* humidity) {
+    // Send measurement command
+    if (!i2c_start(SHT3X_ADDR, false)) return false;
+
+    // Send high byte of command
+    if (!i2c_write_byte((SHT3X_CMD_MEASURE_HIGH >> 8) & 0xFF)) {
+        i2c_stop();
+        return false;
+    }
+
+    // Send low byte of command
+    if (!i2c_write_byte(SHT3X_CMD_MEASURE_HIGH & 0xFF)) {
+        i2c_stop();
+        return false;
+    }
+
+    i2c_stop();
+
+    // Small delay for measurement (~15ms for high repeatability)
+    for (volatile uint32_t i = 0; i < 100000; i++);
+
+    // Read measurement result
+    if (!i2c_start(SHT3X_ADDR, true)) return false;
+
+    // Read 6 bytes: T MSB, T LSB, T CRC, H MSB, H LSB, H CRC
+    uint8_t t_msb = i2c_read_byte(true);
+    uint8_t t_lsb = i2c_read_byte(true);
+    i2c_read_byte(true);  // Skip CRC
+    uint8_t h_msb = i2c_read_byte(true);
+    uint8_t h_lsb = i2c_read_byte(true);
+    i2c_read_byte(false); // Last byte, NACK
+
+    i2c_stop();
+
+    *temp = (t_msb << 8) | t_lsb;
+    *humidity = (h_msb << 8) | h_lsb;
+
+    return true;
+}
+
+/**
+ * @brief Push a new reading into the ring buffer
+ * @param reading Pointer to the reading to add
+ */
+static void buffer_push_reading(sensor_reading_t* reading) {
+    uint32_t next_head = (g_sensor_buffer.head + 1) % SENSOR_BUFFER_SIZE;
+
+    // If buffer is full, overwrite oldest entry
+    if (next_head == g_sensor_buffer.tail && g_sensor_buffer.count > 0) {
+        g_sensor_buffer.tail = (g_sensor_buffer.tail + 1) % SENSOR_BUFFER_SIZE;
+        g_sensor_buffer.count--;
+    }
+
+    // Add new reading
+    g_sensor_buffer.buffer[g_sensor_buffer.head] = *reading;
+    g_sensor_buffer.head = next_head;
+
+    if (g_sensor_buffer.count < SENSOR_BUFFER_SIZE) {
+        g_sensor_buffer.count++;
+    }
+}
+
+/**
+ * @brief Convert raw temperature to Celsius
+ * @param raw_temp Raw temperature value from sensor
+ * @return Temperature in degrees Celsius
+ */
+static float sht3x_convert_temperature(uint16_t raw_temp) {
+    return (-45.0f + 175.0f * ((float)raw_temp / 65535.0f));
+}
+
+/**
+ * @brief Convert raw humidity to percentage
+ * @param raw_humidity Raw humidity value from sensor
+ * @return Humidity percentage
+ */
+static float sht3x_convert_humidity(uint16_t raw_humidity) {
+    return (100.0f * ((float)raw_humidity / 65535.0f));
+}
+
+/**
+ * @brief Get number of readings in buffer
+ * @return Number of readings available
+ */
+uint32_t sensor_get_reading_count(void) {
+    return g_sensor_buffer.count;
+}
+
+/**
+ * @brief Pop the oldest reading from buffer
+ * @param reading Pointer to store the reading
+ * @return true if successful, false if buffer empty
+ */
+bool sensor_pop_reading(sensor_reading_t* reading) {
+    if (g_sensor_buffer.count == 0 || reading == NULL) {
+        return false;
+    }
+
+    *reading = g_sensor_buffer.buffer[g_sensor_buffer.tail];
+    g_sensor_buffer.tail = (g_sensor_buffer.tail + 1) % SENSOR_BUFFER_SIZE;
+    g_sensor_buffer.count--;
+
+    return true;

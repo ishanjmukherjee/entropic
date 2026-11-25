@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-river",
+ "style": "bare",
+ "prompt": "Write the lyrics of a folk song about a river being dammed. Output only the lyrics.",
+ "model": "glm-5.3",
+ "max_tokens": 900,
+ "id": "song-river-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "They Call It Progress Now\n\nOh, the river ran wild through the valley below,\nWhere my grandfather fished in the long ago,\nWhere the willows hung low and the water ran free,\nThat old river meant everything to me.\n\nChorus:\nBut they dammed the water, they dammed the flow,\nThey buried the valley down deep below,\nThey said the world was changing, and I suppose it's true,\nBut I still hear that river calling, cool and blue.\n\nThere were trout in the pools and herons on the sand,\nFerry boats once crossed, now there's dry dead land,\nThe town by the water with its church and its mill,\nThey moved it up the mountainside, up on the hill.\n\nChorus\n\nNow they say the lights will burn from the power they make,\nAnd the crops will grow greener for the farmers' sake,\nBut no turbine's turning, no bright city glow,\nCan bring back the water that I used to know.\n\nChorus\n\nSo I climb to the ridge when the evening falls,\nWhere the old river once ran, now a concrete wall,\nAnd I dream of the current, the rush and the roar,\nAnd a valley that don't sing like it did before.\n\nFinal Chorus:\nYes, they dammed the water, they dammed the stream,\nAnd I'm left with the ghost of a long-lost dream,\nThey can stop the river, but the memory follows through,\nAnd I still hear that water calling, cool and blue.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 31,
+  "completion_tokens": 308,
+  "total_tokens": 339,
+  "cost": 0.0013986,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

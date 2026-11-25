@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a father's hands. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-father-craft-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "His knuckles are maps of the county\nwhere I grew up, cracked earth\n\nunder the nails, Laconia dirt.\nAt five a.m. he holds the flashlight\n\nfor me, steady, while I drop\nthe worm on the hook. His hands\n\nsmell of gasoline and the bread\nhe kneaded before we woke.\n\nLast Tuesday I saw him pause\nabove the lake water, tracing\n\nwith two fingers the line\nwhere the ice gave way in '67,\n\nthen cup the cold and drink.\nHe holds the plane iron still\n\nagainst the grain, making curly\nshavings that fall like the skin\n\nof peeled apples into his boots.\nHis hands have throbbed all night\n\nthinking about my sister's letters\nthough he never opened one.\n\nNow he lifts the thermos,\nthe cap dented once by a\n\nhydraulic jack in the mill,\nand pours coffee into the snow.\n\nThe steam rises between us,\nhis thumb pressing the lid,\n\nthe nail split clean down\nthe middle, holding on.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 196,
+  "completion_tokens": 217,
+  "total_tokens": 413,
+  "cost": 0.003843,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

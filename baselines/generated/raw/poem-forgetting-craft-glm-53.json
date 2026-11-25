@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: forgetting. Form: a villanelle; the refrains may shift slightly each time they return if that serves the poem.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-forgetting-craft-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "The bowl she kept by the stove at four a.m.\nI have it now, chipped where her thumb wore in.\nThe kettle ticks. The tap stutters, then runs.\n\nHer name goes first. Then the street. Bridge and pier\nparse like a map that rain has swollen thin.\nThe kettle ticks. The tap stutters, then runs.\n\nI set two bowls of oatmeal on the table\nand count the birds—that habit still is mine—\nbefore the dark lets go of Harbor Drive.\n\nThe neighbor's dog is barking at a plow.\nI call him by his name and get it wrong.\nThe kettle ticks. The drip runs down the drapes.\n\nOutside, the trucks have salted Second Street;\na man scrapes ice and curses slow and clean.\nI copy him. It helps. It never helps.\n\nI hold the bowl. My thumbs find her worn place.\nThe mail arrives. The mailman knows my name—\nThe kettle ticks. I wave. I don't know him.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 198,
+  "completion_tokens": 272,
+  "total_tokens": 470,
+  "cost": 0.001474,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "craft",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "kimi-k2.6",
+ "max_tokens": 900,
+ "id": "song-night-craft-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Neon leaking through the A/C vent, window stuck at half mast\nTejeda's coughing fit in the backseat, Cherry Garcia for his lungs\nMetroCard balance: two swipes, three people, Sunday math\nLexington platform, urine steam rising with theAnnouncement: delays on the downtown\n\nSixteen handles on the bodega door, none of them match\nJay behind the counter, watching something disappear\nLucy buys Blackwoods even though she's quit, for the pack\nThat smell, that specific tearing sound, that year\n\nSoHo crosswalk, white hand flashing, we walk anyway\nConstruction plywood tagged with someone else's grief\nJefferson inside the rope, knowing Amalia at the door\nSpent his last on the shirt, first drink's on the house, relief\n\nChorus:\nSame bridge, different water\nSame bridge, different water\nSame bridge, different water\nTonight the bridge is breathing\n\n———\n\nArizona cans in the courtyard, radiator hymn\nSome kid's phone blasting Cudi, summer '09, not now\nLucy lights the Blackwood, doesn't inhale, just the grim\nRitual of waste, her father's lighter, some vow\n\nTejeda's cousin's cousin's spot, buzzer taped down\nStairs that remember every shoe that ever feared them\nKitchen counter, credit card, mirror from a hotel downtown\nSomeone's retainer case open, kid still wears them\n\nJefferson in the hallway, recognizing a voice through drywall\nKelsey from Fordham, Kelsey who cut his抠　or who tried\nWall's too thin for dignity, too thick for the call\nHe counts ceiling cracks until the wrong feeling subsided\n\nChorus:\nSame bridge, different water\nSame bridge, different water\nSame bridge, different water\nTonight the bridge is leaning\n\n———\n\n4:17 Sunrise Market, Lucy's buying eggs she won't cook\nTejeda's got the Sunday paper already, Monday's forecast\nSame bridge recounting which parts of the night got took\nBy which phone's dead battery, which app, which mask\n\nD train car, someone else's graffiti getting buffed\nGray sponge, chemical smell, the system's slow erasure\nJefferson's pocket: Amalia's matches, proof enough\nThat somewhere he was present, some version of his nature\n\nLucy peels the Blackwoods, drops them through the gap\nBetween car and platform, offering to the third rail's hum\nTejeda's laughter, surprising,foreign, some map\nThey didn't know they were drawing, some destination to come\n\nChorus:\nSame bridge, different water\nSame bridge, different water\nSame bridge, different water\nTonight the bridge is leaving",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 148,
+  "completion_tokens": 555,
+  "total_tokens": 703,
+  "cost": 0.0020054,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

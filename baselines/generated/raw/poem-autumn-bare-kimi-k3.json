@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "bare",
+ "prompt": "Write a poem about autumn. Output only the poem, with no title.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-autumn-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The apples thicken on the bending bough,\nThe light falls slant across the empty field,\nAnd something in the air is saying now—\nA word the summer knew but kept concealed.\n\nAmber, rust, the slow burn of the maples,\nThe crisp snap of morning on the lawn,\nThe geese practice their farewells in staples\nOf black ink against the drawing dawn.\n\nWe gather in the scattered golden leavings,\nRake the year into a rustling pile,\nAnd stand amid the beautiful bereavings,\nLearning how to love the meanwhile.\n\nThe pumpkins glow like lanterns on the stoop,\nThe dusk arrives too early, smelling sweet\nOf smoke and cider, pressing us to stoop\nAnd warm our hands where heat and season meet.\n\nThen frost, then rest. The garden bows its head.\nThe roots go dreaming in the dark below.\nAutumn is not a mourning for the dead—\nIt is the earth letting go.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 33,
+  "completion_tokens": 198,
+  "total_tokens": 231,
+  "cost": 0.003069,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

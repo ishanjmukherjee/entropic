@@ -1,0 +1,306 @@
+// falling_block_game.cpp
+// Core (headless) logic for a falling-block puzzle game: board, pieces,
+// rotation (SRS-style wall kicks), collision, gravity, locking,
+// line clearing, and scoring. No rendering or I/O dependencies.
+
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstdint>
+#include <random>
+#include <vector>
+
+namespace falling_block {
+
+// ---------------------------------------------------------------------------
+// Configuration constants
+// ---------------------------------------------------------------------------
+constexpr int kBoardWidth  = 10;
+constexpr int kBoardHeight = 20;
+constexpr int kSpawnX      = 3;   // left column of the 4x4 bounding box
+constexpr int kSpawnY      = 0;
+
+// Cell values: 0 = empty, 1..7 = piece color ids.
+enum class Cell : std::uint8_t {
+    Empty = 0,
+    I, O, T, S, Z, J, L
+};
+
+inline bool isEmpty(Cell c) noexcept { return c == Cell::Empty; }
+
+// ---------------------------------------------------------------------------
+// Piece definitions (4x4 coordinate grids, rotation-invariant data)
+// Each shape stores all four rotation states explicitly for clarity and to
+// avoid floating point or matrix math entirely.
+// ---------------------------------------------------------------------------
+using ShapeGrid = std::array<std::array<Cell, 4>, 4>; // [row][col]
+
+struct PieceDef {
+    std::array<ShapeGrid, 4> rotations; // index = rotation state 0..3
+};
+
+namespace detail {
+
+// Builds a ShapeGrid from a list of (row,col) filled cells.
+constexpr ShapeGrid makeGrid(Cell id, std::initializer_list<std::pair<int,int>> cells) {
+    ShapeGrid g{};
+    for (auto& [r, c] : cells) {
+        g[static_cast<std::size_t>(r)][static_cast<std::size_t>(c)] = id;
+    }
+    return g;
+}
+
+// Rotates a grid 90 degrees clockwise.
+constexpr ShapeGrid rotateCW(const ShapeGrid& in) {
+    ShapeGrid out{};
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            out[static_cast<std::size_t>(c)][static_cast<std::size_t>(3 - r)] = in[static_cast<std::size_t>(r)][static_cast<std::size_t>(c)];
+    return out;
+}
+
+constexpr PieceDef buildPiece(Cell id, std::initializer_list<std::pair<int,int>> base) {
+    ShapeGrid g0 = makeGrid(id, base);
+    return PieceDef{ { g0, rotateCW(g0), rotateCW(rotateCW(g0)), rotateCW(rotateCW(rotateCW(g0))) } };
+}
+
+// Standard piece layouts in their 4x4 bounding boxes (rotation state 0).
+constexpr PieceDef kPieces[] = {
+    /* I */ buildPiece(Cell::I, { {1,0},{1,1},{1,2},{1,3} }),
+    /* O */ buildPiece(Cell::O, { {0,1},{0,2},{1,1},{1,2} }),
+    /* T */ buildPiece(Cell::T, { {1,0},{1,1},{1,2},{0,1} }),
+    /* S */ buildPiece(Cell::S, { {1,1},{1,2},{0,0},{0,1} }),
+    /* Z */ buildPiece(Cell::Z, { {1,0},{1,1},{0,1},{0,2} }),
+    /* J */ buildPiece(Cell::J, { {1,0},{1,1},{1,2},{0,0} }),
+    /* L */ buildPiece(Cell::L, { {1,0},{1,1},{1,2},{0,2} }),
+};
+
+// Index into kPieces by Cell id (I=1 ... L=7).
+constexpr int pieceIndex(Cell id) noexcept {
+    return static_cast<int>(id) - 1;
+}
+
+// SRS wall-kick offsets: [rotationFrom][attempt] -> {dx, dy}
+struct KickTable {
+    std::array<std::pair<int,int>, 5> offsets;
+};
+
+// JLSTZ kicks (from->to: 0->1, 1->0, 1->2, 2->1, 2->3, 3->2).
+// Testing offsets, sufficient for gameplay and standard-compliant in shape.
+constexpr std::array<KickTable, 4> kKicksJLSTZ = {{
+    // 0 -> 1
+    {{{ {0,0},{-1,0},{-1,1},{0,-2},{-1,-2} }}},
+    // 1 -> 0 (inverse of above, expressed per state 1)
+    {{{ {0,0},{1,0},{1,-1},{0,2},{1,2} }}},
+    // 1 -> 2
+    {{{ {0,0},{1,0},{1,-1},{0,2},{1,2} }}},
+    // 3 -> 2 (also used for 2->3 reversed pattern per SRS; kept minimal)
+    {{{ {0,0},{1,0},{1,1},{0,-2},{1,-2} }}},
+}};
+
+constexpr std::array<KickTable, 4> kKicksI = {{
+    {{{ {0,0},{-2,0},{1,0},{-2,-1},{1,2} }}},
+    {{{ {0,0},{2,0},{-1,0},{2,1},{-1,-2} }}},
+    {{{ {0,0},{-1,0},{2,0},{-1,2},{2,-1} }}},
+    {{{ {0,0},{1,0},{-2,0},{1,-2},{-2,1} }}},
+}};
+
+} // namespace detail
+
+// ---------------------------------------------------------------------------
+// Active piece
+// ---------------------------------------------------------------------------
+class ActivePiece {
+public:
+    ActivePiece() = default;
+    ActivePiece(Cell type, int rotation, int x, int y) noexcept
+        : type_(type), rotation_(rotation & 3), x_(x), y_(y) {}
+
+    Cell type() const noexcept { return type_; }
+    int rotation() const noexcept { return rotation_; }
+    int x() const noexcept { return x_; }
+    int y() const noexcept { return y_; }
+
+    void setPos(int x, int y) noexcept { x_ = x; y_ = y; }
+    void setRotation(int r) noexcept { rotation_ = r & 3; }
+
+    // Attempts to move by (dx, dy); returns false if it would collide.
+    bool tryMove(int dx, int dy) noexcept {
+        ActivePiece candidate = *this;
+        candidate.x_ += dx;
+        candidate.y_ += dy;
+        return candidate;
+    }
+
+    const ShapeGrid& grid() const noexcept {
+        return detail::kPieces[detail::pieceIndex(type_)].rotations[static_cast<std::size_t>(rotation_)];
+    }
+
+    // Occupied absolute cells (row, col) of the piece in its current state.
+    template <typename F>
+    void forEachCell(F&& fn) const {
+        const ShapeGrid& g = grid();
+        for (int r = 0; r < 4; ++r) {
+            for (int c = 0; c < 4; ++c) {
+                if (!isEmpty(g[static_cast<std::size_t>(r)][static_cast<std::size_t>(c)])) {
+                    fn(y_ + r, x_ + c);
+                }
+            }
+        }
+    }
+
+private:
+    Cell type_   = Cell::I;
+    int rotation_ = 0;
+    int x_ = 0;
+    int y_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// Board
+// ---------------------------------------------------------------------------
+class Board {
+public:
+    Board() { clear(); }
+
+    static constexpr int width()  noexcept { return kBoardWidth; }
+    static constexpr int height() noexcept { return kBoardHeight; }
+
+    Cell at(int row, int col) const noexcept {
+        assert(inBounds(row, col));
+        return cells_[static_cast<std::size_t>(row * kBoardWidth + col)];
+    }
+
+    void set(int row, int col, Cell value) noexcept {
+        assert(inBounds(row, col));
+        cells_[static_cast<std::size_t>(row * kBoardWidth + col)] = value;
+    }
+
+    void clear() noexcept {
+        std::fill(cells_.begin(), cells_.end(), Cell::Empty);
+    }
+
+    // True if the given piece placement is valid (inside, no overlap).
+    bool isValidPlacement(const ActivePiece& piece) const noexcept {
+        bool ok = true;
+        piece.forEachCell([&](int r, int c) {
+            if (!inBounds(r, c) || !isEmpty(at(r, c))) ok = false;
+        });
+        return ok;
+    }
+
+    // True if the piece overlaps anything or is out of bounds.
+    bool collides(const ActivePiece& piece) const noexcept {
+        return !isValidPlacement(piece);
+    }
+
+    // Writes the piece's cells into the board (assumes valid placement).
+    void imprint(const ActivePiece& piece) noexcept {
+        piece.forEachCell([&](int r, int c) { set(r, c, piece.type()); });
+    }
+
+    // Checks whether every column above the board is occupied at row 0
+    // significantly (simplified top-out check: any occupied spawn cell).
+    bool isToppedOut() const noexcept {
+        for (int c = 0; c < kBoardWidth; ++c) {
+            if (!isEmpty(at(0, c))) return true;
+        }
+        return false;
+    }
+
+    // Clears all full rows. Returns the number of rows cleared and, via
+    // out-param, the indices of the cleared rows (top-down order).
+    int clearFullRows(std::vector<int>* clearedRows = nullptr) {
+        std::vector<int> full;
+        full.reserve(4);
+        for (int r = 0; r < kBoardHeight; ++r) {
+            bool rowFull = true;
+            for (int c = 0; c < kBoardWidth; ++c) {
+                if (isEmpty(at(r, c))) { rowFull = false; break; }
+            }
+            if (rowFull) full.push_back(r);
+        }
+        if (full.empty()) return 0;
+
+        if (clearedRows) *clearedRows = full;
+
+        // Compact: rebuild the board without the full rows.
+        static thread_local std::array<Cell, kBoardWidth * kBoardHeight> tmp;
+        int writeRow = kBoardHeight - 1;
+        for (int r = kBoardHeight - 1; r >= 0; --r) {
+            if (std::find(full.begin(), full.end(), r) != full.end()) continue;
+            for (int c = 0; c < kBoardWidth; ++c) {
+                tmp[static_cast<std::size_t>(writeRow * kBoardWidth + c)] =
+                    cells_[static_cast<std::size_t>(r * kBoardWidth + c)];
+            }
+            --writeRow;
+        }
+        while (writeRow >= 0) {
+            for (int c = 0; c < kBoardWidth; ++c) {
+                tmp[static_cast<std::size_t>(writeRow * kBoardWidth + c)] = Cell::Empty;
+            }
+            --writeRow;
+        }
+        cells_ = tmp;
+        return static_cast<int>(full.size());
+    }
+
+    // Number of occupied cells in a row (useful for stat/AI layers).
+    int rowFill(int row) const noexcept {
+        int n = 0;
+        for (int c = 0; c < kBoardWidth; ++c)
+            if (!isEmpty(at(row, c))) ++n;
+        return n;
+    }
+
+private:
+    static bool inBounds(int row, int col) noexcept {
+        return row >= 0 && row < kBoardHeight && col >= 0 && col < kBoardWidth;
+    }
+
+    std::array<Cell, kBoardWidth * kBoardHeight> cells_;
+};
+
+// ---------------------------------------------------------------------------
+// Scoring / level progression
+// ---------------------------------------------------------------------------
+class ScoreKeeper {
+public:
+    static constexpr std::array<int, 4> kLineBaseScores = { 100, 300, 500, 800 };
+
+    void addLines(int lines, int level) {
+        if (lines >= 1 && lines <= 4) {
+            score_ += kLineBaseScores[static_cast<std::size_t>(lines - 1)] * level;
+            linesCleared_ += lines;
+        }
+    }
+    void addSoftDrop()  { score_ += 1; }
+    void addHardDrop(int cells) { score_ += 2 * cells; }
+
+    int score() const noexcept { return score_; }
+    int lines() const noexcept { return linesCleared_; }
+
+    int level() const noexcept {
+        // Level up every 10 lines, starting at level 1.
+        return 1 + linesCleared_ / 10;
+    }
+
+    // Gravity interval in milliseconds for the given level (speed curve).
+    static int gravityMillis(int level) noexcept {
+        // Classic-style curve, clamped to a floor.
+        const int ms = 1000 - (level - 1) * 90;
+        return std::max<int>(ms, 60);
+    }
+
+private:
+    int score_ = 0;
+    int linesCleared_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// Piece bag randomizer (7-bag)
+// ---------------------------------------------------------------------------
+class BagRandomizer {
+public:
+    explicit BagRandomizer(std::uint32_t seed = 0)
+        :

@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: forgetting. Form: a villanelle; the refrains may shift slightly each time they return if that serves the poem.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-forgetting-craft-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The keys are missing from the kitchen hook at dawn,  \nthe bus goes by, the umbrella stays behind,  \nshe checks the hall, the drawer, the washing gone.\n\nA man asks twice for tickets on the train,  \nhis paper ticket folded out of mind.  \nThe keys are missing. From the kitchen hook, a line\n\nof dust marks where the metal used to hang.  \nAt eight the light falls level through the blind;  \nshe checks the hall. The drawer, the washing line\n\na shed skin on the balcony, is blank.  \nThe neighbor calls his dog a different name.  \nThe keys are missing from the kitchen hook, at dawn,\n\nbut frost still keeps the shape of where they lay.  \nInside his coat, the ticket sings for gain;  \nshe checks the hall, the drawer. The washing gone\n\nreturns as water silvering the drain.  \nThe keys are missing from the kitchen. Hook at dawn.  \nShe checks the hall. The drawer. The washing. Gone.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 205,
+  "completion_tokens": 212,
+  "total_tokens": 417,
+  "cost": 0.003795,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

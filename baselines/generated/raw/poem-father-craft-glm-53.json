@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a father's hands. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-father-craft-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "In the feed store on Route 9, my father\ncounted nails out of a bin by feel,\nhis thumb going over each head\nlike a man reading a letter twice.\n\nAt five o'clock he'd come in\nfrom the machine shed, wash at the sink,\nand the water would run gray\nlonger than seemed possible.\n\nHis knuckles were the size of walnuts.\nOne thumbnail was split and dark\nfrom the hay baler, summer of '71,\nand he never had it fixed.\n\nHe could lift the front end of a Rototiller.\nHe cracked walnuts in his palm for us\non Sunday, or shelled peanuts\none at a time, slower than eating them.\n\nThe night the electric fence shorted out\nhe stood in the yard in October\nholding the wire with his bare hand\nto find the pulse of the fault,\n\nand I stood at the window\nwatching that hand open and close,\nopen and close, in the dark,\nlike a man learning something\nhe would never tell.\n\nNow his hands lie on the blanket\nat the home outside Anamosa,\nfingers curled around nothing,\nand still they hold it.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 190,
+  "completion_tokens": 241,
+  "total_tokens": 431,
+  "cost": 0.0013264,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

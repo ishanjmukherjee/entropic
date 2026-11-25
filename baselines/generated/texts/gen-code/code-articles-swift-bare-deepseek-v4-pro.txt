@@ -1,0 +1,466 @@
+import SwiftUI
+import Combine
+import Foundation
+
+// MARK: - Models
+
+struct Article: Codable, Identifiable, Equatable {
+    let id: Int
+    let title: String
+    let summary: String
+    let author: String
+    let publishedDate: String
+    let imageURL: URL?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, summary, author
+        case publishedDate = "published_date"
+        case imageURL = "image_url"
+    }
+
+    static func == (lhs: Article, rhs: Article) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+struct PaginatedResponse: Codable {
+    let articles: [Article]
+    let totalPages: Int
+    let currentPage: Int
+    let totalItems: Int
+
+    enum CodingKeys: String, CodingKey {
+        case articles
+        case totalPages = "total_pages"
+        case currentPage = "current_page"
+        case totalItems = "total_items"
+    }
+}
+
+// MARK: - API Service
+
+protocol ArticleServiceProtocol {
+    func fetchArticles(page: Int, pageSize: Int) -> AnyPublisher<PaginatedResponse, Error>
+}
+
+class ArticleService: ArticleServiceProtocol {
+    private let baseURL: URL
+    private let session: URLSession
+    private let decoder: JSONDecoder
+
+    init(baseURL: URL = URL(string: "https://api.example.com")!,
+         session: URLSession = .shared) {
+        self.baseURL = baseURL
+        self.session = session
+        self.decoder = JSONDecoder()
+    }
+
+    func fetchArticles(page: Int, pageSize: Int = 20) -> AnyPublisher<PaginatedResponse, Error> {
+        guard var components = URLComponents(url: baseURL.appendingPathComponent("articles"), resolvingAgainstBaseURL: false) else {
+            return Fail(error: URLError(.badURL)).eraseToAnyPublisher()
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "page_size", value: "\(pageSize)")
+        ]
+
+        guard let url = components.url else {
+            return Fail(error: URLError(.badURL)).eraseToAnyPublisher()
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 30
+
+        return session.dataTaskPublisher(for: request)
+            .tryMap { data, response in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw URLError(.badServerResponse)
+                }
+
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    throw URLError(.init(rawValue: httpResponse.statusCode))
+                }
+
+                return data
+            }
+            .decode(type: PaginatedResponse.self, decoder: decoder)
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
+}
+
+// MARK: - View Model
+
+@MainActor
+final class ArticleListViewModel: ObservableObject {
+    @Published var articles: [Article] = []
+    @Published var isLoading = false
+    @Published var isLoadingMore = false
+    @Published var errorMessage: String?
+    @Published var hasMorePages = true
+
+    private let service: ArticleServiceProtocol
+    private let pageSize: Int
+    private var currentPage = 0
+    private var totalPages = 1
+    private var cancellables = Set<AnyCancellable>()
+
+    var showEmptyState: Bool {
+        !isLoading && articles.isEmpty && errorMessage == nil
+    }
+
+    var showErrorState: Bool {
+        errorMessage != nil && articles.isEmpty
+    }
+
+    init(service: ArticleServiceProtocol = ArticleService(),
+         pageSize: Int = 20) {
+        self.service = service
+        self.pageSize = pageSize
+    }
+
+    func loadInitialArticles() {
+        guard !isLoading else { return }
+
+        currentPage = 0
+        articles = []
+        hasMorePages = true
+        errorMessage = nil
+
+        loadNextPage()
+    }
+
+    func loadMoreArticlesIfNeeded(currentArticle: Article) {
+        guard !isLoadingMore,
+              hasMorePages,
+              let lastArticleID = articles.last?.id,
+              currentArticle.id == lastArticleID else {
+            return
+        }
+
+        loadNextPage()
+    }
+
+    func refreshArticles() {
+        loadInitialArticles()
+    }
+
+    func dismissError() {
+        errorMessage = nil
+    }
+
+    private func loadNextPage() {
+        let nextPage = currentPage + 1
+
+        guard nextPage <= totalPages else {
+            hasMorePages = false
+            return
+        }
+
+        let isInitialLoad = currentPage == 0
+
+        if isInitialLoad {
+            isLoading = true
+        } else {
+            isLoadingMore = true
+        }
+
+        service.fetchArticles(page: nextPage, pageSize: pageSize)
+            .sink { [weak self] completion in
+                guard let self = self else { return }
+
+                if isInitialLoad {
+                    self.isLoading = false
+                } else {
+                    self.isLoadingMore = false
+                }
+
+                if case .failure(let error) = completion {
+                    self.errorMessage = self.localizedError(error)
+                }
+            } receiveValue: { [weak self] response in
+                guard let self = self else { return }
+
+                self.currentPage = response.currentPage
+                self.totalPages = response.totalPages
+                self.hasMorePages = response.currentPage < response.totalPages
+
+                if isInitialLoad {
+                    self.articles = response.articles
+                } else {
+                    let existingIDs = Set(self.articles.map(\.id))
+                    let newArticles = response.articles.filter { !existingIDs.contains($0.id) }
+                    self.articles.append(contentsOf: newArticles)
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private func localizedError(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                return "No internet connection. Please check your network and try again."
+            case .timedOut:
+                return "The request timed out. Please try again."
+            case .badServerResponse:
+                return "The server encountered an error. Please try again later."
+            default:
+                return "Something went wrong. Please try again."
+            }
+        }
+        return error.localizedDescription
+    }
+}
+
+// MARK: - Views
+
+struct ArticleListView: View {
+    @StateObject private var viewModel = ArticleListViewModel()
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        NavigationView {
+            contentView
+                .navigationTitle("Articles")
+                .background(backgroundColor.ignoresSafeArea())
+                .onAppear {
+                    if viewModel.articles.isEmpty {
+                        viewModel.loadInitialArticles()
+                    }
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var contentView: some View {
+        if viewModel.isLoading && viewModel.articles.isEmpty {
+            loadingView
+        } else if viewModel.showErrorState {
+            errorStateView
+        } else if viewModel.showEmptyState {
+            emptyStateView
+        } else {
+            articleList
+        }
+    }
+
+    private var articleList: some View {
+        List {
+            ForEach(viewModel.articles) { article in
+                ArticleRowView(article: article)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .onAppear {
+                        viewModel.loadMoreArticlesIfNeeded(currentArticle: article)
+                    }
+            }
+
+            if viewModel.isLoadingMore {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .padding(.vertical, 16)
+                    Spacer()
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+
+            if let error = viewModel.errorMessage, !viewModel.articles.isEmpty {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+
+                        Button("Tap to retry") {
+                            viewModel.dismissError()
+                        }
+                        .font(.caption)
+                    }
+                    .padding(.vertical, 16)
+                    Spacer()
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+        }
+        .listStyle(.plain)
+        .refreshable {
+            await refreshArticlesAsync()
+        }
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+            Text("Loading articles...")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "newspaper")
+                .font(.system(size: 60))
+                .foregroundColor(.secondary.opacity(0.5))
+
+            Text("No Articles")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+
+            Text("There are no articles to display right now. Pull to refresh or check back later.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            Button(action: {
+                viewModel.loadInitialArticles()
+            }) {
+                Text("Try Again")
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+            }
+        }
+        .refreshable {
+            await refreshArticlesAsync()
+        }
+    }
+
+    private var errorStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 60))
+                .foregroundColor(.secondary.opacity(0.5))
+
+            Text("Something Went Wrong")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            Button(action: {
+                viewModel.loadInitialArticles()
+            }) {
+                Text("Retry")
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+            }
+        }
+    }
+
+    private var backgroundColor: Color {
+        colorScheme == .dark ? Color(UIColor.systemBackground) : Color(UIColor.systemGroupedBackground)
+    }
+
+    private func refreshArticlesAsync() async {
+        await withCheckedContinuation { continuation in
+            viewModel.refreshArticles()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                continuation.resume()
+            }
+        }
+    }
+}
+
+// MARK: - Article Row View
+
+struct ArticleRowView: View {
+    let article: Article
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            thumbnailImage
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(article.title)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .lineLimit(2)
+                    .foregroundColor(.primary)
+
+                Text(article.summary)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
+
+                HStack(spacing: 8) {
+                    Text(article.author)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.accentColor)
+
+                    Spacer()
+
+                    Text(formattedDate(article.publishedDate))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var thumbnailImage: some View {
+        if let imageURL = article.imageURL {
+            AsyncImage(url: imageURL) { phase in
+                switch phase {
+                case .empty:
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .overlay(
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        )
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                case .failure:
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .overlay(
+                            Image(systemName: "photo")
+                                .foregroundColor(.gray)
+                        )
+                @unknown default:
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                }
+            }
+            .frame(width: 80, height: 80)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+    }

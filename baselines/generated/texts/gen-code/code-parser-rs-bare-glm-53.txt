@@ -1,0 +1,441 @@
+//! Tokenizer and recursive-descent parser for arithmetic expressions.
+//!
+//! Grammar (EBNF):
+//! ```text
+//! expression := term (("+" | "-") term)*
+//! term       := factor (("*" | "/") factor)*
+//! factor     := ("-")? power
+//! power      := primary ("^" factor)?
+//! primary    := NUMBER | IDENT | "(" expression ")"
+//! ```
+
+use std::collections::BTreeMap;
+use std::fmt;
+
+// ---------------------------------------------------------------------------
+// Tokens
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Token {
+    Number(f64),
+    Ident(String),
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Caret,
+    LParen,
+    RParen,
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Token::Number(n) => write!(f, "number `{n}`"),
+            Token::Ident(s) => write!(f, "identifier `{s}`"),
+            Token::Plus => write!(f, "`+`"),
+            Token::Minus => write!(f, "`-`"),
+            Token::Star => write!(f, "`*`"),
+            Token::Slash => write!(f, "`/`"),
+            Token::Caret => write!(f, "`^`"),
+            Token::LParen => write!(f, "`(`"),
+            Token::RParen => write!(f, "`)`"),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParseError {
+    pub message: String,
+    pub position: usize,
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "parse error at position {}: {}", self.position, self.message)
+    }
+}
+
+impl std::error::Error for ParseError {}
+
+// ---------------------------------------------------------------------------
+// AST
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expr {
+    Number(f64),
+    Variable(String),
+    Unary(UnaryOp, Box<Expr>),
+    Binary(BinaryOp, Box<Expr>, Box<Expr>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnaryOp {
+    Neg,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Pow,
+}
+
+impl Expr {
+    /// Collect the set of variable names referenced in this expression.
+    pub fn variables(&self) -> BTreeMap<String, ()> {
+        let mut vars = BTreeMap::new();
+        self.collect_vars(&mut vars);
+        vars
+    }
+
+    fn collect_vars(&self, vars: &mut BTreeMap<String, ()>) {
+        match self {
+            Expr::Number(_) => {}
+            Expr::Variable(name) => {
+                vars.insert(name.clone(), ());
+            }
+            Expr::Unary(_, e) => e.collect_vars(vars),
+            Expr::Binary(_, l, r) => {
+                l.collect_vars(vars);
+                r.collect_vars(vars);
+            }
+        }
+    }
+
+    /// Evaluate the expression, resolving variables through `env`.
+    pub fn eval(&self, env: &BTreeMap<String, f64>) -> Result<f64, String> {
+        Ok(match self {
+            Expr::Number(n) => *n,
+            Expr::Variable(name) => *env
+                .get(name)
+                .ok_or_else(|| format!("undefined variable: `{name}`"))?,
+            Expr::Unary(UnaryOp::Neg, e) => -e.eval(env)?,
+            Expr::Binary(op, l, r) => {
+                let (l, r) = (l.eval(env)?, r.eval(env)?);
+                match op {
+                    BinaryOp::Add => l + r,
+                    BinaryOp::Sub => l - r,
+                    BinaryOp::Mul => l * r,
+                    BinaryOp::Div => {
+                        if r == 0.0 {
+                            return Err("division by zero".into());
+                        }
+                        l / r
+                    }
+                    BinaryOp::Pow => l.powf(r),
+                }
+            }
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tokenizer
+// ---------------------------------------------------------------------------
+
+pub fn tokenize(input: &str) -> Result<Vec<(Token, usize)>, ParseError> {
+    let mut tokens = Vec::new();
+    let chars: Vec<char> = input.chars().collect();
+    let mut i = 0usize;
+
+    while i < chars.len() {
+        let c = chars[i];
+        // Count whitespace by characters to keep positions stable.
+        if c.is_whitespace() {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        match c {
+            '+' => {
+                tokens.push((Token::Plus, start));
+                i += 1;
+            }
+            '-' => {
+                tokens.push((Token::Minus, start));
+                i += 1;
+            }
+            '*' => {
+                tokens.push((Token::Star, start));
+                i += 1;
+            }
+            '/' => {
+                tokens.push((Token::Slash, start));
+                i += 1;
+            }
+            '^' => {
+                tokens.push((Token::Caret, start));
+                i += 1;
+            }
+            '(' => {
+                tokens.push((Token::LParen, start));
+                i += 1;
+            }
+            ')' => {
+                tokens.push((Token::RParen, start));
+                i += 1;
+            }
+            '0'..='9' | '.' => {
+                let mut j = i;
+                let mut digits = 0;
+                while j < chars.len() && chars[j].is_ascii_digit() {
+                    j += 1;
+                    digits += 1;
+                }
+                if j < chars.len() && chars[j] == '.' {
+                    j += 1;
+                    while j < chars.len() && chars[j].is_ascii_digit() {
+                        j += 1;
+                        digits += 1;
+                    }
+                }
+                if digits == 0 {
+                    return Err(ParseError {
+                        message: "expected digits in number literal".into(),
+                        position: start,
+                    });
+                }
+                // Optional exponent.
+                if j < chars.len() && (chars[j] == 'e' || chars[j] == 'E') {
+                    let mut k = j + 1;
+                    if k < chars.len() && (chars[k] == '+' || chars[k] == '-') {
+                        k += 1;
+                    }
+                    let exp_digits_start = k;
+                    while k < chars.len() && chars[k].is_ascii_digit() {
+                        k += 1;
+                    }
+                    if k > exp_digits_start {
+                        j = k;
+                    }
+                }
+                let text: String = chars[i..j].iter().collect();
+                let value = text
+                    .parse::<f64>()
+                    .map_err(|_| ParseError {
+                        message: format!("invalid number literal `{text}`"),
+                        position: start,
+                    })?;
+                tokens.push((Token::Number(value), start));
+                i = j;
+            }
+            c if c.is_alphabetic() || c == '_' => {
+                let mut j = i;
+                while j < chars.len()
+                    && (chars[j].is_alphanumeric() || chars[j] == '_')
+                {
+                    j += 1;
+                }
+                let name: String = chars[i..j].iter().collect();
+                tokens.push((Token::Ident(name), start));
+                i = j;
+            }
+            other => {
+                return Err(ParseError {
+                    message: format!("unexpected character `{other}`"),
+                    position: start,
+                });
+            }
+        }
+    }
+
+    Ok(tokens)
+}
+
+// ---------------------------------------------------------------------------
+// Parser
+// ---------------------------------------------------------------------------
+
+pub struct Parser<'a> {
+    tokens: &'a [(Token, usize)],
+    pos: usize,
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(tokens: &'a [(Token, usize)]) -> Self {
+        Parser { tokens, pos: 0 }
+    }
+
+    fn peek(&self) -> Option<&(Token, usize)> {
+        self.tokens.get(self.pos)
+    }
+
+    fn advance(&mut self) -> Option<&'a (Token, usize)> {
+        let tok = self.tokens.get(self.pos);
+        if tok.is_some() {
+            self.pos += 1;
+        }
+        tok
+    }
+
+    fn error_at(&self, token: Option<&(Token, usize)>, message: impl Into<String>) -> ParseError {
+        let (message, position) = match token {
+            Some((tok, pos)) => {
+                let msg = message.into();
+                if matches!(tok, Token::RParen | Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Caret | Token::LParen) {
+                    (msg, *pos)
+                } else {
+                    (msg, *pos)
+                }
+            }
+            None => (message.into(), self.end_position()),
+        };
+        ParseError { message, position }
+    }
+
+    fn end_position(&self) -> usize {
+        // Approximate end of input from last token's position (+ a token width).
+        match self.tokens.last() {
+            Some((tok, pos)) => pos + tok_width(tok),
+            None => 0,
+        }
+    }
+
+    fn expect_rparen(&mut self) -> Result<(), ParseError> {
+        match self.advance() {
+            Some((Token::RParen, _)) => Ok(()),
+            other => Err(self.error_at(other, "expected `)`")),
+        }
+    }
+
+    pub fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+        let mut left = self.parse_term()?;
+        while let Some((tok, _)) = self.peek() {
+            let op = match tok {
+                Token::Plus => BinaryOp::Add,
+                Token::Minus => BinaryOp::Sub,
+                _ => break,
+            };
+            self.advance();
+            let right = self.parse_term()?;
+            left = Expr::Binary(op, Box::new(left), Box::new(right));
+        }
+        Ok(left)
+    }
+
+    fn parse_term(&mut self) -> Result<Expr, ParseError> {
+        let mut left = self.parse_factor()?;
+        while let Some((tok, _)) = self.peek() {
+            let op = match tok {
+                Token::Star => BinaryOp::Mul,
+                Token::Slash => BinaryOp::Div,
+                _ => break,
+            };
+            self.advance();
+            let right = self.parse_factor()?;
+            left = Expr::Binary(op, Box::new(left), Box::new(right));
+        }
+        Ok(left)
+    }
+
+    fn parse_factor(&mut self) -> Result<Expr, ParseError> {
+        if let Some((Token::Minus, _)) = self.peek() {
+            self.advance();
+            let inner = self.parse_factor()?;
+            return Ok(Expr::Unary(UnaryOp::Neg, Box::new(inner)));
+        }
+        self.parse_power()
+    }
+
+    fn parse_power(&mut self) -> Result<Expr, ParseError> {
+        let base = self.parse_primary()?;
+        if let Some((Token::Caret, _)) = self.peek() {
+            self.advance();
+            // Right-associative; exponent may itself be negated/recursive.
+            let exp = self.parse_factor()?;
+            return Ok(Expr::Binary(BinaryOp::Pow, Box::new(base), Box::new(exp)));
+        }
+        Ok(base)
+    }
+
+    fn parse_primary(&mut self) -> Result<Expr, ParseError> {
+        match self.advance() {
+            Some((Token::Number(n), _)) => Ok(Expr::Number(*n)),
+            Some((Token::Ident(name), _)) => Ok(Expr::Variable(name.clone())),
+            Some((Token::LParen, _)) => {
+                let inner = self.parse_expression()?;
+                self.expect_rparen()?;
+                Ok(inner)
+            }
+            other => Err(self.error_at(other, "expected a number, identifier, or `(`")),
+        }
+    }
+}
+
+fn tok_width(tok: &Token) -> usize {
+    match tok {
+        Token::Number(n) => {
+            let s = n.to_string();
+            s.len()
+        }
+        Token::Ident(s) => s.chars().count(),
+        _ => 1,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/// Tokenize and parse `input` into an AST.
+pub fn parse(input: &str) -> Result<Expr, ParseError> {
+    let tokens = tokenize(input)?;
+    let mut parser = Parser::new(&tokens);
+    let expr = parser.parse_expression()?;
+    if let Some((tok, pos)) = parser.peek() {
+        return Err(ParseError {
+            message: format!("unexpected trailing token {tok}"),
+            position: *pos,
+        });
+    }
+    Ok(expr)
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn close(a: f64, b: f64) -> bool {
+        (a - b).abs() < 1e-9
+    }
+
+    #[test]
+    fn tokenizes_basic_expression() {
+        let toks = tokenize("1 + 2*x").unwrap();
+        assert_eq!(toks[0].0, Token::Number(1.0));
+        assert_eq!(toks[1].0, Token::Plus);
+        assert_eq!(toks[3].0, Token::Number(2.0));
+        assert_eq!(toks[4].0, Token::Star);
+        assert_eq!(toks[5].0, Token::Ident("x".into()));
+    }
+
+    #[test]
+    fn parses_precedence() {
+        let e = parse("1 + 2 * 3").unwrap();
+        let env = BTreeMap::new();
+        assert!(close(e.eval(&env).unwrap(), 7.0));
+    }
+
+    #[test]
+    fn parses_right_assoc_power() {
+        let e = parse("2 ^ 3 ^ 2").unwrap();
+        let env = BTreeMap::new();
+        assert!(close(e.eval(&env).unwrap(), 512.0));
+    }
+
+    #[test]
+    fn parses_unary_minus() {
+        let e

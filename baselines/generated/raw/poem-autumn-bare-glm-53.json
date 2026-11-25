@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "bare",
+ "prompt": "Write a poem about autumn. Output only the poem, with no title.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-autumn-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "The amber light falls soft and low,\nWhere summer's blaze has dimmed to gold,\nThe weary winds begin to blow\nAnd whisper stories growing old.\n\nThe maple drops its crimson crown\nUpon the frost-embroidered ground,\nWhile shadows lengthen, drifting down\nIn silence, without any sound.\n\nThe geese are calling from the height,\nTheir arrows pointed far from here,\nAnd evening comes a little more near,\nA little earlier than last night.\n\nThe harvest moon, so round and clear,\nWatches the fields let go their grain,\nAnd in the coolness of the year,\nWe feel both sorrow and its gain—\n\nFor all things fall, and yet they rise\nIn different forms, at different times,\nAnd beauty lives in goodbyes\nAs surely as in morning's chimes.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 27,
+  "completion_tokens": 165,
+  "total_tokens": 192,
+  "cost": 0.0007638,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

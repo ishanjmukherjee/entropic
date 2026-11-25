@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "bare",
+ "prompt": "Write a poem about autumn. Output only the poem, with no title.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-autumn-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "The trees let fall their gilded stores,\nA carpet spread on earthen floors,\nThe scent of woodsmoke, sharp and thin,\nAs cooler days at last begin.\n\nThe sun, a pale and weaker gold,\nTells tales of summer that are old,\nAnd shadows stretch a longer shape\nAcross the hill and through the grape.\n\nA rustle stirs the brittle corn,\nA single, clear, and lonely horn\nFrom some far field where geese converse,\nPreparing to rehearse the universe.\n\nApples drop with sodden thud,\nFermenting in the grass and mud,\nA sweet decay, a heady wine,\nA promise of the closing vine.\n\nSo let the branches turn to bone,\nThe world prepare its hushed, gray tone,\nFor in this withering, deep and vast,\nIs beauty that was built to last.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 19,
+  "completion_tokens": 173,
+  "total_tokens": 192,
+  "cost": 0.000584,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

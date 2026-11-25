@@ -1,0 +1,377 @@
+import React, {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+
+export interface ComboboxRenderState {
+  active: boolean;
+  selected: boolean;
+}
+
+export interface ComboboxProps<T> {
+  /** All available options. */
+  options: readonly T[];
+  /** Currently selected option, or null when nothing is selected. */
+  value: T | null;
+  /** Called when the user commits a selection, or clears it with Escape. */
+  onChange: (value: T | null) => void;
+  /** Stable unique key for each option. */
+  getKey: (option: T) => string;
+  /** Human-readable text for each option. Used for the input and default filtering. */
+  getLabel: (option: T) => string;
+  /** Visible label for the input (required for accessibility). */
+  label: string;
+  placeholder?: string;
+  /**
+   * Custom filter. Receives the lowercased, trimmed query.
+   * Defaults to a case-insensitive "contains" match on `getLabel`.
+   */
+  filter?: (option: T, query: string) => boolean;
+  /** Maximum number of options rendered at once. */
+  maxResults?: number;
+  /** Text shown (and announced) when no options match. */
+  noResultsText?: string;
+  /** Custom option renderer. */
+  renderOption?: (option: T, state: ComboboxRenderState) => ReactNode;
+  disabled?: boolean;
+  required?: boolean;
+  id?: string;
+  className?: string;
+  style?: CSSProperties;
+}
+
+const visuallyHidden: CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
+
+const styles = {
+  root: { position: "relative", display: "inline-block", minWidth: 240 } as CSSProperties,
+  label: { display: "block", marginBottom: 4, fontSize: 14, fontWeight: 600 } as CSSProperties,
+  input: {
+    boxSizing: "border-box",
+    width: "100%",
+    padding: "8px 10px",
+    fontSize: 14,
+    border: "1px solid #8a8a8a",
+    borderRadius: 4,
+  } as CSSProperties,
+  listbox: {
+    position: "absolute",
+    zIndex: 1000,
+    top: "100%",
+    left: 0,
+    right: 0,
+    margin: "4px 0 0",
+    padding: 4,
+    listStyle: "none",
+    maxHeight: 280,
+    overflowY: "auto",
+    background: "#fff",
+    border: "1px solid #8a8a8a",
+    borderRadius: 4,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+  } as CSSProperties,
+  option: {
+    padding: "6px 8px",
+    borderRadius: 3,
+    cursor: "pointer",
+    fontSize: 14,
+    userSelect: "none",
+  } as CSSProperties,
+  optionActive: { background: "#dbeafe" } as CSSProperties,
+  optionSelected: { fontWeight: 600 } as CSSProperties,
+  empty: {
+    position: "absolute",
+    zIndex: 1000,
+    top: "100%",
+    left: 0,
+    right: 0,
+    margin: "4px 0 0",
+    padding: "6px 8px",
+    background: "#fff",
+    border: "1px solid #8a8a8a",
+    borderRadius: 4,
+    fontSize: 14,
+    color: "#555",
+  } as CSSProperties,
+};
+
+/**
+ * Accessible autocomplete combobox implementing the WAI-ARIA 1.2
+ * "combobox with list autocomplete" pattern.
+ *
+ * Keyboard:
+ *  - ArrowDown / ArrowUp: open the list, or move the active option
+ *  - Enter: commit the active option
+ *  - Tab: commit the active option (if any) and move focus
+ *  - Escape: close the list; if already closed, clear the input and selection
+ */
+export function Combobox<T>({
+  options,
+  value,
+  onChange,
+  getKey,
+  getLabel,
+  label,
+  placeholder,
+  filter,
+  maxResults = 100,
+  noResultsText = "No results found",
+  renderOption,
+  disabled = false,
+  required = false,
+  id,
+  className,
+  style,
+}: ComboboxProps<T>) {
+  const reactId = useId();
+  const inputId = id ?? `${reactId}-input`;
+  const labelId = `${reactId}-label`;
+  const listboxId = `${reactId}-listbox`;
+  const optionId = (index: number) => `${reactId}-option-${index}`;
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectedLabel = value !== null ? getLabel(value) : "";
+  const selectedKey = value !== null ? getKey(value) : null;
+
+  const [query, setQuery] = useState(selectedLabel);
+  // `dirty` is true once the user has typed; until then, show all options.
+  const [dirty, setDirty] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  // Keep the input text in sync when the selection changes externally.
+  useEffect(() => {
+    setQuery(selectedLabel);
+    setDirty(false);
+  }, [selectedLabel]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const matches =
+      dirty && q
+        ? options.filter((option) =>
+            filter ? filter(option, q) : getLabel(option).toLowerCase().includes(q),
+          )
+        : options;
+    return matches.slice(0, maxResults);
+  }, [options, query, dirty, filter, getLabel, maxResults]);
+
+  const showList = open && !disabled && filtered.length > 0;
+  const showEmpty = open && !disabled && filtered.length === 0 && dirty;
+  // Clamp the active index if the filtered list shrank.
+  const active = activeIndex >= 0 && activeIndex < filtered.length ? activeIndex : -1;
+
+  // Keep the active option visible inside the scrolling listbox.
+  useEffect(() => {
+    if (active < 0) return;
+    const el = document.getElementById(optionId(active));
+    el?.scrollIntoView?.({ block: "nearest" });
+    // optionId is derived from reactId, which is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, reactId]);
+
+  const close = () => {
+    setOpen(false);
+    setActiveIndex(-1);
+  };
+
+  const commit = (option: T) => {
+    onChange(option);
+    setQuery(getLabel(option));
+    setDirty(false);
+    close();
+  };
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+    setDirty(true);
+    setOpen(true);
+    setActiveIndex(-1);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
+
+    switch (e.key) {
+      case "ArrowDown": {
+        e.preventDefault();
+        if (!open) {
+          setOpen(true);
+          setActiveIndex(filtered.length > 0 ? 0 : -1);
+          return;
+        }
+        if (filtered.length === 0) return;
+        setActiveIndex((i) => (i < 0 || i >= filtered.length - 1 ? 0 : i + 1));
+        return;
+      }
+
+      case "ArrowUp": {
+        e.preventDefault();
+        if (!open) {
+          setOpen(true);
+          setActiveIndex(filtered.length - 1);
+          return;
+        }
+        if (filtered.length === 0) return;
+        setActiveIndex((i) => (i <= 0 ? filtered.length - 1 : i - 1));
+        return;
+      }
+
+      case "Enter": {
+        if (showList && active >= 0) {
+          e.preventDefault();
+          commit(filtered[active]);
+        }
+        return;
+      }
+
+      case "Tab": {
+        if (showList && active >= 0) {
+          commit(filtered[active]);
+        } else {
+          close();
+        }
+        return;
+      }
+
+      case "Escape": {
+        if (open) {
+          e.preventDefault();
+          e.stopPropagation(); // Don't also close a surrounding dialog.
+          close();
+        } else if (query || value !== null) {
+          e.preventDefault();
+          setQuery("");
+          setDirty(false);
+          if (value !== null) onChange(null);
+        }
+        return;
+      }
+
+      default:
+        return;
+    }
+  };
+
+  const handleBlur = () => {
+    // Free text is discarded: the input reverts to the committed selection.
+    close();
+    setQuery(selectedLabel);
+    setDirty(false);
+  };
+
+  const handleClick = () => {
+    if (disabled) return;
+    setDirty(false);
+    setOpen(true);
+  };
+
+  const count = filtered.length;
+  const liveText = open
+    ? count > 0
+      ? `${count} ${count === 1 ? "result" : "results"} available`
+      : noResultsText
+    : "";
+
+  return (
+    <div className={className} style={{ ...styles.root, ...style }}>
+      <label id={labelId} htmlFor={inputId} style={styles.label}>
+        {label}
+      </label>
+
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="text"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        aria-expanded={showList}
+        aria-controls={showList ? listboxId : undefined}
+        aria-activedescendant={showList && active >= 0 ? optionId(active) : undefined}
+        aria-required={required || undefined}
+        aria-disabled={disabled || undefined}
+        autoComplete="off"
+        autoCapitalize="none"
+        spellCheck={false}
+        placeholder={placeholder}
+        disabled={disabled}
+        required={required}
+        value={query}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        onClick={handleClick}
+        style={{
+          ...styles.input,
+          ...(disabled ? { opacity: 0.6, cursor: "not-allowed" } : null),
+        }}
+      />
+
+      {showList && (
+        <ul
+          id={listboxId}
+          role="listbox"
+          aria-labelledby={labelId}
+          tabIndex={-1}
+          style={styles.listbox}
+        >
+          {filtered.map((option, index) => {
+            const key = getKey(option);
+            const selected = key === selectedKey;
+            const isActive = index === active;
+
+            return (
+              <li
+                key={key}
+                id={optionId(index)}
+                role="option"
+                aria-selected={selected}
+                // Prevent the input from blurring before the click registers.
+                onMouseDown={(e) => e.preventDefault()}
+                onMouseMove={() => {
+                  if (active !== index) setActiveIndex(index);
+                }}
+                onClick={() => commit(option)}
+                style={{
+                  ...styles.option,
+                  ...(isActive ? styles.optionActive : null),
+                  ...(selected ? styles.optionSelected : null),
+                }}
+              >
+                {renderOption
+                  ? renderOption(option, { active: isActive, selected })
+                  : getLabel(option)}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {showEmpty && <div style={styles.empty}>{noResultsText}</div>}
+
+      <div role="status" aria-live="polite" style={visuallyHidden}>
+        {liveText}
+      </div>
+    </div>
+  );
+}
+
+export default Combobox;

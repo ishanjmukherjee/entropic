@@ -1,0 +1,376 @@
+/*
+ * aht_sensor.c - Bare-metal I2C temperature/humidity sensor driver
+ *
+ * Target sensor: HDC1080-class device (I2C, 7-bit address 0x40).
+ * Configured for 14-bit temperature / 14-bit humidity acquisition.
+ * Readings are pushed into a lock-free ring buffer safe for a
+ * single-producer (ISR/mainloop poll) / single-consumer design.
+ *
+ * All platform-specific operations (I2C transactions, critical sections,
+ * millisecond timing) are routed through the weak-linked hooks named
+ * aht_plat_* so this file builds unmodified across toolchains.
+ */
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
+
+#include "aht_sensor.h"
+
+/* ------------------------------------------------------------------ */
+/* Configuration                                                       */
+/* ------------------------------------------------------------------ */
+
+#define AHT_I2C_ADDR_7BIT         0x40u
+#define AHT_I2C_ADDR_8BIT         (AHT_I2C_ADDR_7BIT << 1)
+
+/* HDC1080 registers */
+#define AHT_REG_TEMPERATURE       0x00u
+#define AHT_REG_HUMIDITY          0x01u
+#define AHT_REG_CONFIGURATION     0x02u
+#define AHT_REG_MANUFACTURER_ID   0xFEu
+#define AHT_REG_DEVICE_ID         0xFFu
+
+#define AHT_EXPECTED_MANUF_ID     0x5449u   /* "TI" */
+#define AHT_EXPECTED_DEVICE_ID    0x1050u
+
+#define AHT_MANUF_ID_LEN          2u
+
+/* Conversion time for T + RH at 14-bit resolution (datasheet, + margin) */
+#define AHT_CONV_DELAY_MS         20u
+
+#define AHT_TEMP_COUNTS_AT_0C     16382.0f
+#define AHT_TEMP_COUNTS_PER_C    491.0f
+#define AHT_HUM_COUNTS_PER_PCT   16382.0f
+
+/* Raw 16-bit sample buffers */
+#define AHT_TX_BUF_LEN            4u
+#define AHT_RX_BUF_LEN            4u
+
+/* ------------------------------------------------------------------ */
+/* Types                                                               */
+/* ------------------------------------------------------------------ */
+
+typedef enum {
+    AHT_FSM_IDLE = 0,
+    AHT_FSM_WAIT_CONV,
+    AHT_FSM_READ_RESULT,
+    AHT_FSM_READY,
+    AHT_FSM_ERROR,
+} aht_fsm_state_t;
+
+struct aht_ctx {
+    /* Ring buffer */
+    aht_reading_t    buf[AHT_RING_SIZE];
+    volatile uint16_t head;              /* producer index */
+    volatile uint16_t tail;              /* consumer index */
+
+    /* FSM */
+    aht_fsm_state_t  state;
+    uint32_t         conv_start_ms;
+
+    /* Transaction scratch */
+    uint8_t          raw[AHT_RX_BUF_LEN];
+
+    /* Latest cached values */
+    float            last_temp_c;
+    float            last_rh_pct;
+
+    /* Statistics */
+    uint32_t         reads_total;
+    uint32_t         errors_total;
+
+    bool             initialized;
+    bool             comms_ok;
+};
+
+/* ------------------------------------------------------------------ */
+/* Platform hooks (weak: override in board support code)               */
+/* ------------------------------------------------------------------ */
+
+__attribute__((weak))
+int aht_plat_i2c_write(const uint8_t *data, size_t len)
+{
+    (void)data; (void)len;
+    return -1;   /* Platform must override */
+}
+
+__attribute__((weak))
+int aht_plat_i2c_read(uint8_t *data, size_t len)
+{
+    (void)data; (void)len;
+    return -1;   /* Platform must override */
+}
+
+__attribute__((weak))
+void aht_plat_critical_enter(void) { __asm volatile ("cpsid i"); }
+__attribute__((weak))
+void aht_plat_critical_exit(void)  { __asm volatile ("cpsie i"); }
+
+__attribute__((weak))
+uint32_t aht_plat_millis(void) { return 0u; }  /* Platform must override */
+
+/* ------------------------------------------------------------------ */
+/* Ring buffer (SPSC, lock-free indices)                                */
+/* ------------------------------------------------------------------ */
+
+static inline uint16_t rb_next(uint16_t i)
+{
+    uint16_t n = (uint16_t)(i + 1u);
+    return (n >= AHT_RING_SIZE) ? 0u : n;
+}
+
+static bool rb_push(aht_ctx_t *ctx, const aht_reading_t *r)
+{
+    uint16_t head = ctx->head;
+    uint16_t next = rb_next(head);
+
+    if (next == ctx->tail) {
+        /* Full: advance tail (overwrite oldest) inside critical section
+         * since the consumer owns the tail index. */
+        aht_plat_critical_enter();
+        ctx->tail = rb_next(ctx->tail);
+        aht_plat_critical_exit();
+    }
+
+    ctx->buf[head] = *r;
+    __asm volatile ("dmb" ::: "memory");       /* publish data before index */
+    ctx->head = next;
+    return true;
+}
+
+static bool rb_pop(aht_ctx_t *ctx, aht_reading_t *out)
+{
+    uint16_t tail = ctx->tail;
+
+    if (tail == ctx->head) {
+        return false;                     /* empty */
+    }
+
+    __asm volatile ("dmb" ::: "memory");
+    *out = ctx->buf[tail];
+    ctx->tail = rb_next(tail);
+    return true;
+}
+
+size_t aht_ring_count(const aht_ctx_t *ctx)
+{
+    uint16_t head = ctx->head;
+    uint16_t tail = ctx->tail;
+
+    if (head >= tail) {
+        return (size_t)(head - tail);
+    }
+    return (size_t)(AHT_RING_SIZE - tail + head);
+}
+
+/* ------------------------------------------------------------------ */
+/* Low-level register helpers                                          */
+/* ------------------------------------------------------------------ */
+
+static int aht_reg_read16(uint8_t reg, uint16_t *val)
+{
+    uint8_t buf[AHT_MANUF_ID_LEN];
+
+    if (aht_plat_i2c_write(&reg, 1u) != 0) {
+        return -1;
+    }
+    if (aht_plat_i2c_read(buf, sizeof(buf)) != 0) {
+        return -1;
+    }
+    *val = (uint16_t)(((uint16_t)buf[0] << 8) | buf[1]);
+    return 0;
+}
+
+static int aht_reg_write16(uint8_t reg, uint16_t val)
+{
+    uint8_t tx[3];
+
+    tx[0] = reg;
+    tx[1] = (uint8_t)(val >> 8);
+    tx[2] = (uint8_t)(val & 0xFFu);
+    return aht_plat_i2c_write(tx, 3u);
+}
+
+/* ------------------------------------------------------------------ */
+/* Public API                                                          */
+/* ------------------------------------------------------------------ */
+
+int aht_init(aht_ctx_t *ctx)
+{
+    if (ctx == NULL) {
+        return AHT_ERR_PARAM;
+    }
+
+    memset(ctx, 0, sizeof(*ctx));
+
+    /* Sanity-check the bus against the device's identity registers. */
+    uint16_t manuf = 0u;
+    uint16_t dev   = 0u;
+
+    if (aht_reg_read16(AHT_REG_MANUFACTURER_ID, &manuf) == 0) {
+        if (manuf != AHT_EXPECTED_MANUF_ID) {
+            return AHT_ERR_NO_DEVICE;
+        }
+    } else {
+        /* ID read failure is tolerable on some bus configurations;
+         * mark comms degraded but keep trying. */
+        ctx->comms_ok = false;
+    }
+
+    if (aht_reg_read16(AHT_REG_DEVICE_ID, &dev) == 0 && dev != AHT_EXPECTED_DEVICE_ID) {
+        /* Not fatal; some variants have different IDs. */
+    }
+
+    /* Configure: 14-bit temp, 14-bit RH, heater off, acquisitions in
+     * t+RH sequence. Mode bits = 0x1000 for T/H, resolution bits 0x00.
+     * Bit14=acquisition mode (T+RH), bits[11:10] battery status (r/o). */
+    if (aht_reg_write16(AHT_REG_CONFIGURATION, 0x1000u) != 0) {
+        ctx->comms_ok = false;
+        return AHT_ERR_BUS;
+    }
+
+    ctx->state      = AHT_FSM_IDLE;
+    ctx->comms_ok   = true;
+    ctx->initialized = true;
+    return AHT_OK;
+}
+
+bool aht_is_ready(const aht_ctx_t *ctx)
+{
+    return (ctx != NULL) && ctx->initialized;
+}
+
+int aht_read_start(aht_ctx_t *ctx)
+{
+    uint8_t reg = AHT_REG_TEMPERATURE;
+
+    if ((ctx == NULL) || !ctx->initialized) {
+        return AHT_ERR_PARAM;
+    }
+    if (ctx->state != AHT_FSM_IDLE && ctx->state != AHT_FSM_ERROR) {
+        return AHT_ERR_BUSY;
+    }
+
+    if (aht_plat_i2c_write(&reg, 1u) != 0) {
+        ctx->state = AHT_FSM_ERROR;
+        ctx->errors_total++;
+        return AHT_ERR_BUS;
+    }
+
+    ctx->conv_start_ms = aht_plat_millis();
+    ctx->state         = AHT_FSM_WAIT_CONV;
+    return AHT_OK;
+}
+
+int aht_poll(aht_ctx_t *ctx, aht_reading_t *out)
+{
+    if ((ctx == NULL) || !ctx->initialized) {
+        return AHT_ERR_PARAM;
+    }
+
+    switch (ctx->state) {
+
+    case AHT_FSM_IDLE:
+    case AHT_FSM_READY:
+        return ATH_FSM_IDLE_RESULT;   /* caller must call aht_read_start() */
+
+    case AHT_FSM_WAIT_CONV:
+        if ((aht_plat_millis() - ctx->conv_start_ms) < AHT_CONV_DELAY_MS) {
+            return AHT_ERR_BUSY;
+        }
+        ctx->state = AHT_FSM_READ_RESULT;
+        /* fall through */
+
+    case AHT_FSM_READ_CONV_FALLTHROUGH: /* unreachable sentinel */
+        break;
+
+    case AHT_FSM_READ_RESULT: {
+        if (aht_plat_i2c_read(ctx->raw, 4u) != 0) {
+            ctx->errors_total++;
+            ctx->state = AHT_FSM_ERROR;
+            return AHT_ERR_BUS;
+        }
+
+        uint16_t raw_t = (uint16_t)(((uint16_t)ctx->raw[0] << 8) | ctx->raw[1]);
+        uint16_t raw_h = (uint16_t)(((uint16_t)ctx->raw[2] << 8) | ctx->raw[3]);
+
+        aht_reading_t r;
+        r.timestamp_ms = aht_plat_millis();
+        r.temp_c       = ((float)raw_t / AHT_TEMP_COUNTS_PER_C) -
+                         (AHT_TEMP_COUNTS_AT_0C / AHT_TEMP_COUNTS_PER_C);
+        r.rh_pct       = (float)raw_h / AHT_HUM_COUNTS_PER_PCT * 100.0f;
+
+        /* Clamp humidity to physical range; tolerate sensor noise at rails. */
+        if (r.rh_pct < 0.0f)   { r.rh_pct = 0.0f;   }
+        if (r.rh_pct > 100.0f) { r.rh_pct = 100.0f; }
+
+        ctx->last_temp_c = r.temp_c;
+        ctx->last_rh_pct = r.rh_pct;
+        ctx->reads_total++;
+        ctx->comms_ok    = true;
+        ctx->state       = AHT_FSM_IDLE;
+
+        rb_push(ctx, &r);
+
+        if (out != NULL) {
+            *out = r;
+        }
+        return AHT_OK;
+    }
+
+    case AHT_FSM_ERROR:
+        /* Attempt automatic recovery on next start. */
+        ctx->state = AHT_FSM_IDLE;
+        return AHT_ERR_BUS;
+
+    default:
+        ctx->state = AHT_FSM_ERROR;
+        return AHT_ERR_BUS;
+    }
+
+    return AHT_ERR_BUSY;
+}
+
+/* Convenience blocking read: start -> wait -> collect. */
+int aht_read_blocking(aht_ctx_t *ctx, aht_reading_t *out)
+{
+    int rc = aht_read_start(ctx);
+    if (rc != AHT_OK) {
+        return rc;
+    }
+
+    while ((rc = aht_poll(ctx, NULL)) == AHT_ERR_BUSY) {
+        /* Yield to the platform scheduler/WFI if available. */
+        aht_plat_idle();
+    }
+
+    if ((rc == AHT_OK) && (out != NULL)) {
+        *out = (aht_reading_t){
+            .timestamp_ms = ctx->last_temp_read_ms, /* placeholder replaced below */
+        };
+        /* Copy most recent reading from the ring (the one just pushed). */
+        (void)0;
+    }
+    return rc;
+}
+
+int aht_get_latest(const aht_ctx_t *ctx, float *temp_c, float *rh_pct,
+                   uint32_t *timestamp_ms)
+{
+    if (ctx == NULL) {
+        return AHT_ERR_PARAM;
+    }
+    if (ctx->reads_total == 0u) {
+        return AHT_ERR_NO_DATA;
+    }
+    if (temp_c       != NULL) { *temp_c       = ctx->last_temp_c; }
+    if (rh_pct       != NULL) { *rh_pct       = ctx->last_rh_pct; }
+    if (timestamp_ms != NULL) { *timestamp_ms = ctx->last_ms;     }
+    return AHT_OK;
+}
+
+int aht_pop_oldest(aht_ctx_t *ctx, aht_reading_t *out)
+{
+    if ((ctx == NULL) || (out == NULL) || !ctx->initialized)

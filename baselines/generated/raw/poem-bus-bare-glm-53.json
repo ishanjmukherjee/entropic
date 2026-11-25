@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "bare",
+ "prompt": "Write a poem about a city bus at night. Output only the poem, with no title.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-bus-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "Steel sighs at the corner stop,\nits windows glowing amber-gold,\na lantern rolling through the dark\non streets the midnight has holds.\n\nInside, a scatter of quiet souls—\na nurse with tired eyes,\na boy with headphones drowning out\nthe city's lullabies.\n\nThe driver's hands, steady and old,\nguide the beast through rain-slicked streets,\npast shuttered shops and sleeping homes\nwhere the porch light rarely greets.\n\nHeadlights carve a fleeting path\nthrough puddles mirroring the moon,\neach stop a breath, a pause, a door\nthat opens and closes too soon.\n\nWhen the last rider steps away\nand the engine's hum grows still,\nthe bus rolls empty to the barn,\nkeeping time the city will.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 31,
+  "completion_tokens": 157,
+  "total_tokens": 188,
+  "cost": 0.0007342,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

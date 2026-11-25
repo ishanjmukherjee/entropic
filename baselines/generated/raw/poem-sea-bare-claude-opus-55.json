@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "bare",
+ "prompt": "Write a poem about the sea. Output only the poem, with no title.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-sea-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "The sea keeps no ledger of the ships it takes,\nno list of names, no stone for those who sank;\nit folds them under like a bed one makes\neach morning, smoothing every wrinkled plank.\n\nIt speaks in one long vowel to the shore,\na breath drawn in, a breath let slowly go,\nthe same word it was saying long before\nthere was a mouth to answer it below.\n\nAt dawn it wears the color of a pearl,\nat noon a blue too bright to look upon,\nat dusk it takes the sun and lets it curl\nto embers, and then swallows it, and then it's gone.\n\nAnd still the children run to meet its edge,\nand still the old men sit and watch it turn,\nas if, between the breakers and the ledge,\nthere were some patient thing it meant to learn,\n\nor teach: that nothing held is ever kept,\nthat every wave arrives to pull away,\nthat all the salt of every tear we've wept\nis home again, and moving, and at play.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

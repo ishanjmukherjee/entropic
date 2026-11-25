@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "craft",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 900,
+ "id": "song-night-craft-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Cracked phone screen reads ten-fifteen\nWeed smoke curls through the fire escape\nTaxi’s a yellow wound across the bridge\nJasmine says my jacket’s a mistake\n\nPre-game in a kitchen with a flickering bulb\nTequila from a coffee mug pregnant with chips\nLucas palmed the aux cord like a dare\nNow we’re shouting hooks with bitten lips\n\nI hope the night forgets my name\nI hope the DJ plays the thing we can’t request\nI hope the floor gives way\nAnd I wake up broke and blessed\n\nBouncer’s neck is thicker than a promise\nHis pat-down found Lucas’s tin of mints\nInside, the red light makes us all aquatic\nA stranger grins with gold across his dent\n\nJasmine’s dancing like she’s shedding skin\nHer drink is blue and tastes like second grade\nLucas mouths a secret to a man in vape exhaust\nI guard the coats from everything they paid\n\nI hope the night forgets my name\nI hope the DJ plays the thing we can’t request\nI hope the floor gives way\nAnd I wake up broke and blessed\n\nSpilled a bourbon on a pinstriped sleeve\nThe guy just laughed and ordered me a double\nTurns out he frames the paintings at the Met\nSays Vermeer’s the only one who understood the trouble\n\nJasmine lost an earring down a vent\nWe lit a match and watched the silver disappear\nLucas bought a rose from somebody’s date\nAnd bit the stem and tucked it in my ear\n\nI hope the night forgets my name\nI hope the DJ plays the thing we can’t request\nI hope the floor gives way\nAnd I wake up broke and blessed\n\nWe ate cold empanadas on a stoop\nThe sky was pink and sick above the water towers\nLucas said the city’s just a sound that got too loud\nAnd I could almost see the air around the hours\n\nJasmine took a photo of the three of us\nHeld the phone too high so all the streetlight screamed\nSomebody’s pit bull licked the salt off of my hand\nNobody said a word. Nobody dreamed.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 142,
+  "completion_tokens": 468,
+  "total_tokens": 610,
+  "cost": 0.0017248,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "bare",
+ "prompt": "Write a poem about the sea. Output only the poem, with no title.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-sea-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Salt-throated, the horizon swallows the sun\nwhole each evening, spits it back bone-white\nat dawn. Tide marks write their riddles\non the skin of sand, erased before reading.\n\nWhat the sea keeps:\nthe helm of a ship named Perseverance,\na pocket watch still ticking in its tomb,\nyour voice the last time you called my name\nfrom the deck rail, waving.\n\nWhat the sea returns:\npolished stones, the illogic of driftwood,\nseaglass dulled to amber and green,\nsometimes a body, sometimes\nonly the jacket, the shoes.\n\nI have learned to translate\nthe dialect of gulls, to read\nthe contract of waves—\nhow they advance, advance,\nthen break their own promise.\n\nAt night the water invents another darkness.\nI wade in to my shoulders,\nlet the undertow write its counter-argument\nagainst my legs. Not drowning.\nListening. The old negotiations:\nbreath, salt, the cold grammar of buoyancy.\n\nWhat the sea forgets\nit invents again in fog,\nin the particular miss of a bell buoy\nclanging its one note\nwhere no chart marks danger or depth.\n\nI collect shells that once housed hunger.\nEach is a door the animal installed\nthen outgrew, abandoned.\nI put my ear to their hollow\nand hear machinery—my own blood,\nthe lie we tell about oceans\nbeginning here, so small,\nso desperate for the larger darkness.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 25,
+  "completion_tokens": 305,
+  "total_tokens": 330,
+  "cost": 0.001057,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

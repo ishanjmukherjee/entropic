@@ -1,0 +1,25 @@
+{
+ "set": "play",
+ "kind": "play",
+ "prompt_id": "play-funeral",
+ "style": "craft",
+ "prompt": "Write a scene for a stage play, about 700 words. Situation: two estranged brothers meet at their father's funeral.\n\nWrite it as a skilled playwright would. Each character wants something from the other and will not say what; the scene is the manoeuvring. Lines should be short and speakable, with people cutting across each other, changing the subject, answering the question they wish they had been asked. Keep stage directions few and physical. Let one object on stage matter. No speech that explains a feeling or a history, and no tidy resolution: end on an action or a line that leaves the question open.\n\nFormat: character names in capitals on their own line, the speech on the next line, stage directions in parentheses. Output only the script, with no title or cast list.",
+ "model": "kimi-k2.6",
+ "max_tokens": 1500,
+ "id": "play-funeral-craft-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "MARCUS enters the vestry. He stops.\n\nSIMON is at a small table, turning a pocket watch over in his hands.\n\nMARCUS\nNo sign outside. Thought it was tomorrow.\n\nSIMON\nTen fifteen today.\n\nMARCUS\nI was told—\n\nSIMON\nBy who?\n\nMARCUS\nDoesn't matter now.\n\n(Silence. SIMON closes the watch, opens it.)\n\nSIMON\nRail said you'd be late.\n\nMARCUS\nYou spoke?\n\nSIMON\nI informed him.\n\nMARCUS\nThat was kind.\n\nSIMON\nIt was practical.\n\n(He holds up the watch.)\n\nYou recognise it.\n\nMARCUS\nShould I?\n\nSIMON\nHe wore it. Sundays.\n\nMARCUS\nDid he?\n\nSIMON\nYou're saying no.\n\nMARCUS\nI'm saying did he. Different words.\n\n(MARCUS moves toward a chair, doesn't sit.)\n\nHell of a turnout.\n\nSIMON\nCouncilmen. Two MPs.\n\nMARCUS\nHe'd have enjoyed that.\n\nSIMON\nHe'd have expected it.\n\n(The watch again. Click. Close. Click. Open.)\n\nHe left it to me. Specifically.\n\nMARCUS\nHe had little enough.\n\nSIMON\nThis. The cufflinks you wore. The house.\n\nMARCUS\nI own no house.\n\nSIMON\nI meant my house. Where he died.\n\nMARCUS\nAh.\n\nSIMON\nYou weren't there.\n\nMARCUS\nI was informed.\n\nSIMON\nPractical again.\n\n(SIMON sets the watch on the table. MARCUS looks at it.)\n\nI offered to bring him. London. The specialist you named.\n\nMARCUS\nI didn't name him.\n\nSIMON\nYou suggested. In your letter.\n\nMARCUS\nThat was—\n\nSIMON\nWinter. Yes.\n\nMARCUS\n—different circumstances.\n\n(SIMON laughs, once.)\n\nYou find that funny.\n\nSIMON\nI find it a sentence.\n\n(SIMON pockets the watch. MARCUS's hand moves, stops.)\n\nHe spoke of you. The end.\n\nMARCUS\nWhat end?\n\nSIMON\nHospital. Three days.\n\nMARCUS\nThere was time, then.\n\nSIMON\nThere was.\n\n(MARCUS walks to the window, back.)\n\nMARCUS\nWhat did he say?\n\nSIMON\nThat you were busy.\n\nMARCUS\nBusy.\n\nSIMON\nYour words. From the phone.\n\nMARCUS\nI never—\n\nSIMON\nYou said: \"Busy month, tell him I'll ring Sunday.\" Four Sundays running.\n\nMARCUS\nHe knew my situation.\n\nSIMON\nHe knew your months.\n\n(SIMON checks the watch against the wall clock. They do not match. He adjusts it.)\n\nHalf the people out there think you're in Canada.\n\nMARCUS\nI was.\n\nSIMON\nWhen?\n\nMARCUS\nRecently.\n\nSIMON\nNot when he spoke of you. Not when you missed the funeral.\n\nMARCUS\nThis is the funeral.\n\nSIMON\nThe first. October.\n\n(MARCUS sits, finally.)\n\nYou didn't know.\n\nMARCUS\nI was in—\n\nSIMON\nCanada. No.\n\n(Silence.)\n\nWhat are you doing here, Marcus?\n\nMARCUS\nWhat is required.\n\nSIMON\nPlenty requires nothing.\n\nMARCUS\nThen why attend?\n\nSIMON\nI'll ask the questions.\n\nMARCUS\nYou've always—\n\nSIMON\nNot always. Not always.\n\n(SIMON places the watch on the table between them. Steps back.)\n\nI don't want it. The mechanism sticks. He wound it too tight, forever, trying to—\n\nMARCUS\nTrying to what?\n\nSIMON\n—keep something moving.\n\n(SIMON moves to the door.)\n\nBe practical. Be informed. Wear the cufflinks, someone should.\n\nMARCUS\nHe meant you to have it.\n\nSIMON\nHe meant something.\n\n(SIMON exits.)\n\n(MARCUS alone. He picks up the watch. Holds it to his ear. Shakes it. Presses it against his forehead, eyes closed. He does not wind it.)\n\n(Blackout.)",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 171,
+  "completion_tokens": 852,
+  "total_tokens": 1023,
+  "cost": 0.0030336,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

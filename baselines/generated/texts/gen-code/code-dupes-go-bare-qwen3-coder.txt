@@ -1,0 +1,208 @@
+package main
+
+import (
+	"crypto/md5"
+	"encoding/hex"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+// FileInfo holds information about a file
+type FileInfo struct {
+	Path string
+	Size int64
+}
+
+// FileHash holds file path and its hash
+type FileHash struct {
+	Path string
+	Hash string
+}
+
+func main() {
+	var (
+		dirPath    = flag.String("dir", ".", "Directory to scan for duplicates")
+		minSize    = flag.Int64("min-size", 1, "Minimum file size to consider (bytes)")
+		extensions = flag.String("ext", "", "Comma-separated list of file extensions to include (e.g., 'jpg,png')")
+		verbose    = flag.Bool("v", false, "Verbose output")
+	)
+
+	flag.Parse()
+
+	if _, err := os.Stat(*dirPath); os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "Error: Directory '%s' does not exist\n", *dirPath)
+		os.Exit(1)
+	}
+
+	exts := parseExtensions(*extensions)
+
+	// First pass: group files by size
+	if *verbose {
+		fmt.Println("Scanning directory...")
+	}
+
+	sizeGroups, err := groupFilesBySize(*dirPath, *minSize, exts, *verbose)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error scanning directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Second pass: calculate hashes for files with same size
+	if *verbose {
+		fmt.Println("Finding duplicates...")
+	}
+
+	duplicates := findDuplicates(sizeGroups, *verbose)
+
+	// Print results
+	printDuplicates(duplicates)
+}
+
+// parseExtensions parses comma-separated extensions into a map
+func parseExtensions(extStr string) map[string]bool {
+	if extStr == "" {
+		return nil
+	}
+
+	exts := make(map[string]bool)
+	for _, ext := range strings.Split(extStr, ",") {
+		ext = strings.TrimSpace(ext)
+		if ext != "" {
+			if !strings.HasPrefix(ext, ".") {
+				ext = "." + ext
+			}
+			exts[strings.ToLower(ext)] = true
+		}
+	}
+	return exts
+}
+
+// groupFilesBySize walks the directory and groups files by their size
+func groupFilesBySize(dirPath string, minSize int64, exts map[string]bool, verbose bool) (map[int64][]FileInfo, error) {
+	sizeGroups := make(map[int64][]FileInfo)
+
+	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			if verbose {
+				fmt.Fprintf(os.Stderr, "Warning: Cannot access %s: %v\n", path, err)
+			}
+			return nil
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		// Check extension filter
+		if exts != nil {
+			ext := strings.ToLower(filepath.Ext(path))
+			if _, ok := exts[ext]; !ok {
+				return nil
+			}
+		}
+
+		// Skip files smaller than minimum size
+		if info.Size() < minSize {
+			return nil
+		}
+
+		sizeGroups[info.Size()] = append(sizeGroups[info.Size()], FileInfo{
+			Path: path,
+			Size: info.Size(),
+		})
+
+		return nil
+	})
+
+	return sizeGroups, err
+}
+
+// findDuplicates calculates MD5 hashes for files with same size and identifies duplicates
+func findDuplicates(sizeGroups map[int64][]FileInfo, verbose bool) map[string][]string {
+	duplicates := make(map[string][]string)
+
+	for size, files := range sizeGroups {
+		// Skip files that are unique in size
+		if len(files) < 2 {
+			continue
+		}
+
+		if verbose {
+			fmt.Printf("Processing %d files of size %d bytes\n", len(files), size)
+		}
+
+		// Calculate hashes for all files of this size
+		hashes := make(map[string][]string)
+
+		for _, file := range files {
+			hash, err := calculateMD5(file.Path)
+			if err != nil {
+				if verbose {
+					fmt.Fprintf(os.Stderr, "Warning: Cannot read %s: %v\n", file.Path, err)
+				}
+				continue
+			}
+
+			hashes[hash] = append(hashes[hash], file.Path)
+		}
+
+		// Add duplicates to result
+		for hash, paths := range hashes {
+			if len(paths) > 1 {
+				duplicates[hash] = paths
+			}
+		}
+	}
+
+	return duplicates
+}
+
+// calculateMD5 calculates the MD5 hash of a file
+func calculateMD5(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// printDuplicates prints the duplicate files grouped by hash
+func printDuplicates(duplicates map[string][]string) {
+	if len(duplicates) == 0 {
+		fmt.Println("No duplicate files found.")
+		return
+	}
+
+	// Sort hashes for consistent output
+	hashes := make([]string, 0, len(duplicates))
+	for hash := range duplicates {
+		hashes = append(hashes, hash)
+	}
+	sort.Strings(hashes)
+
+	fmt.Printf("Found %d duplicate groups:\n\n", len(duplicates))
+
+	for i, hash := range hashes {
+		paths := duplicates[hash]
+		fmt.Printf("Group %d (hash: %s):\n", i+1, hash)
+
+		// Sort paths for consistent output
+		sort.Strings(paths)
+		for _, path := range paths {
+			fmt.Printf("  %s\n", path)
+		}
+		fmt.Println()
+	}
+}

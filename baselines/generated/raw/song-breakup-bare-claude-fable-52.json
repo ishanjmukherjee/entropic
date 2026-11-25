@@ -1,0 +1,16 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-breakup",
+ "style": "bare",
+ "prompt": "Write the lyrics of a pop song about a breakup. Output only the lyrics.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 900,
+ "id": "song-breakup-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "**\"Ghost in My Passenger Seat\"**\n\n**Verse 1**\nYour coffee cup's still on the shelf\nI keep it there to hurt myself\nThe radio plays our favorite song\nI turn it up, then turn it off\nYou took your records and your coat\nLeft me a three-line goodbye note\nI read it twice, I read it ten\nStill don't know where the end began\n\n**Pre-Chorus**\nAnd everybody says I'm better off\nBut they don't know what I lost\n\n**Chorus**\n'Cause you're the ghost in my passenger seat\nSinging off-key to the summer heat\nI'm driving past every place we've been\nRed lights flashing like \"remember when\"\nI'm learning how to be alone\nDeleting pictures off my phone\nBut every road leads back to you and me\nYou're the ghost in my passenger seat\n\n**Verse 2**\nYour sister called me yesterday\nI didn't know what I should say\n\"I'm doing fine\" came out too fast\nA little lie to make it last\nI painted over the bedroom blue\nThe color you said looked like you\nBut in the dark it's all the same\nThe walls still whisper your name\n\n**Pre-Chorus**\nAnd everybody says to give it time\nBut time's not on my side\n\n**Chorus**\n'Cause you're the ghost in my passenger seat\nSinging off-key to the summer heat\nI'm driving past every place we've been\nRed lights flashing like \"remember when\"\nI'm learning how to be alone\nDeleting pictures off my phone\nBut every road leads back to you and me\nYou're the ghost in my passenger seat\n\n**Bridge**\nMaybe one day I'll take the long way home\nAnd not look over\nMaybe one day I'll hear that song come on\nAnd feel no colder\nI'll roll the windows down\nLet the wind take your sound\nBut not tonight, not tonight\nTonight I'm holding on\n\n**Final Chorus**\nTo the ghost in my passenger seat\nThe echo of what we used to be\nI'm driving past every place we've been\nGreen lights saying \"try again\"\nI'm learning how to be my own\nFinding my way back on my own\nAnd someday this road will set me free\nFrom the ghost in my passenger seat\n\n**Outro**\nYour coffee cup's still on the shelf\nTomorrow I'll put it somewhere else\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

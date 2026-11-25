@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "bare",
+ "prompt": "Write a villanelle about forgetting. Output only the poem, with no title.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-forgetting-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "I've lost the names I used to keep\nin boxes labeled with such care—\nwhat I forgot, I cannot keep.\n\nThe photographs begin to sleep\nin albums faded by the air.\nI've lost the names I used to keep.\n\nThe birthdays sink into the deep\nof calendars I left somewhere.\nWhat I forgot, I cannot keep.\n\nThe faces that I used to reap\nfrom memory's field now disappear.\nI've lost the names I used to keep.\n\nThe stories that I meant to steep\nin telling them dissolve to spare.\nWhat I forgot, I cannot keep.\n\nNow even absence cannot keep\nthe shape of what was never there.\nI've lost the names I used to keep;\nwhat I forgot, I cannot keep.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 35,
+  "completion_tokens": 153,
+  "total_tokens": 188,
+  "cost": 0.0024,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

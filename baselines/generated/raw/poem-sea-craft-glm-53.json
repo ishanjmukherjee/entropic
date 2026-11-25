@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: the sea. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-sea-craft-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "At low tide the flats at Morecambe shine\nlike a wet roof. A man walks out\npast the old lifeguard station, bucket\nin one hand, digs for cockles\nwith his heel where the sand\nsplits around his boot.\n\nFour o'clock. The light has quit\npretending. It lies flat on the water\nand the water takes it\nwithout comment. Out near the channel\na cormorant holds its wings open\nlike laundry on a line,\ndrying in a wind nobody feels.\n\nThe woman on the promenade bench\npeels an orange with her thumbs.\nHer dog watches the peel\nfall between the slats.\nShe reads the same page\nfor a long time.\n\nGulls argue over something dead\nnear the ferry slip. Their noise\ncarries better than the sea does,\nwhich today is only a shuffle,\na turning of pages,\n\nand at the far edge, where the sand\ngoes back to being water,\na single figure stands so still\nhe could be planted there,\nuntil he isn't,\nuntil he bends and lifts\nsomething small and shining\ninto his coat.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 188,
+  "completion_tokens": 235,
+  "total_tokens": 423,
+  "cost": 0.0012972,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

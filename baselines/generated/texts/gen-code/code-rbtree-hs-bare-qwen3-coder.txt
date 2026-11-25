@@ -1,0 +1,62 @@
+{-# LANGUAGE DeriveFunctor #-}
+module RedBlackTree
+  ( RedBlackTree
+  , empty
+  , insert
+  , member
+  , toList
+  ) where
+
+data Color = Red | Black
+  deriving (Show, Eq)
+
+data RedBlackTree a
+  = Empty
+  | Node Color (RedBlackTree a) a (RedBlackTree a)
+  deriving (Show, Functor)
+
+-- | Create an empty red-black tree
+empty :: RedBlackTree a
+empty = Empty
+
+-- | Insert a value into the red-black tree
+insert :: Ord a => a -> RedBlackTree a -> RedBlackTree a
+insert x tree =
+  let (Node _ left val right) = ins tree
+  in Node Black left val right
+  where
+    ins Empty = Node Red Empty x Empty
+    ins (Node color left val right) =
+      case compare x val of
+        LT -> balance color (ins left) val right
+        GT -> balance color left val (ins right)
+        EQ -> Node color left val right
+
+    balance :: Color -> RedBlackTree a -> a -> RedBlackTree a -> RedBlackTree a
+    balance Black (Node Red (Node Red a x b) y c) z d =
+      Node Red (Node Black a x b) y (Node Black c z d)
+    balance Black (Node Red a x (Node Red b y c)) z d =
+      Node Red (Node Black a x b) y (Node Black c z d)
+    balance Black a x (Node Red (Node Red b y c) z d) =
+      Node Red (Node Black a x b) y (Node Black c z d)
+    balance Black a x (Node Red b y (Node Red c z d)) =
+      Node Red (Node Black a x b) y (Node Black c z d)
+    balance color left val right = Node color left val right
+
+-- | Check if a value is a member of the red-black tree
+member :: Ord a => a -> RedBlackTree a -> Bool
+member _ Empty = False
+member x (Node _ left val right) =
+  case compare x val of
+    LT -> member x left
+    GT -> member x right
+    EQ -> True
+
+-- | Convert the red-black tree to a sorted list
+toList :: RedBlackTree a -> [a]
+toList = foldTree (:[]) (:) (++) []
+  where
+    foldTree :: (a -> b) -> (a -> b -> b -> b) -> (b -> b -> b) -> b -> RedBlackTree a -> b
+    foldTree f g h z Empty = z
+    foldTree f g h z (Node _ left val right) =
+      g val (foldTree f g h z left) (foldTree f g h z right)

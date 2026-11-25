@@ -1,0 +1,25 @@
+{
+ "set": "essay",
+ "kind": "essay",
+ "prompt_id": "essay-city",
+ "style": "bare",
+ "prompt": "Write a personal essay about moving to a new city. About 800 words. Output only the essay, with no title.",
+ "model": "kimi-k3",
+ "max_tokens": 1600,
+ "id": "essay-city-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The boxes arrived on a Tuesday, thirty-seven of them stacked like a small cityscape in the middle of my new living room. I stood there holding a box cutter, suddenly aware that I didn’t know a single person within a three-hundred-mile radius. The silence was different here. In my old town, quiet felt like a blanket. Here, it felt like an echo.\n\nI had moved for a reason that sounded good when I explained it to friends back home: opportunity, fresh start, expanding horizons. But standing in an apartment where the light fell wrong through the windows, I understood I had traded the known for the possible, and the possible has a terrifying way of being indistinguishable from the empty.\n\nThe first weeks were a study in orientation. I learned the geography of my new life by getting lost repeatedly. I discovered the corner store sold terrible coffee but was owned by a man who would later remember my name. I found the park where old men played chess on Sundays, their concentration so complete it felt like architecture. I began to measure time not by days but by small recognitions — the barista who no longer needed my order, the neighbor who waved first, the moment I stopped automatically locking my doors at certain intersections because I’d learned which shadows were just shadows.\n\nLonely is a word we use too carelessly. There is loneliness as absence, and then there is the strange, fertile loneliness of starting over. I was an island learning to be a peninsula. I spent evenings walking without destination, following the curve of the river that divided the city, watching how the light changed on the water. In my old life, I had been busy with the machinery of existing. Here, I had space to notice the color of buildings at dusk, the particular cadence of speech that made this place itself, the way autumn arrived not with a single cold snap but with a slow cooling of the air like a long-held breath being released.\n\nI found a job, though not the one I had imagined. I made friends, though not the kind who had known me since childhood. These relationships were different — built not on shared history but on shared present, on the vulnerability of being new and the generosity of those who welcomed it暂时市列表. We told each other stories of where we came from, of what we left behind, never quite believing the other would understand the shape of our old lives. We were wrong and right simultaneously.\n\nThe city began to accumulate meaning in unexpected places. A bookstore where I spent rainy Saturdays. A diner with cracked vinyl booths where I wrote letters I would never send. The sound of a street musician who played saxophone beneath my window on summer nights, his music rising like smoke through the still air. These were the unglamorous things that slowly wove themselves into a sense of belonging, thread by thread.\n\nI learned that home is not a place but a practice. It is built from small rituals — the grocery list that evolves to include the new preferences of a new climate, the route to work that becomes so familiar it disappears, the moment you wake and know, without thinking, which window faces east. Home is the accumulation of ordinary days until they become something that holds weight.\n\nThere are still moments when the absence of people who knew me when feels acute. I see an old car and reach for my phone to tell someone who no longer exists in this geography. I laugh at a joke that requires context I will never fully explain. But these moments have grown softer at the edges. They are not wounds anymore but scars, evidence of a life that continued even after the ground shifted.\n\nThe boxes are long since unpacked, their contents dispersed through rooms that now feel inevitable. I have photos on the walls, plants I have somehow kept alive, a dent in my particular chair that marks my shape against the world. The city outside has become specific — not \"the new place\" but \"home,\" with all its attendant frustrations and familiarities.\n\nI moved here looking for something I could not name. I found it in the small hours of a Tuesday, standing in my kitchen with the light falling exactly where it should, aware that I had become someone who knew which direction the river ran. The loneliness remains, but it has changed shape. It is no longer the emptiness of isolation but the fullness of independence — the knowledge that I carried myself here, and that in doing so, I discovered what I was capable of carrying.\n\nThe city is quiet tonight. The silence is different now. It feels like mine.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 43,
+  "completion_tokens": 923,
+  "total_tokens": 966,
+  "cost": 0.013974,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

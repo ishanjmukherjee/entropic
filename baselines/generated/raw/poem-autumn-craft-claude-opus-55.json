@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: autumn. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-autumn-craft-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "At half past four the lift bridge in Duluth\nrises for a laker riding low with taconite,\nand the horn comes over the water twice,\nonce from the hull and once back off the hill.\n\nI am carrying storm windows up from my father's basement.\nEach frame is numbered in grease pencil\nin the hand he had in 1987,\nwhen he still crossed his sevens.\nNumber four goes over the sink.\nNumber nine has a cracked pane he taped in an X\nand never replaced, and the tape has gone the color of tea.\n\nThe screens come down. In their corners\na summer of moths, which I knock out\nagainst the porch rail the way he knocked his pipe.\nBy spring the ore in that ship will be a fender in Toledo.\n\nDown the block a neighbor rakes maple leaves\ninto the gutter, where the city truck will vacuum them\nTuesday, if it doesn't snow.\nI turn the last brass button on number four.\nIt sticks where it always stuck.\n\nThe bridge settles back onto its road.\nBehind the new glass the kitchen light clicks on by its timer\nand lays out on the counter for me\nhis reading glasses, a jar of screws,\nmy own two hands in his gloves.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

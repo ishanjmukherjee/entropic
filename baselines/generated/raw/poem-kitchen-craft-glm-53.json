@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a kitchen. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-kitchen-craft-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "The kettle ticks as it cools,\npast six, the window gone dark\nover Fourth Street where the bus\nreleases one passenger, then none.\n\nMy mother's knife, the small one\nwith the cracked wooden handle,\nstill cuts the onion on the board\nshe bought before I was born.\nThe onion comes apart in rings.\nOne lands on the floor and I leave it.\n\nThe fridge hums, stops, hums.\nA magnet holds the dentist's card\nfrom an appointment four years old.\nOn the stove, oil shifts\nand settles in the pan\nlike something deciding.\n\nI rinse the rice until the water\nruns off clear, and the radio man\nsays rain for Thursday, then\nreads the scores. The cat\npushes her head into my shin.\nHer bowl is already empty—\nshe has learned to ask early.\n\nSteam climbs the window\nand the streetlight doubles in it.\nI salt the water twice,\nhappy, and put the lid on.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 188,
+  "completion_tokens": 222,
+  "total_tokens": 410,
+  "cost": 0.00124,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

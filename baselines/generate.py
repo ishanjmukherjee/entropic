@@ -174,9 +174,13 @@ LABEL = re.compile(r"^\s*[\[\(\*]*\s*(verse|chorus|bridge|pre-?chorus|post-?chor
 def clean(raw, kind):
     text = re.sub(r"<think>.*?</think>", "", raw, flags=re.S).replace("\r\n", "\n").strip()
     if kind == "code":
-        blocks = re.findall(r"```[^\n]*\n(.*?)```", text, flags=re.S)
-        if blocks:
-            text = max(blocks, key=len)
+        # The first fenced block: from the first line that opens a fence to the
+        # next line that starts with one (or the end, if the output was cut
+        # off). Fences inside doc comments do not start a line.
+        lines = text.split("\n")
+        fences = [i for i, l in enumerate(lines) if l.startswith("```")]
+        if fences:
+            text = "\n".join(lines[fences[0] + 1:fences[1] if len(fences) > 1 else len(lines)])
         return "\n".join(l.rstrip() for l in text.split("\n")).strip("\n")
     lines = text.split("\n")
     if lines and re.match(r"^(sure|certainly|of course|okay|here('s| is| are))\b.*[:!.]\s*$", lines[0], re.I) and len(lines[0]) < 120:

@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-kitchen",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a kitchen. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-kitchen-craft-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The kettle clicks off before it boils.\nSomeone has left the radio low,\na voice from Duluth selling mattresses\nto the burner, the sink, the empty stool.\n\nI wipe crumbs from the cutting board—\nrye, seeded, gone dark at the edges—\nand find a bottle cap under the knife block.\nIt says *try again*. The light through the window\n\nhas the color of weak tea.\nOn the counter, a bowl of lemons\nfrom the tree that survived the frost,\ntheir skins cold, their ends still green.\n\nThe faucet drips. I count four seconds,\nthen lose count. A truck downshifts\non the hill. My hands smell of garlic\nand the pencil I sharpened this morning.\n\nThere is a hairline crack in the blue plate\nI mean to throw out and never do.\nThe oven clock reads 6:47,\nbut the oven is off, and the kitchen\n\nis filling with the first stars,\nwhich look nothing like stars\nthrough the screen door—\nonly small holes where the light gets in.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 195,
+  "completion_tokens": 223,
+  "total_tokens": 418,
+  "cost": 0.00393,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

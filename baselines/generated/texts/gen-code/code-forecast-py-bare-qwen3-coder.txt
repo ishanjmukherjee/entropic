@@ -1,0 +1,246 @@
+"""
+Daily Sales Forecasting Pipeline
+
+Loads daily sales data from CSV, cleans the data, and performs seasonal forecasting
+using SARIMA models with statsmodels.
+"""
+
+import pandas as pd
+import numpy as np
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import warnings
+warnings.filterwarnings('ignore')
+
+
+def load_and_clean_data(filepath):
+    """
+    Load and clean daily sales data from CSV file.
+
+    Parameters:
+    filepath (str): Path to the CSV file containing sales data
+
+    Returns:
+    pd.DataFrame: Cleaned daily sales data with date index
+    """
+    # Load data
+    df = pd.read_csv(filepath)
+
+    # Convert date column to datetime
+    date_columns = [col for col in df.columns if 'date' in col.lower() or 'time' in col.lower()]
+    if date_columns:
+        df['date'] = pd.to_datetime(df[date_columns[0]])
+    else:
+        # Assume first column is date if no obvious date column found
+        df['date'] = pd.to_datetime(df.iloc[:, 0])
+
+    # Identify sales/revenue column
+    sales_columns = [
+        col for col in df.columns
+        if any(keyword in col.lower() for keyword in ['sales', 'revenue', 'amount', 'value'])
+    ]
+
+    if not sales_columns:
+        # Use last numeric column if no obvious sales column found
+        numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+        sales_columns = [numeric_columns[-1]] if numeric_columns else []
+
+    if not sales_columns:
+        raise ValueError("Could not identify sales column in the dataset")
+
+    sales_col = sales_columns[0]
+
+    # Create cleaned dataframe
+    cleaned_df = df[['date', sales_col]].copy()
+    cleaned_df.columns = ['date', 'sales']
+
+    # Remove rows with missing values
+    cleaned_df = cleaned_df.dropna()
+
+    # Remove negative sales (if any)
+    cleaned_df = cleaned_df[cleaned_df['sales'] >= 0]
+
+    # Set date as index and sort
+    cleaned_df.set_index('date', inplace=True)
+    cleaned_df.sort_index(inplace=True)
+
+    # Resample to ensure daily frequency, filling gaps with zeros
+    cleaned_df = cleaned_df.resample('D').sum().fillna(0)
+
+    return cleaned_df
+
+
+def analyze_seasonality(data, period=365):
+    """
+    Analyze seasonality in the time series data.
+
+    Parameters:
+    data (pd.Series): Time series data
+    period (int): Seasonal period (default: 365 for yearly seasonality)
+
+    Returns:
+    dict: Seasonality analysis results
+    """
+    try:
+        decomposition = seasonal_decompose(data, model='additive', period=period)
+        return {
+            'trend': decomposition.trend,
+            'seasonal': decomposition.seasonal,
+            'residual': decomposition.resid,
+            'observed': decomposition.observed
+        }
+    except Exception as e:
+        print(f"Warning: Could not perform seasonal decomposition: {e}")
+        return None
+
+
+def fit_sarima_model(train_data, order=(1, 1, 1), seasonal_order=(1, 1, 1, 7)):
+    """
+    Fit SARIMA model to the training data.
+
+    Parameters:
+    train_data (pd.Series): Training time series data
+    order (tuple): (p,d,q) ARIMA parameters
+    seasonal_order (tuple): (P,D,Q,s) seasonal parameters
+
+    Returns:
+    SARIMAXResults: Fitted model results
+    """
+    model = SARIMAX(
+        train_data,
+        order=order,
+        seasonal_order=seasonal_order,
+        enforce_stationarity=False,
+        enforce_invertibility=False
+    )
+
+    fitted_model = model.fit(disp=False)
+    return fitted_model
+
+
+def evaluate_forecast(actual, predicted):
+    """
+    Evaluate forecast accuracy using multiple metrics.
+
+    Parameters:
+    actual (array-like): Actual values
+    predicted (array-like): Predicted values
+
+    Returns:
+    dict: Dictionary containing evaluation metrics
+    """
+    mae = mean_absolute_error(actual, predicted)
+    mse = mean_squared_error(actual, predicted)
+    rmse = np.sqrt(mse)
+
+    # Mean Absolute Percentage Error
+    mape = np.mean(np.abs((actual - predicted) / actual)) * 100 if not np.any(actual == 0) else np.inf
+
+    return {
+        'MAE': mae,
+        'MSE': mse,
+        'RMSE': rmse,
+        'MAPE': mape
+    }
+
+
+def main_pipeline(filepath, test_size=30):
+    """
+    Main forecasting pipeline.
+
+    Parameters:
+    filepath (str): Path to CSV file
+    test_size (int): Number of days to use for testing
+
+    Returns:
+    dict: Results including model, forecasts, and metrics
+    """
+    # Load and clean data
+    print("Loading and cleaning data...")
+    sales_data = load_and_clean_data(filepath)
+    print(f"Data loaded: {len(sales_data)} records from {sales_data.index.min()} to {sales_data.index.max()}")
+
+    # Split data into train and test sets
+    train_data = sales_data[:-test_size]['sales']
+    test_data = sales_data[-test_size:]['sales']
+
+    print(f"Training set size: {len(train_data)}")
+    print(f"Test set size: {len(test_data)}")
+
+    # Analyze seasonality
+    print("Analyzing seasonality...")
+    seasonality_results = analyze_seasonality(train_data)
+
+    # Fit SARIMA model
+    print("Fitting SARIMA model...")
+    # Using weekly seasonality (7 days) as default
+    model = fit_sarima_model(train_data, order=(1, 1, 1), seasonal_order=(1, 1, 1, 7))
+
+    # Generate forecasts
+    print("Generating forecasts...")
+    forecast_steps = len(test_data)
+    forecast_result = model.get_forecast(steps=forecast_steps)
+    forecast = forecast_result.predicted_mean
+    conf_int = forecast_result.conf_int()
+
+    # Evaluate model
+    print("Evaluating model performance...")
+    metrics = evaluate_forecast(test_data.values, forecast.values)
+
+    # Print results
+    print("\nForecast Evaluation Metrics:")
+    for metric, value in metrics.items():
+        if metric == 'MAPE' and value == np.inf:
+            print(f"{metric}: Cannot compute (division by zero)")
+        else:
+            print(f"{metric}: {value:.2f}")
+
+    return {
+        'model': model,
+        'train_data': train_data,
+        'test_data': test_data,
+        'forecast': forecast,
+        'confidence_intervals': conf_int,
+        'metrics': metrics,
+        'seasonality': seasonality_results
+    }
+
+
+# Example usage function
+def run_example():
+    """
+    Run example with sample data creation.
+    """
+    # Create sample data for demonstration
+    dates = pd.date_range(start='2020-01-01', end='2022-12-31', freq='D')
+    np.random.seed(42)
+
+    # Create synthetic sales data with trend and seasonality
+    trend = np.linspace(1000, 1500, len(dates))
+    seasonal = 200 * np.sin(2 * np.pi * np.arange(len(dates)) / 365.25)
+    noise = np.random.normal(0, 50, len(dates))
+    sales = trend + seasonal + noise + np.abs(noise)  # Ensure positive sales
+
+    sample_data = pd.DataFrame({
+        'date': dates,
+        'sales': sales
+    })
+
+    # Save sample data
+    sample_data.to_csv('sample_sales_data.csv', index=False)
+    print("Sample data saved to 'sample_sales_data.csv'")
+
+    # Run forecasting pipeline
+    results = main_pipeline('sample_sales_data.csv', test_size=30)
+
+    return results
+
+
+if __name__ == "__main__":
+    # This section will run when the script is executed directly
+    # For production use, you would call main_pipeline with your actual CSV path
+
+    # Example with generated sample data
+    print("Running forecasting pipeline with sample data...")
+    results = run_example()

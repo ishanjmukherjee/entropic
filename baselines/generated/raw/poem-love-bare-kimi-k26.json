@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "bare",
+ "prompt": "Write a love poem. Output only the poem, with no title.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-love-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "You are the quiet between heartbeats,\nthe pause before rain,\nthe single star I find first\nwhen the others blur and wane.\n\nI have loved you in languages\nI never learned to speak,\nin the tilt of morning light,\nin the weight of the week.\n\nYour name, a door I open\nwithout knowing the room,\nthe dark familiar as skin,\nthe air honeyed with gloom.\n\nI would fail at every metaphor\nbefore I'd fail at this:\nthe plain, unbearable fact\nof your wrist, of your wrist.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 23,
+  "completion_tokens": 111,
+  "total_tokens": 134,
+  "cost": 0.0003958,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

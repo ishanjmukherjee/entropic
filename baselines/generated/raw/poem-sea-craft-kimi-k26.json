@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-sea",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: the sea. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-sea-craft-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "At Penzance the fish van parks by the harbour wall.\nThe driver winds down overtime\nand three gulls drop into the tarmac.\n\nI stand at the lock gate at three,\nmy hands on iron, the tide slapping gravel.\nA twelve-bolt hinge holds back nothing.\n\nSomething off Keyboard Island is barking.\nIt keeps barking. The diesel is idling\nin a language nobody speaks.\n\nI pick up a mussel shell with a borehole clean through it,\nthe whelk's acid job, and rub the rim\nagainst my thumb until it warms.\n\nNow the van starts. The gulls lift.\nThe driver does not look at the water.\nThe water does not look at him.\n\nA blue bib of diesel where the hull kissed the jetty.\nA man coiling hose on a trawler named *Boy James*.\nThe barking stops. Something else begins,\n\nor was always continuing under it,\none notch below hearing, the slack rope\ntrembling on the bollard. I set down the shell.\n\nThe numbers on the lock wall: depth, date, initials.\nA wasp has drowned in a pint of rainwater.\nTwo hundred miles east my daughter builds a city\n\nfrom cereal boxes. She does not know\nI am watching the wasp dispute the surface\nwith no one, winning no one, entering the measure\n\nthe tide makes of this hour,\nalready closing over its yellow and black,\nalready keeping the ribbon of its legs.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 186,
+  "completion_tokens": 304,
+  "total_tokens": 490,
+  "cost": 0.0011824,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

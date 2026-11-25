@@ -1,0 +1,331 @@
+-- ============================================================================
+-- Library Lending System — PostgreSQL Schema & Operations
+-- ============================================================================
+
+BEGIN;
+
+-- ---------------------------------------------------------------------------
+-- Extensions
+-- ---------------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pgcrypto;  -- gen_random_uuid()
+
+-- ---------------------------------------------------------------------------
+-- Domain types
+-- ---------------------------------------------------------------------------
+CREATE DOMAIN isbn_t AS TEXT
+    CHECK (VALUE ~ '^(97(8|9))?\d{9}(\d|X)$');
+
+CREATE DOMAIN email_t AS TEXT
+    CHECK (VALUE ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+
+-- ---------------------------------------------------------------------------
+-- Enumerations
+-- ---------------------------------------------------------------------------
+CREATE TYPE member_status_t AS ENUM ('active', 'suspended', 'expired');
+CREATE TYPE loan_status_t   AS ENUM ('open', 'returned', 'overdue', 'lost');
+CREATE TYPE fine_status_t   AS ENUM ('outstanding', 'paid', 'waived');
+
+-- ---------------------------------------------------------------------------
+-- Tables
+-- ---------------------------------------------------------------------------
+CREATE TABLE members (
+    member_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    card_number TEXT NOT NULL UNIQUE
+        CHECK (card_number ~ '^[A-Z]{2}\d{6}$'),
+    first_name  TEXT NOT NULL CHECK (first_name <> ''),
+    last_name   TEXT NOT NULL CHECK (last_name <> ''),
+    email       email_t NOT NULL UNIQUE,
+    phone       TEXT,
+    address     TEXT,
+    status      member_status_t NOT NULL DEFAULT 'active',
+    joined_on   DATE NOT NULL DEFAULT CURRENT_DATE,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT members_updated_at_sane
+        CHECK (updated_at >= joined_on::timestamptz)
+);
+
+CREATE INDEX idx_members_status ON members (status);
+
+CREATE TABLE authors (
+    author_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name  TEXT NOT NULL UNIQUE CHECK (full_name <> ''),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE publishers (
+    publisher_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name         TEXT NOT NULL UNIQUE CHECK (name <> ''),
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE book_categories (
+    category_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        TEXT NOT NULL UNIQUE CHECK (name <> '')
+);
+
+CREATE TABLE books (
+    book_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    isbn          isbn_t NOT NULL UNIQUE,
+    title         TEXT NOT NULL CHECK (title <> ''),
+    subtitle      TEXT,
+    author_id     UUID NOT NULL REFERENCES authors (author_id),
+    publisher_id  UUID REFERENCES publishers (publisher_id),
+    category_id   UUID REFERENCES book_categories (category_id),
+    edition       TEXT,
+    publish_year  SMALLINT CHECK (publish_year BETWEEN 1000 AND EXTRACT(YEAR FROM now())::smallint),
+    loan_days     SMALLINT NOT NULL DEFAULT 21 CHECK (loan_days BETWEEN 1 AND 90),
+    daily_fine    NUMERIC(6,2) NOT NULL DEFAULT 0.25 CHECK (daily_fine >= 0),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_books_author    ON books (author_id);
+CREATE INDEX idx_books_publisher ON books (publisher_id);
+CREATE INDEX idx_books_category  ON books (category_id);
+CREATE INDEX idx_books_title_trgm ON books USING gin (title gin_trgm_ops); -- requires pg_trgm
+
+CREATE TABLE book_copies (
+    copy_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    book_id      UUID NOT NULL REFERENCES books (book_id) ON DELETE CASCADE,
+    barcode      TEXT NOT NULL UNIQUE CHECK (barcode ~ '^[A-Z]{3}\d{6}$'),
+    is_available BOOLEAN NOT NULL DEFAULT TRUE,
+    condition    TEXT NOT NULL DEFAULT 'good'
+        CHECK (condition IN ('new', 'good', 'fair', 'damaged', 'lost')),
+    acquired_on  DATE NOT NULL DEFAULT CURRENT_DATE,
+    CONSTRAINT copies_availability_sane CHECK (condition <> 'lost' OR is_available = FALSE)
+);
+
+CREATE INDEX idx_copies_book_avail ON book_copies (book_id, is_available);
+
+CREATE TABLE loans (
+    loan_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    copy_id      UUID NOT NULL REFERENCES book_copies (copy_id),
+    member_id    UUID NOT NULL REFERENCES members (member_id),
+    checkout_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    due_at       TIMESTAMPTZ NOT NULL,
+    returned_at  TIMESTAMPTZ,
+    status       loan_status_t NOT NULL DEFAULT 'open',
+    renewed_count SMALLINT NOT NULL DEFAULT 0 CHECK (renewed_count <= 3),
+    notes        TEXT,
+    CONSTRAINT loans_due_after_checkout CHECK (due_at > checkout_at),
+    CONSTRAINT loans_returned_window
+        CHECK (returned_at IS NULL OR (returned_at >= checkout_at AND status = 'returned'))
+);
+
+-- One open loan per copy at a time.
+CREATE UNIQUE INDEX uq_open_loan_per_copy ON loans (copy_id) WHERE status IN ('open', 'overdue');
+
+CREATE INDEX idx_loans_member_status ON loans (member_id, status);
+CREATE INDEX idx_loans_due_at ON loans (due_at) WHERE status = 'open';
+
+CREATE TABLE fines (
+    fine_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    loan_id       UUID NOT NULL REFERENCES loans (loan_id),
+    amount        NUMERIC(8,2) NOT NULL CHECK (amount > 0),
+    status        fine_status_t NOT NULL DEFAULT 'outstanding',
+    assessed_on   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_on   TIMESTAMPTZ,
+    CONSTRAINT fines_resolution_sane
+        CHECK ((status = 'outstanding') OR resolved_on IS NOT NULL),
+    CONSTRAINT fines_amount_outstanding
+        CHECK (status <> 'waived' OR true)  -- waived fines keep original amount for audit
+);
+
+CREATE UNIQUE INDEX uq_fine_per_loan ON fines (loan_id);
+
+CREATE INDEX idx_fines_outstanding ON fines (status, assessed_on) WHERE status = 'outstanding';
+
+-- ---------------------------------------------------------------------------
+-- Updated-at triggers
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
+BEGIN
+    NEW.updated_at := now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_members_updated BEFORE UPDATE ON members
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_books_updated BEFORE UPDATE ON books
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- CHECKOUT procedure
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE checkout_copy(
+    p_member_id  UUID,
+    p_copy_id    UUID,
+    INOUT p_loan_id UUID DEFAULT NULL,
+    INOUT p_error      TEXT DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_member_status member_status_t;
+    v_open_count    integer;
+    v_loan_days     smallint;
+BEGIN
+    SELECT status INTO v_member_status FROM members WHERE member_id = p_member_id FOR UPDATE;
+    IF v_member_status IS NULL THEN
+        p_error := 'MEMBER_NOT_FOUND';
+        RETURN;
+    END IF;
+    IF v_member_status <> 'active' THEN
+        p_error := 'MEMBER_NOT_ACTIVE';
+        RETURN;
+    END IF;
+
+    -- Lending limit and overdue-member block.
+    SELECT count(*) INTO v_open_count
+    FROM loans
+    WHERE member_id = p_member_id AND status IN ('open', 'overdue');
+    IF v_open_count >= 5 THEN
+        p_error := 'LENDING_LIMIT_REACHED';
+        RETURN;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM fines
+               WHERE loan_id IN (SELECT loan_id FROM loans WHERE member_id = p_member_id)
+                 AND status = 'outstanding') THEN
+        p_error := 'OUTSTANDING_FINE';
+        RETURN;
+    END IF;
+
+    SELECT b.loan_days INTO v_loan_days
+    FROM book_copies c JOIN books b USING (book_id)
+    WHERE c.copy_id = p_copy_id AND c.is_available
+    FOR UPDATE OF c;
+    IF v_loan_days IS NULL THEN
+        p_error := 'COPY_UNAVAILABLE';
+        RETURN;
+    END IF;
+
+    INSERT INTO loans (copy_id, member_id, due_at)
+    VALUES (p_copy_id, p_member_id, now() + make_interval(days => v_loan_days))
+    RETURNING loan_id INTO p_loan_id;
+
+    UPDATE book_copies SET is_available = FALSE WHERE copy_id = p_copy_id;
+END;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- RETURN procedure (assesses fine if overdue)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE return_copy(
+    p_copy_id     UUID,
+    p_returned_at TIMESTAMPTZ DEFAULT now(),
+    INOUT p_fine_amount NUMERIC DEFAULT 0,
+    INOUT p_error       TEXT   DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_loan    loans;
+    v_was_overdue boolean;
+BEGIN
+    IF p_returned_at > now() THEN
+        p_error := 'FUTURE_TIMESTAMP';
+        RETURN;
+    END IF;
+
+    SELECT * INTO v_loan
+    FROM loans
+    WHERE copy_id = p_copy_id AND status IN ('open', 'overdue')
+    FOR UPDATE;
+    IF v_loan.loan_id IS NULL THEN
+        p_error := 'NO_OPEN_LOAN';
+        RETURN;
+    END IF;
+
+    v_was_overdue := p_returned_at > v_loan.due_at;
+
+    UPDATE loans
+       SET returned_at = p_returned_at,
+           status = 'returned'
+     WHERE loan_id = v_loan.loan_id;
+
+    UPDATE book_copies SET is_available = TRUE WHERE copy_id = p_copy_id;
+
+    IF v_was_overdue THEN
+        INSERT INTO fines (loan_id, amount)
+        VALUES (v_loan.loan_id, assess_fine_amount(
+            (p_returned_at::date - v_loan.due_at::date),
+            (SELECT daily_fine FROM books b JOIN book_copies c USING (book_id) WHERE c.copy_id = p_copy_id)
+        ))
+        RETURNING amount INTO p_fine_amount;
+    END IF;
+END;
+$$;
+
+-- Helper to cap fines.
+CREATE OR REPLACE FUNCTION assess_fine_amount(p_days_late integer, p_daily NUMERIC)
+RETURNS NUMERIC AS $$
+BEGIN
+    RETURN LEAST(p_days_late * p_daily, 50.00);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- ---------------------------------------------------------------------------
+-- Mark overdue loans (run daily, e.g. pg_cron or app scheduler)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION mark_overdue_loans() RETURNS integer AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    WITH updated AS (
+        UPDATE loans
+           SET status = 'overdue'
+         WHERE status = 'open' AND due_at < now()
+        RETURNING 1
+    )
+    SELECT count(*) INTO v_count FROM updated;
+    RETURN v_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---------------------------------------------------------------------------
+-- Named queries / views
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE VIEW v_open_loans AS
+SELECT l.loan_id,
+       m.card_number, m.first_name, m.last_name, m.email,
+       b.title, b.isbn, c.barcode,
+       l.checkout_at, l.due_at,
+       GREATEST(0, (now()::date - l.due_at::date)) AS days_overdue
+FROM loans l
+JOIN members m USING (member_id)
+JOIN book_copies c USING (copy_id)
+JOIN books b USING (book_id)
+WHERE l.status IN ('open', 'overdue');
+
+CREATE OR REPLACE VIEW v_overdue_report AS
+SELECT * FROM v_open_loans WHERE days_overdue > 0;
+
+-- Overdue notice data (7+ days late).
+CREATE OR REPLACE VIEW v_overdue_notices AS
+SELECT v.card_number, v.first_name, v.last_name, v.email,
+       v.title, v.barcode, v.due_at, v.days_overdue
+FROM v_overdue_report v
+WHERE v.days_overdue >= 7;
+
+-- Visible availability for catalog search.
+CREATE OR REPLACE VIEW v_book_availability AS
+SELECT b.book_id, b.isbn, b.title, a.full_name AS author,
+       count(c.copy_id) AS total_copies,
+       count(*) FILTER (WHERE c.is_available AND c.condition NOT IN ('lost')) AS available_copies
+FROM books b
+JOIN authors a USING (author_id)
+LEFT JOIN book_copies c USING (book_id)
+GROUP BY b.book_id, b.isbn, b.title, a.full_name;
+
+CREATE OR REPLACE VIEW v_member_summary AS
+SELECT m.member_id, m.card_number, m.first_name, m.last_name, m.status,
+       count(l.loan_id) FILTER (WHERE l.status IN ('open','overdue')) AS open_loans,
+       coalesce(sum(f.amount) FILTER (WHERE f.status = 'outstanding'), 0) AS outstanding_fines
+FROM members m
+LEFT JOIN loans l USING (member_id)
+LEFT JOIN fines f USING (loan_id)
+GROUP BY m.member_id, m.card_number, m.first_name, m.last_name, m.status;
+
+COMMIT;

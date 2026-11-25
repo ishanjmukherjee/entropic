@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "bare",
+ "prompt": "Write a poem about a father's hands. Output only the poem, with no title.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-father-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "These hands that once could span my newborn back,\nA trembling cradle, careful, swift to hold\nA weight of worry, or a colic’s crack,\nNow rest with stories that have all been told.\nThe knuckles are like weathered, knotted oak,\nThe veins a map of rivers running slow,\nThey wear the permanent and gritty smoke\nOf bonfires built a thousand moons ago.\n\nA crescent scar from where the hammer slipped,\nA thumbnail bruised an old, forgotten hue,\nThe calloused pads from where a rope was gripped\nTo anchor what the frantic wind blew through.\nThese hands could fix a chain on any bike,\nOr build a world from scraps of wood and glue,\nThey were the final word, the one to strike\nA bargain with the broken, make it new.\n\nThey taught me how to tie a double knot,\nAnd held the seat and ran and let it go,\nThey pointed to the single star we sought\nAnd showed me what a seed needs to grow.\nAnd even in their stillness, I can trace\nThe ghost of every gesture, every plight,\nThe strength that held our whole, unsteady space,\nThen gently turned the hallway out the light.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 22,
+  "completion_tokens": 240,
+  "total_tokens": 262,
+  "cost": 0.0008032,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

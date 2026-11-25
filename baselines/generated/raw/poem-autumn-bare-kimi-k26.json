@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-autumn",
+ "style": "bare",
+ "prompt": "Write a poem about autumn. Output only the poem, with no title.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-autumn-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "The field shivers gold, then bronze, then rust.\nWind writes a thin script through the osier,\nand the orchard reduces its light\nto these last globes, heavy and cider-sweet.\n\nLeaves unfasten without grief,\ntesselating the path, the pond, the roof—\nevery vessel filling with the same\nquiet erasure.\n\nI too am learning\nto loosen from the stem,\nto listen for the particular\nclick of frost threading\nthe morning's black seams.\n\nEvening arrives sooner,\ncarrying its small cargo of stars.\nSmoke braids above the valley\nwhere someone, still burning,\nhas not yet learned\nthe whole of surrender.\n\nThe geese pass, aligning\ntheir cold music south.\nI stand in the aperture\nof the dying year,\nmy pockets full of seed,\nmy mouth full of wind,\nnot knowing if I am\nthe one who remains\nor the one who departs.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 24,
+  "completion_tokens": 190,
+  "total_tokens": 214,
+  "cost": 0.0006652,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

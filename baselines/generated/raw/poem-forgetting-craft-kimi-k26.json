@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: forgetting. Form: a villanelle; the refrains may shift slightly each time they return if that serves the poem.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-forgetting-craft-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "Pullman, ten to seven. The porch light fails\nand fails. The stoneware bowl I set out\nholds water now for no one. A dog bails\n\nfrom the neighbor's truck at idling. The rails\ngo bright, go dark. Someone is yelling, out\npast the Safeway, something about failing—\na carburetor. Someone leaves the mail\nin the box three days. The bus I watch for pulls out.\nThe bowl holds water. For no one. A dog bays\n\nat the train's unhurried warning. The light wanes,\nnot fails. I move the bowl. I move it. Out\nwhere the rail meets the粤. The porch light fails\neventually, everything does, the grails\nwe build in the bui的lding, as if about\nto hold something. Water. The dog stays,\nleaves, comes back to the stoneware bowl. The train sails\nthrough. I count the cars. I count. I set out\nfor anywhere. The porch light fails.\nThe bowl holds. Something. The dog. Out.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 196,
+  "completion_tokens": 229,
+  "total_tokens": 425,
+  "cost": 0.0009354,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

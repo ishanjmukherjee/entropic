@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "bare",
+ "prompt": "Write a sonnet about insomnia. Output only the poem, with no title.",
+ "model": "kimi-k3",
+ "max_tokens": 700,
+ "id": "poem-insomnia-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "The clock unspools its numbers, one by one,  \nAnd shadows stretch like fingers on the wall;  \nThe night, once soft, now weighs a heavy ton—  \nA tide that neither ebbs nor starts to fall.  \n\nI count the stars, the sheep, the hours too  \nThat slip through grasping hands like silver sand;  \nThe darkness holds no dreams, no ship, no crew,  \nJust silence vast, and thoughts I can’t command.  \n\nOh, Sleep, cruel lover, distant and aloof,  \nYou grant your gifts to children and the just,  \nBut leave me here, awake, without reproof,  \nTo search your face among the ash and dust.  \n\nNow dawn approaches with its pale distress,  \nAnd finds me still adrift in emptiness.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 34,
+  "completion_tokens": 169,
+  "total_tokens": 203,
+  "cost": 0.002637,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

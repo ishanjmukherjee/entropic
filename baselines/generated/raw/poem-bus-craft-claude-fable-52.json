@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "craft",
+ "prompt": "Write one poem. Subject: a city bus at night. Form: free verse, 14 to 30 lines.\n\nBefore writing, settle privately on particulars: one place that could be found on a map, one object, one hour of the day. Build the poem out of things that can be seen, handled or overheard, and let any idea arrive through them. Do not name the emotion. Prefer the exact noun and the plain verb to the adjective. Leave out the furniture of generic verse: no tapestries, whispers, echoes, dances of light, souls or journeys; no moral; no closing epiphany. Break lines where the breath or the sense turns, not at every phrase. At least once, say something the previous line gave the reader no way to expect. End on an image, not a statement.\n\nOutput only the poem: no title, no commentary.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-bus-craft-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "The 49 kneels at Western and Lawrence, 2:40,\nand the doors fold open on nobody.\nThe driver waits anyway, counts to five\nby tapping the wheel.\n\nThree seats back a man holds a rice cooker\nstill in its box, the receipt taped to the lid.\nHe has it pinned to his lap with both forearms.\nAt Montrose a woman gets on in a hairnet\nand pays in dimes. The machine takes each one\nwith a click like a swallowed pill.\n\nNobody pulls the cord for Irving Park.\nLane Tech's field goes by, the goalposts,\nthe chain-link, a shopping cart on the fifty,\nand the man says to the box, not loud,\nfirst in Tagalog, then in English,\nyou'll like her.\n\nThe woman in the hairnet has taken her shoes off.\nHer socks do not match: one is a child's,\nwith a rubber giraffe on the sole.\n\nPast Belmont the driver brakes hard for a red\nand his thermos comes off the dash,\nrolls down the aisle past all the empty seats,\nunscrewed, drawing its thin line of tea\ntoward the back door.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

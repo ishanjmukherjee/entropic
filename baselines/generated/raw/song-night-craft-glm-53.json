@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "craft",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city.\n\nWrite it as a working songwriter would, to be sung: lines that scan against a steady beat, a chorus that earns its repetition by meaning something slightly different each time it comes back, and verses that move a story forward through particular scenes, names, brands and street-level detail. Say the thing sideways: no line that states the feeling outright, no stock phrases, no word chosen only because it rhymes. Put one detail in each verse that only this story could contain.\n\nOutput only the lyrics, as plain lines with a blank line between sections: no title, no section labels, no chords, no commentary.",
+ "model": "glm-5.3",
+ "max_tokens": 900,
+ "id": "song-night-craft-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "Sun going down on the el tracks, orange on the rust\nMarcus already texting, \"meet me at the dumpling spot\nBefore the line gets stupid,\" so I lace up the New Balances\nJacket for the cold, no umbrella, betting on luck\n\nRosie behind the counter knows I always get the pork and chive\nShe slides an extra one on the plate, says my boy was in here earlier\nBought a hundred of 'em for the crowd at Dev's place\nSomewhere above the laundromat on Kedzie, fifth floor walk-up\n\nThe city's still warm from the day, like a comma, not a period\n\nWe take the alley to Dev's, speaker leaning out the window\nSomebody's cousin from out of town doing magic with two left feet\nAngela's teaching him anyway, patient, laughing at his shoes\nThe whole block smells like cilantro and somebody's transmission burning\n\nI left my phone in my other pants, and honestly it's fine\nNobody can reach me with the bad news until I decide to go home\nDev pours something in a red cup that tastes like his grandmother's kitchen\nPear brandy he says, from the old country, don't ask how he got it\n\nThe night's got no edges, it just keeps folding into new corners\n\nChorus:\nTonight we're just people on a sidewalk, nobody's client, nobody's shift\nThe moon's doing overtime above the Pawn King billboard\nWe walk like we own it, we walk like we borrowed it\nWhatever's waiting Monday can wait till Monday's face shows up\n\nTwo a.m., the dumplings come back around, cold now, still perfect\nMarcus falls asleep sitting up against the door frame mid-sentence\nAngela takes pictures of him like he's a museum exhibit\nSays she's going to frame it next to the one from the lake trip\n\nSomebody puts on Al Green, the real one, vinyl, not the playlist\nThe cousin finally lands a step, the whole room loses it\nRosie walks past the window with her market bag, waves, keeps going\nEven at this hour she's got somewhere she's headed\n\nThe night's still young, the night's ancient, both of those are true\n\nChorus:\nTonight we're just people on a sidewalk, nobody's client, nobody's shift\nThe moon's doing overtime above the Pawn King billboard\nWe walk like we own it, we walk like we borrowed it\nWhatever's waiting Monday can wait a little longer, if it must\n\nThree a.m., the fog rolls in off the lake and swallows the skyline\nDev's floor is covered in sleeping bags and somebody's coat collection\nI take the stairs down slow, let myself out quiet, careful with the latch\nWalk the six blocks home past the bakery where the ovens never stop\n\nThe bread smell at three-thirty, that's the city still keeping watch\nMy block, my stoop, my one window with the crooked shade\nI sit on the steps a minute, don't go in yet, don't rush it\nThe sun will be up soon and take the whole thing back\n\nBut it'll come around again, it always does, it's a comma, not a period\n\nChorus:\nTonight we're just people on a sidewalk, nobody's client, nobody's shift\nThe moon's punched out, the birds are covering the Pawn King billboard\nWe walked like we owned it, we walked like we borrowed it\nMonday's on the bus somewhere, and I'm not at the stop yet",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 151,
+  "completion_tokens": 736,
+  "total_tokens": 887,
+  "cost": 0.0034498,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-love",
+ "style": "bare",
+ "prompt": "Write a love poem. Output only the poem, with no title.",
+ "model": "claude-opus-5.5",
+ "max_tokens": 700,
+ "id": "poem-love-bare-claude-opus-55",
+ "model_id": "claude-opus-5-5",
+ "family": "Anthropic",
+ "raw": "I didn't know that love could be so small:\nthe way you leave the kettle half-filled for me,\nyour coat that slumps beside mine in the hall,\nthe crossword squares you leave for me to see.\n\nI thought it came in thunder, or in flame,\nin letters sealed and sent across the sea,\nbut mostly it's the way you say my name\nwhen you're half-asleep and reaching out for me.\n\nIt's toast gone cold because we talked too long,\nyour laughter breaking open in the car,\nthe hum you make, not knowing it's a song,\nthe way you always know just where things are.\n\nSo keep your grand cathedrals and your vows\ncarved in marble, stubborn as the stone.\nI'll take this ordinary here and now,\nthis kitchen light, this life I call my own.\n\nAnd if the years should bend us, slow us down,\nand silver every strand upon your head,\nI'll love you in the quiet of this town\nthe way I love you now: in what's unsaid.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

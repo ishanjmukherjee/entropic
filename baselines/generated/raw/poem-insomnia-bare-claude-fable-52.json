@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "bare",
+ "prompt": "Write a sonnet about insomnia. Output only the poem, with no title.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-insomnia-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "The clock hands crawl; the ceiling holds my stare,\nAnd every sheep I count has slipped the fold.\nThe pillow turns, but finds no comfort there,\nOne side too warm, the other side too cold.\n\nThe house exhales its settling creaks and sighs,\nA faucet marks the seconds, drop by drop,\nWhile thoughts I buried under daylight rise\nAnd circle like a wheel that will not stop.\n\nI tally debts, old words I can't unsay,\nTomorrow's labors looming, list by list,\nEach hour I lose subtracted from the day\nThat waits beyond the window's graying mist.\n\nThen, just as dawn spills pale across the deep,\nThe birds begin, and I at last could sleep.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

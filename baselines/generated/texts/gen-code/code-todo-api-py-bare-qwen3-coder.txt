@@ -1,0 +1,239 @@
+#!/usr/bin/env python3
+"""
+A simple to-do list JSON API server using only the Python standard library.
+"""
+
+import json
+import sys
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+from typing import Dict, List, Any, Optional
+
+
+class TodoItem:
+    """Represents a single todo item."""
+
+    def __init__(self, id: int, title: str, completed: bool = False):
+        self.id = id
+        self.title = title
+        self.completed = completed
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the todo item to a dictionary."""
+        return {
+            'id': self.id,
+            'title': self.title,
+            'completed': self.completed
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'TodoItem':
+        """Create a TodoItem from a dictionary."""
+        return cls(
+            id=data.get('id', 0),
+            title=data.get('title', ''),
+            completed=data.get('completed', False)
+        )
+
+
+class TodoStore:
+    """In-memory storage for todo items."""
+
+    def __init__(self):
+        self._todos: Dict[int, TodoItem] = {}
+        self._next_id = 1
+
+    def get_all(self) -> List[TodoItem]:
+        """Get all todo items."""
+        return list(self._todos.values())
+
+    def get_by_id(self, todo_id: int) -> Optional[TodoItem]:
+        """Get a todo item by ID."""
+        return self._todos.get(todo_id)
+
+    def create(self, title: str) -> TodoItem:
+        """Create a new todo item."""
+        todo = TodoItem(self._next_id, title)
+        self._todos[self._next_id] = todo
+        self._next_id += 1
+        return todo
+
+    def update(self, todo_id: int, title: str = None, completed: bool = None) -> Optional[TodoItem]:
+        """Update a todo item."""
+        todo = self._todos.get(todo_id)
+        if not todo:
+            return None
+
+        if title is not None:
+            todo.title = title
+        if completed is not None:
+            todo.completed = completed
+
+        return todo
+
+    def delete(self, todo_id: int) -> bool:
+        """Delete a todo item."""
+        return self._todos.pop(todo_id, None) is not None
+
+
+class TodoAPIHandler(BaseHTTPRequestHandler):
+    """HTTP request handler for the todo API."""
+
+    # Store instance shared across all handlers
+    store = TodoStore()
+
+    def _send_json_response(self, status_code: int, data: Any = None):
+        """Send a JSON response."""
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+
+        if data is not None:
+            response_data = json.dumps(data, indent=2)
+            self.wfile.write(response_data.encode('utf-8'))
+
+    def _read_json_body(self) -> Dict[str, Any]:
+        """Read and parse JSON from request body."""
+        content_length = int(self.headers.get('Content-Length', 0))
+        if content_length == 0:
+            return {}
+
+        post_data = self.rfile.read(content_length)
+        return json.loads(post_data.decode('utf-8'))
+
+    def do_OPTIONS(self):
+        """Handle CORS preflight requests."""
+        self._send_json_response(200)
+
+    def do_GET(self):
+        """Handle GET requests."""
+        parsed_path = urlparse(self.path)
+
+        if parsed_path.path == '/todos':
+            # Get all todos
+            todos = [todo.to_dict() for todo in self.store.get_all()]
+            self._send_json_response(200, todos)
+        elif parsed_path.path.startswith('/todos/'):
+            # Get specific todo
+            try:
+                todo_id = int(parsed_path.path.split('/')[-1])
+                todo = self.store.get_by_id(todo_id)
+                if todo:
+                    self._send_json_response(200, todo.to_dict())
+                else:
+                    self._send_json_response(404, {'error': 'Todo not found'})
+            except (ValueError, IndexError):
+                self._send_json_response(400, {'error': 'Invalid todo ID'})
+        else:
+            self._send_json_response(404, {'error': 'Endpoint not found'})
+
+    def do_POST(self):
+        """Handle POST requests."""
+        parsed_path = urlparse(self.path)
+
+        if parsed_path.path == '/todos':
+            try:
+                data = self._read_json_body()
+                title = data.get('title', '').strip()
+
+                if not title:
+                    self._send_json_response(400, {'error': 'Title is required'})
+                    return
+
+                todo = self.store.create(title)
+                self._send_json_response(201, todo.to_dict())
+            except json.JSONDecodeError:
+                self._send_json_response(400, {'error': 'Invalid JSON'})
+            except Exception as e:
+                self._send_json_response(500, {'error': str(e)})
+        else:
+            self._send_json_response(404, {'error': 'Endpoint not found'})
+
+    def do_PUT(self):
+        """Handle PUT requests."""
+        parsed_path = urlparse(self.path)
+
+        if parsed_path.path.startswith('/todos/'):
+            try:
+                todo_id = int(parsed_path.path.split('/')[-1])
+                data = self._read_json_body()
+
+                title = data.get('title')
+                completed = data.get('completed')
+
+                if title is not None:
+                    title = title.strip()
+                    if not title:
+                        self._send_json_response(400, {'error': 'Title cannot be empty'})
+                        return
+
+                todo = self.store.update(todo_id, title, completed)
+                if todo:
+                    self._send_json_response(200, todo.to_dict())
+                else:
+                    self._send_json_response(404, {'error': 'Todo not found'})
+            except (ValueError, IndexError):
+                self._send_json_response(400, {'error': 'Invalid todo ID'})
+            except json.JSONDecodeError:
+                self._send_json_response(400, {'error': 'Invalid JSON'})
+            except Exception as e:
+                self._send_json_response(500, {'error': str(e)})
+        else:
+            self._send_json_response(404, {'error': 'Endpoint not found'})
+
+    def do_DELETE(self):
+        """Handle DELETE requests."""
+        parsed_path = urlparse(self.path)
+
+        if parsed_path.path.startswith('/todos/'):
+            try:
+                todo_id = int(parsed_path.path.split('/')[-1])
+                success = self.store.delete(todo_id)
+                if success:
+                    self._send_json_response(204)
+                else:
+                    self._send_json_response(404, {'error': 'Todo not found'})
+            except (ValueError, IndexError):
+                self._send_json_response(400, {'error': 'Invalid todo ID'})
+        else:
+            self._send_json_response(404, {'error': 'Endpoint not found'})
+
+    def log_message(self, format, *args):
+        """Override to customize logging or disable it."""
+        pass
+
+
+def main():
+    """Main function to start the server."""
+    host = 'localhost'
+    port = 8000
+
+    # Allow customizing host and port via command line arguments
+    if len(sys.argv) > 1:
+        host = sys.argv[1]
+    if len(sys.argv) > 2:
+        port = int(sys.argv[2])
+
+    server = HTTPServer((host, port), TodoAPIHandler)
+
+    print(f"Starting todo API server on http://{host}:{port}")
+    print("Endpoints:")
+    print("  GET    /todos          - Get all todos")
+    print("  GET    /todos/<id>     - Get a specific todo")
+    print("  POST   /todos          - Create a new todo")
+    print("  PUT    /todos/<id>     - Update a todo")
+    print("  DELETE /todos/<id>     - Delete a todo")
+    print("Press Ctrl+C to stop the server")
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
+        server.shutdown()
+
+
+if __name__ == '__main__':
+    main()

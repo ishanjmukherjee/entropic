@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-insomnia",
+ "style": "bare",
+ "prompt": "Write a sonnet about insomnia. Output only the poem, with no title.",
+ "model": "kimi-k2.6",
+ "max_tokens": 700,
+ "id": "poem-insomnia-bare-kimi-k26",
+ "model_id": "moonshotai/Kimi-K2.6",
+ "family": "Moonshot",
+ "raw": "The clock strikes three, then four, then five—still wake,\nWhile darkness presses heavy on my eyes.\nI count the breaths I cannot seem to take,\nAnd listen to a silence that denies\nThe mercy of the sleep my body craves.\nEach thought, unbidden, turns and turns again,\nLike restless waves that never find their graves\nBut break, and break, against the windowpane.\nWhat shadowed thing keeps vigil with my mind?\nWhat hidden thread, pulled taut, refuses snap?\nI am abandoned by the peace I pine,\nA stranger in my own familiar trap.\nYet morning will arrive, indifferent, pale—\nAnd I, hollow-eyed, will rise, and live, and fail.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 25,
+  "completion_tokens": 146,
+  "total_tokens": 171,
+  "cost": 0.0005164,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

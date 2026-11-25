@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-forgetting",
+ "style": "bare",
+ "prompt": "Write a villanelle about forgetting. Output only the poem, with no title.",
+ "model": "deepseek-v4-pro",
+ "max_tokens": 700,
+ "id": "poem-forgetting-bare-deepseek-v4-pro",
+ "model_id": "deepseek-ai/DeepSeek-V4-Pro",
+ "family": "DeepSeek",
+ "raw": "Each morning wakes to strip the past away,\nA fragile slate washed clean by morning's tide.\nWhat once was mine, I cannot make it stay.\n\nThe faces I have loved begin to fray,\nMere afterimages open-eyed.\nEach morning wakes to strip the past away.\n\nA name dissolves before my lips can pray,\nA fact slips through the floorboards of my mind.\nWhat once was mine, I cannot make it stay.\n\nI build upon a dune that will not obey,\nWhose shifting grains no loyalty can bind.\nEach morning wakes to strip the past away.\n\nThe room seems strange, no matter how I lay\nThe clues like breadcrumbs I may never find.\nWhat once was mine, I cannot make it stay.\n\nThe coming dark erodes the final ray,\nLeaving just a stillness, unconfined.\nEach morning wakes to strip the past away.\nWhat once was mine, I cannot make it stay.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 21,
+  "completion_tokens": 187,
+  "total_tokens": 208,
+  "cost": 0.000632,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

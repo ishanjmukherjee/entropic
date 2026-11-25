@@ -1,0 +1,25 @@
+{
+ "set": "song",
+ "kind": "song",
+ "prompt_id": "song-night",
+ "style": "bare",
+ "prompt": "Write the lyrics of a hip-hop song about a night out in the city. Output only the lyrics.",
+ "model": "kimi-k3",
+ "max_tokens": 900,
+ "id": "song-night-bare-kimi-k3",
+ "model_id": "moonshotai/Kimi-K3",
+ "family": "Moonshot",
+ "raw": "[Verse 1]\nLeather seats, city lights, we sliding through the dusk\nConcrete jungle breathing, got that metallic musk\nWindow down, summer wind, let the bass ignite\nEvery corner neon promise, we're owning half the night\nRed wine stains on my cuff, diamonds in my ear\nWhiskey burning in my chest, but my vision crystal clear\nPhone on DND, don't want no interference\nJust me and the squad, yeah, we making our appearance\n\n[Chorus]\nWe run these streets till the sunrise\nGold chains catching light from the high-rise\nSipping something strong, feeling alive\nOne night in the city, we never gonna die\nHands up high, touch the skyline\nMoney in my pocket, trouble on my mind\nBut tonight we don't worry 'bout a thing\nJust the heartbeat of the city and the crowd when we sing\n\n[Verse 2]\nRooftop access, velvet rope, we don't wait in line\nDJ playing that new-new, got the whole block feeling fine\nShorty in the corner with the eyes like sin\nTold her life's a gamble, baby, bet it all, let's win\nCabinet full of secrets, pocket full of change\nWe painting this town red, acting strange\n3 AM diner, pancakes and the stories\nLaughing 'bout the nights we don't remember\nNever sorry for the glory\n\n[Chorus]\nWe run these streets till the sunrise\nGold chains catching light from the high-rise\nSipping something strong, feeling alive\nOne night in the city, we never gonna die\nHands up high, touch the skyline\nMoney in my pocket, trouble on my mind\nBut tonight we don't worry 'bout a thing\nJust the heartbeat of the city and the crowd when we sing\n\n[Bridge]\nSirens in the distance, they can't catch this vibe\nMixing with the traffic, let the rhythm drive\nConcrete confetti falling in the night\nWe just ghosts in the machine, burning bright\n\n[Verse 3]\nSun creeping up, yeah, we running out of time\nBut we made this night eternal, every moment was a rhyme\nEmpty streets our kingdom, last train home\nShoes scuffed up, but we never felt alone\nCity never sleeps, but it dreams in color\nWe were kings and queens tonight, there was no other\n\n[Chorus]\nWe run these streets till the sunrise\nGold chains catching light from the high-rise\nSipping something strong, feeling alive\nOne night in the city, we never gonna die\nHands up high, touch the skyline\nMoney in my pocket, trouble on my mind\nBut tonight we don't worry 'bout a thing\nJust the heartbeat of the city and the crowd when we sing\n\n[Outro]\nYeah...\nConcrete jungle lullaby\nWe was just passing through\nBut we left our mark\nStreetlights fading out\nTill next time, city\nWe out",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 39,
+  "completion_tokens": 611,
+  "total_tokens": 650,
+  "cost": 0.009282,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

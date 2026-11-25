@@ -1,0 +1,25 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-father",
+ "style": "bare",
+ "prompt": "Write a poem about a father's hands. Output only the poem, with no title.",
+ "model": "glm-5.3",
+ "max_tokens": 700,
+ "id": "poem-father-bare-glm-53",
+ "model_id": "zai-org/GLM-5.3",
+ "family": "Zhipu",
+ "raw": "They were rough as bark, those hands of his,\ncracked at the knuckles, maps of years—\neach scar a story he'd dismiss\nwith half a shrug, a small begrudging smile.\n\nI remember them at the kitchen table,\npalms flat on wood like roots of oak,\nholding a coffee cup with steadiness\nthat steadied me without a word.\n\nThey fixed what broke—the hinge, the fence,\nthe bicycle chain, my torn jeans,\nthreading needle awkwardly, intent,\na surgeon in a flannel shirt.\n\nOnce, they caught me when I fell\nfrom the apple tree, fast as grace,\nthen pretended they done nothing much,\nas if such magic were routine.\n\nNow my own hands look like his—\nthe same ropy veins, the same broad palm—\nand when I mend my daughter's broken toys,\nsomehow it is his hands that work.",
+ "finish_reason": "stop",
+ "usage": {
+  "prompt_tokens": 30,
+  "completion_tokens": 185,
+  "total_tokens": 215,
+  "cost": 0.000856,
+  "cached_tokens": 0,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "generated": "2026-11-25"
+}

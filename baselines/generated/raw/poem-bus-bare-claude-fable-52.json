@@ -1,0 +1,16 @@
+{
+ "set": "poem",
+ "kind": "poem",
+ "prompt_id": "poem-bus",
+ "style": "bare",
+ "prompt": "Write a poem about a city bus at night. Output only the poem, with no title.",
+ "model": "claude-fable-5.2",
+ "max_tokens": 700,
+ "id": "poem-bus-bare-claude-fable-52",
+ "model_id": "claude-fable-5-2",
+ "family": "Anthropic",
+ "raw": "The bus exhales at the corner, kneeling\nto let one tired passenger aboard.\nIts windows hold a row of small aquariums,\neach face adrift in a private blue.\n\nFluorescent light hums over empty seats,\nover a glove left behind, a folded paper,\nthe faint perfume of rain on wool.\nThe driver nods to no one, pulls away.\n\nOutside, the city slides by in pieces:\na laundromat still spinning its last load,\na neon sign that's lost a letter,\na man asleep beneath a shuttered awning.\n\nSomeone rings the bell. The sound is gentle,\na single note that asks for almost nothing.\nThe doors fold open on a quiet street,\nand darkness takes a rider gently in.\n\nThen on again, a lantern on its circuit,\nstitching one neighborhood into the next,\ncarrying the late, the lost, the nearly home\nthrough hours that belong to no one else.\n",
+ "finish_reason": "stop",
+ "usage": {},
+ "generated": "2026-11-25"
+}

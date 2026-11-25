@@ -1,0 +1,267 @@
+/**
+ * @file    sht3x_driver.c
+ * @brief   Production-quality I2C driver for Sensirion SHT3x temperature/humidity sensor
+ *          with ring buffer storage, targeting bare-metal ARM Cortex-M microcontrollers.
+ */
+
+/* --------------------------------------------------------------------------
+ * User-configurable hardware abstraction (implement these for your target)
+ * -------------------------------------------------------------------------- */
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
+
+/* --- Start of Board Support Package interface ---
+ * The following extern functions MUST be provided by the user's BSP:
+ *
+ *   void     bsp_i2c_init(void);
+ *   bool     bsp_i2c_write(uint8_t dev_addr, const uint8_t *data, size_t len);
+ *   bool     bsp_i2c_read(uint8_t dev_addr, uint8_t *data, size_t len);
+ *   void     bsp_delay_ms(uint32_t ms);
+ *   uint32_t bsp_get_tick_ms(void);
+ *   void     bsp_critical_enter(void);
+ *   void     bsp_critical_exit(void);
+ *
+ * These are declared as extern to allow linking against the user's implementation.
+ */
+extern void     bsp_i2c_init(void);
+extern bool     bsp_i2c_write(uint8_t dev_addr, const uint8_t *data, size_t len);
+extern bool     bsp_i2c_read(uint8_t dev_addr, uint8_t *data, size_t len);
+extern void     bsp_delay_ms(uint32_t ms);
+extern uint32_t bsp_get_tick_ms(void);
+extern void     bsp_critical_enter(void);
+extern void     bsp_critical_exit(void);
+
+/* --------------------------------------------------------------------------
+ * Driver Configuration Constants
+ * -------------------------------------------------------------------------- */
+
+#define SHT3X_DEFAULT_I2C_ADDR         0x44u   /* ADDR pin low */
+#define SHT3X_ALT_I2C_ADDR             0x45u   /* ADDR pin high */
+
+#define SHT3X_MEASUREMENT_MIN_INTERVAL_MS  10u /* Minimum time between measurements in single-shot */
+
+/* Ring buffer size – must be a power of two for efficient indexing */
+#define SHT3X_RING_BUFFER_SIZE  (32u)
+#define SHT3X_RING_BUFFER_MASK  (SHT3X_RING_BUFFER_SIZE - 1u)
+
+/* SHT3x commands (MSB first) */
+#define SHT3X_CMD_MEAS_CLOCKSTRETCH_HIGH_REP 0x2C06u
+#define SHT3X_CMD_MEAS_CLOCKSTRETCH_MED_REP  0x2C0Du
+#define SHT3X_CMD_MEAS_CLOCKSTRETCH_LOW_REP  0x2C10u
+#define SHT3X_CMD_MEAS_POLL_HIGH_REP         0x2400u
+#define SHT3X_CMD_MEAS_POLL_MED_REP          0x240Bu
+#define SHT3X_CMD_MEAS_POLL_LOW_REP          0x2416u
+#define SHT3X_CMD_SOFT_RESET                0x30A2u
+#define SHT3X_CMD_READ_STATUS               0xF32Du
+#define SHT3X_CMD_CLEAR_STATUS              0x3041u
+#define SHT3X_CMD_HEATER_ENABLE             0x306Du
+#define SHT3X_CMD_HEATER_DISABLE            0x3066u
+
+/* Timing (in ms) */
+#define SHT3X_POWERUP_DELAY_MS     1u
+#define SHT3X_SOFT_RESET_DELAY_MS  1u
+#define SHT3X_MEAS_HIGH_REP_MS    15u
+#define SHT3X_MEAS_MED_REP_MS      6u
+#define SHT3X_MEAS_LOW_REP_MS      4u
+
+/* CRC parameters for Sensirion sensors */
+#define SHT3X_CRC_POLYNOMIAL 0x31u
+#define SHT3X_CRC_INIT       0xFFu
+
+/* --------------------------------------------------------------------------
+ * Data Types
+ * -------------------------------------------------------------------------- */
+
+typedef enum {
+    SHT3X_OK = 0,
+    SHT3X_ERR_I2C_WRITE = -1,
+    SHT3X_ERR_I2C_READ = -2,
+    SHT3X_ERR_CRC = -3,
+    SHT3X_ERR_BUSY = -4,
+    SHT3X_ERR_PARAM = -5,
+    SHT3X_ERR_NOT_INITIALIZED = -6,
+} sht3x_err_t;
+
+typedef enum {
+    SHT3X_REPEATABILITY_HIGH = 0,
+    SHT3X_REPEATABILITY_MEDIUM,
+    SHT3X_REPEATABILITY_LOW,
+} sht3x_repeatability_t;
+
+typedef struct {
+    int16_t temperature_celsius_hundredths;  /* e.g., 2375 = 23.75 °C */
+    uint16_t relative_humidity_hundredths;   /* e.g., 5450 = 54.50 %RH */
+    uint32_t timestamp_ms;                   /* sensor reading timestamp */
+} sht3x_sample_t;
+
+typedef struct {
+    sht3x_sample_t buffer[SHT3X_RING_BUFFER_SIZE];
+    volatile uint32_t head;       /* next write index */
+    volatile uint32_t count;      /* number of valid elements */
+} sht3x_ring_buffer_t;
+
+typedef struct {
+    uint8_t dev_addr;
+    sht3x_repeatability_t repeatability;
+    bool use_clock_stretching;
+    volatile bool busy;
+    uint32_t last_measurement_tick;
+    sht3x_ring_buffer_t ring;
+    bool initialized;
+} sht3x_dev_t;
+
+/* --------------------------------------------------------------------------
+ * Module-level device instance (singleton pattern for single-sensor systems)
+ * -------------------------------------------------------------------------- */
+
+static sht3x_dev_t g_sht3x;
+
+/* --------------------------------------------------------------------------
+ * Private Helper Functions
+ * -------------------------------------------------------------------------- */
+
+/**
+ * @brief Calculate SHT3x CRC-8 (polynomial 0x31, initialization 0xFF).
+ * @param data  Pointer to two bytes (MSB, LSB) of sensor data.
+ * @return      Computed CRC byte.
+ */
+static uint8_t sht3x_calc_crc(uint8_t msb, uint8_t lsb)
+{
+    uint8_t crc = SHT3X_CRC_INIT;
+    crc ^= msb;
+    for (uint8_t i = 0; i < 8; i++) {
+        crc = (crc & 0x80u) ? (uint8_t)((crc << 1) ^ SHT3X_CRC_POLYNOMIAL) : (uint8_t)(crc << 1);
+    }
+    crc ^= lsb;
+    for (uint8_t i = 0; i < 8; i++) {
+        crc = (crc & 0x80u) ? (uint8_t)((crc << 1) ^ SHT3X_CRC_POLYNOMIAL) : (uint8_t)(crc << 1);
+    }
+    return crc;
+}
+
+/**
+ * @brief Validate CRC of a temperature or humidity data pair.
+ * @param msb      Data MSB.
+ * @param lsb      Data LSB.
+ * @param crc_rcvd Received CRC byte.
+ * @return true if CRC is valid, false otherwise.
+ */
+static bool sht3x_verify_crc(uint8_t msb, uint8_t lsb, uint8_t crc_rcvd)
+{
+    return (sht3x_calc_crc(msb, lsb) == crc_rcvd);
+}
+
+/**
+ * @brief Send a 16-bit command to the sensor (no data phase).
+ * @param cmd  16-bit command (MSB first on the wire).
+ * @return sht3x_err_t
+ */
+static sht3x_err_t sht3x_send_command(uint16_t cmd)
+{
+    uint8_t buf[2];
+    buf[0] = (uint8_t)(cmd >> 8);
+    buf[1] = (uint8_t)(cmd & 0xFFu);
+    if (!bsp_i2c_write(g_sht3x.dev_addr, buf, sizeof(buf))) {
+        return SHT3X_ERR_I2C_WRITE;
+    }
+    return SHT3X_OK;
+}
+
+/**
+ * @brief Read a 6-byte measurement (T MSB, T LSB, T CRC, RH MSB, RH LSB, RH CRC).
+ * @param buf   Pointer to 6-byte buffer.
+ * @return sht3x_err_t
+ */
+static sht3x_err_t sht3x_read_meas_data(uint8_t buf[6])
+{
+    if (!bsp_i2c_read(g_sht3x.dev_addr, buf, 6)) {
+        return SHT3X_ERR_I2C_READ;
+    }
+    return SHT3X_OK;
+}
+
+/**
+ * @brief Convert raw temperature/humidity to engineering units.
+ * @param raw_data    6-byte raw measurement.
+ * @param out_sample  Populated sample structure.
+ * @return sht3x_err_t (CRC error if applicable).
+ */
+static sht3x_err_t sht3x_parse_measurement(const uint8_t raw_data[6], sht3x_sample_t *out_sample)
+{
+    uint8_t  t_msb = raw_data[0];
+    uint8_t  t_lsb = raw_data[1];
+    uint8_t  t_crc = raw_data[2];
+    uint8_t  h_msb = raw_data[3];
+    uint8_t  h_lsb = raw_data[4];
+    uint8_t  h_crc = raw_data[5];
+
+    if (!sht3x_verify_crc(t_msb, t_lsb, t_crc) ||
+        !sht3x_verify_crc(h_msb, h_lsb, h_crc)) {
+        return SHT3X_ERR_CRC;
+    }
+
+    uint16_t raw_temp = ((uint16_t)t_msb << 8) | t_lsb;
+    uint16_t raw_hum  = ((uint16_t)h_msb << 8) | h_lsb;
+
+    /* Formulas from datasheet:
+     * T[°C] = -45 + 175 * (raw_temp / (2^16 - 1))
+     * RH[%] = 100 * (raw_hum / (2^16 - 1))
+     * We store hundredths to avoid floating point in ISR/unprivileged contexts.
+     */
+    int32_t temp_hundredths = -4500 + (int32_t)((17500ULL * raw_temp) / 65535U);
+    int32_t rh_hundredths   = (int32_t)((10000ULL * raw_hum) / 65535U);
+
+    /* Clamp to plausible range to avoid overflows in case of sensor noise */
+    if (temp_hundredths < -4500)  temp_hundredths = -4500;
+    if (temp_hundredths > 13000)  temp_hundredths = 13000;
+    if (rh_hundredths < 0)        rh_hundredths = 0;
+    if (rh_hundredths > 10000)    rh_hundredths = 10000;
+
+    out_sample->temperature_celsius_hundredths = (int16_t)temp_hundredths;
+    out_sample->relative_humidity_hundredths   = (uint16_t)rh_hundredths;
+    out_sample->timestamp_ms = bsp_get_tick_ms();
+
+    return SHT3X_OK;
+}
+
+/**
+ * @brief Push a sample into the ring buffer (thread-safe via critical section).
+ * @param sample  Validated sample to store.
+ */
+static void sht3x_ring_push(const sht3x_sample_t *sample)
+{
+    bsp_critical_enter();
+    uint32_t head = g_sht3x.ring.head;
+    uint32_t count = g_sht3x.ring.count;
+
+    g_sht3x.ring.buffer[head] = *sample;
+    g_sht3x.ring.head = (head + 1u) & SHT3X_RING_BUFFER_MASK;
+    if (count < SHT3X_RING_BUFFER_SIZE) {
+        g_sht3x.ring.count = count + 1u;
+    }
+    bsp_critical_exit();
+}
+
+/**
+ * @brief Retrieve measurement duration in ms for given repeatability.
+ */
+static inline uint32_t sht3x_meas_duration_ms(sht3x_repeatability_t rep)
+{
+    switch (rep) {
+    case SHT3X_REPEATABILITY_HIGH:   return SHT3X_MEAS_HIGH_REP_MS;
+    case SHT3X_REPEATABILITY_MEDIUM: return SHT3X_MEAS_MED_REP_MS;
+    case SHT3X_REPEATABILITY_LOW:    return SHT3X_MEAS_LOW_REP_MS;
+    default:                         return SHT3X_MEAS_HIGH_REP_MS;
+    }
+}
+
+/**
+ * @brief Get the command word for single-shot measurement with clock stretching.
+ */
+static uint16_t sht3x_meas_cmd_stretch(sht3x_repeatability_t rep)
+{
+    switch (rep) {
+    case SHT3X_REPEATABILITY_HIGH:   return SHT3X_CMD_MEAS_CLOCKSTRET
