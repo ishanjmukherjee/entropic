@@ -71,3 +71,4 @@ under "settings and privacy"; it is stored only in their browser.
   - Claude's Constitution(s)
   - Frontier and neolab blog posts
   - Wikipedia and other encyclopedia articles
+  - Andrej Karpathy's X posts
