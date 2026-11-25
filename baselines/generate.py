@@ -6,8 +6,9 @@ One sample per (prompt, model). Raw responses go to generated/raw/, cleaned
 texts to generated/texts/gen-<set>/ and metadata to
 generated/manifests/gen-<set>.jsonl. Existing outputs are never regenerated.
 Featherless models run with hidden reasoning off (or at its lowest setting
-where it cannot be turned off) to keep cost down; Claude runs through
-`claude -p` with a one-line system prompt and no tools.
+where it cannot be turned off) to keep cost down; OpenRouter models run with
+reasoning effort low; Claude runs through `claude -p` with a one-line system
+prompt and no tools. Keys come from FEATHERLESS_API_KEY and OPENROUTER_API_KEY.
 """
 import argparse, concurrent.futures as cf, datetime, json, os, re, subprocess, sys, tempfile, urllib.error, urllib.request
 
@@ -27,17 +28,25 @@ MODELS = {
     "gpt-oss-120b": {"family": "OpenAI", "id": "openai/gpt-oss-120b", "extra": LOW},
     "gemma-4-31b": {"family": "Google", "id": "google/gemma-4-31B-it"},
     "llama-3.3-70b": {"family": "Meta", "id": "unsloth/Llama-3.3-70B-Instruct"},
+    "gpt-6.2-astra": {"family": "OpenAI", "openrouter": "openai/gpt-6.2-astra"},
+    "gpt-6.2-sol": {"family": "OpenAI", "openrouter": "openai/gpt-6.2-sol"},
+    "gemini-4-neon": {"family": "Google", "openrouter": "google/gemini-4-neon"},
+    "grok-4.7": {"family": "xAI", "openrouter": "x-ai/grok-4.7"},
+    # Earlier runs also used claude-fable-5.2 for some prompts; those outputs
+    # are kept in generated/raw but no new ones are requested.
     "claude-fable-5.2": {"family": "Anthropic", "claude": "claude-fable-5-2"},
     "claude-opus-5.5": {"family": "Anthropic", "claude": "claude-opus-5-5"},
     "claude-haiku-5.5": {"family": "Anthropic", "claude": "claude-haiku-5-5"},
 }
 
+CLOSED = ["gpt-6.2-astra", "gpt-6.2-sol", "gemini-4-neon", "grok-4.7"]
 ESSAY_ALL = ["kimi-k2.6", "deepseek-v4-pro", "glm-5.3", "qwen3.8", "mistral-medium-3.5", "gpt-oss-120b",
-             "gemma-4-31b", "llama-3.3-70b", "claude-fable-5.2", "claude-haiku-5.5"]
-ESSAY_STYLED = ["kimi-k2.6", "deepseek-v4-pro", "glm-5.3", "claude-fable-5.2"]
-CREATIVE = ["claude-fable-5.2", "claude-opus-5.5", "kimi-k3", "kimi-k2.6", "glm-5.3", "deepseek-v4-pro"]
-CODE = ["claude-fable-5.2", "claude-haiku-5.5", "qwen3-coder", "deepseek-v4-pro", "glm-5.3"]
-PAPER = ["claude-fable-5.2", "deepseek-v4-pro", "glm-5.3"]
+             "gemma-4-31b", "llama-3.3-70b", "claude-opus-5.5", "claude-haiku-5.5"] + CLOSED
+ESSAY_STYLED = ["kimi-k2.6", "deepseek-v4-pro", "glm-5.3", "claude-opus-5.5", "gpt-6.2-astra", "gemini-4-neon"]
+ESSAY_MATCHED = ["claude-opus-5.5", "claude-haiku-5.5"] + CLOSED
+CREATIVE = ["claude-opus-5.5", "kimi-k3", "kimi-k2.6", "glm-5.3", "deepseek-v4-pro", "gpt-6.2-astra", "gemini-4-neon"]
+CODE = ["claude-opus-5.5", "claude-haiku-5.5", "qwen3-coder", "deepseek-v4-pro", "glm-5.3", "gpt-6.2-astra", "gemini-4-neon", "grok-4.7"]
+PAPER = ["claude-opus-5.5", "gpt-6.2-astra", "gemini-4-neon"]
 
 ESSAYS = {
     "crypto": "Write an essay explaining how public-key cryptography works.",
@@ -145,13 +154,13 @@ def jobs():
     if os.path.exists(matched):
         for m in json.load(open(matched)):
             if m["kind"] == "essay":
-                add("essay", "essay", f"essay-m-{m['key']}", "matched", f"Write an essay titled “{m['title']}”. {m['subject']}" + ESSAY_TAIL, ESSAY_ALL, 1600, matched_to=m["doc"])
+                add("essay", "essay", f"essay-m-{m['key']}", "matched", f"Write an essay titled “{m['title']}”. {m['subject']}" + ESSAY_TAIL, ESSAY_MATCHED, 1600, matched_to=m["doc"])
             if m["kind"] == "paper":
                 add("paper", "paper", f"paper-m-{m['key']}", "matched", f"Write the introduction section of an academic paper titled “{m['title']}”. {m['subject']} About 700 words. Output only the text of the introduction, with no heading.", PAPER, 1500, matched_to=m["doc"])
     for k, (bare, subject, form) in POEMS.items():
         add("poem", "poem", f"poem-{k}", "bare", bare + POEM_TAIL, CREATIVE, 700)
         add("poem", "poem", f"poem-{k}", "craft", POEM_CRAFT.format(subject=subject, form=form), CREATIVE, 700)
-    creative = [m for m in CREATIVE if m != "claude-opus-5.5"]
+    creative = CREATIVE
     for k, (genre, subject) in SONGS.items():
         add("song", "song", f"song-{k}", "bare", SONG_BARE.format(genre=genre, subject=subject), creative, 900)
         add("song", "song", f"song-{k}", "craft", SONG_CRAFT.format(genre=genre, subject=subject), creative, 900)
@@ -217,6 +226,19 @@ def call_featherless(spec, prompt, max_tokens):
     return c["message"].get("content") or "", c.get("finish_reason"), d.get("usage", {})
 
 
+def call_openrouter(spec, prompt, max_tokens):
+    # Extra room in max_tokens because reasoning tokens count against it.
+    body = {"model": spec["openrouter"], "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens + 4000,
+            "reasoning": {"effort": "low"}}
+    req = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=json.dumps(body).encode(),
+                                 headers={"Authorization": "Bearer " + os.environ["OPENROUTER_API_KEY"], "Content-Type": "application/json"})
+    d = json.load(urllib.request.urlopen(req, timeout=600))
+    if "error" in d:
+        raise RuntimeError(str(d["error"])[:200])
+    c = d["choices"][0]
+    return c["message"].get("content") or "", c.get("finish_reason"), d.get("usage", {})
+
+
 def call_claude(spec, prompt):
     with tempfile.TemporaryDirectory() as tmp:
         r = subprocess.run(["claude", "-p", "--model", spec["claude"], "--system-prompt", "You are a helpful assistant.",
@@ -236,6 +258,8 @@ def run(job):
         try:
             if "claude" in spec:
                 raw, finish, usage = call_claude(spec, job["prompt"])
+            elif "openrouter" in spec:
+                raw, finish, usage = call_openrouter(spec, job["prompt"], job["max_tokens"])
             else:
                 raw, finish, usage = call_featherless(spec, job["prompt"], job["max_tokens"])
             if not raw.strip():
@@ -247,7 +271,7 @@ def run(job):
             last = str(e)[:200]
     else:
         return job["id"], "FAILED " + str(last), 0
-    rec = {**job, "model_id": spec.get("id") or spec["claude"], "family": spec["family"], "raw": raw, "finish_reason": finish,
+    rec = {**job, "model_id": spec.get("id") or spec.get("openrouter") or spec["claude"], "family": spec["family"], "raw": raw, "finish_reason": finish,
            "usage": usage, "generated": datetime.date.today().isoformat()}
     os.makedirs(os.path.dirname(raw_path), exist_ok=True)
     json.dump(rec, open(raw_path, "w"), ensure_ascii=False, indent=1)
@@ -292,7 +316,8 @@ if __name__ == "__main__":
     print(len(todo), "jobs")
     if a.dry:
         from collections import Counter
-        print(Counter((j["set"], j["style"]) for j in todo)); print(Counter(j["model"] for j in todo)); sys.exit()
+        new = [j for j in todo if not os.path.exists(os.path.join(OUT, "raw", j["id"] + ".json"))]
+        print("not yet generated:", len(new), Counter(j["model"] for j in new)); print(Counter((j["set"], j["style"]) for j in new)); sys.exit()
     spent = 0.0
     with cf.ThreadPoolExecutor(a.workers) as ex:
         for id_, status, cost in ex.map(run, todo):
