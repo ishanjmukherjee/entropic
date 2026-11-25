@@ -82,3 +82,4 @@ under "settings and privacy"; it is stored only in their browser.
   - Textbooks
   - Tyler Cowen (see especially if his signature writing style is also predictble)
   - Scott Alexander
+  - Interviews, e.g., Paris Review
