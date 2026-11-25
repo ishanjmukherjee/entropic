@@ -1,0 +1,542 @@
+[
+ {
+  "id": "arxiv-00",
+  "source": "arxiv",
+  "split": "dev",
+  "url": "http://arxiv.org/abs/2611.29975v1",
+  "date": "2026-11-23",
+  "chars": 1332,
+  "sha256": "5e7b37fd1462e6aac236a8f40059e5ee232290d2c66391b39739b1916a695b28"
+ },
+ {
+  "id": "arxiv-01",
+  "source": "arxiv",
+  "split": "test",
+  "url": "http://arxiv.org/abs/2611.26197v1",
+  "date": "2026-11-19",
+  "chars": 1361,
+  "sha256": "066f1f9564bdaa221d18cc554c82b7bd1c28fd0b3a4a302d4b7610b2e0a0e72d"
+ },
+ {
+  "id": "arxiv-02",
+  "source": "arxiv",
+  "split": "dev",
+  "url": "http://arxiv.org/abs/2611.30459v1",
+  "date": "2026-11-23",
+  "chars": 1698,
+  "sha256": "9e90d43d9a1435477c7eee8dfbb9dcceaead4363484ac5b0dfe7e6c97ccb87d0"
+ },
+ {
+  "id": "arxiv-03",
+  "source": "arxiv",
+  "split": "test",
+  "url": "http://arxiv.org/abs/2611.31057v1",
+  "date": "2026-11-23",
+  "chars": 1392,
+  "sha256": "d5131bcacb7781c85c7c6b23744c7ccd3e9edd492098061003d7bfd292e72cd6"
+ },
+ {
+  "id": "arxiv-04",
+  "source": "arxiv",
+  "split": "dev",
+  "url": "http://arxiv.org/abs/2611.26890v1",
+  "date": "2026-11-19",
+  "chars": 947,
+  "sha256": "7eb684a20e35dff3db0bd9f991024344728a6b31c7d3b16026f1c19a9642262b"
+ },
+ {
+  "id": "arxiv-05",
+  "source": "arxiv",
+  "split": "test",
+  "url": "http://arxiv.org/abs/2611.29996v1",
+  "date": "2026-11-23",
+  "chars": 1103,
+  "sha256": "8cbef1bd9a885bee312df170dbfe355abb56532e713d676e3ee6fd609be9999b"
+ },
+ {
+  "id": "arxiv-06",
+  "source": "arxiv",
+  "split": "dev",
+  "url": "http://arxiv.org/abs/2611.28908v1",
+  "date": "2026-11-21",
+  "chars": 1266,
+  "sha256": "a253afae088088c672ba969414f2262fd9994e1c3a85ef12c8157ff1239be3b6"
+ },
+ {
+  "id": "arxiv-07",
+  "source": "arxiv",
+  "split": "test",
+  "url": "http://arxiv.org/abs/2611.29765v1",
+  "date": "2026-11-22",
+  "chars": 1900,
+  "sha256": "573a1b32fcabc6d0fc625978af88dd673972c9ab18a4fc0b9b1d2bb03ee7f94a"
+ },
+ {
+  "id": "arxiv-08",
+  "source": "arxiv",
+  "split": "dev",
+  "url": "http://arxiv.org/abs/2611.30732v1",
+  "date": "2026-11-23",
+  "chars": 1744,
+  "sha256": "289221271c65fa604499b4720ded1b80712402c949ab8385e3df231f9270df9d"
+ },
+ {
+  "id": "arxiv-09",
+  "source": "arxiv",
+  "split": "test",
+  "url": "http://arxiv.org/abs/2611.27280v1",
+  "date": "2026-11-20",
+  "chars": 1904,
+  "sha256": "5240476376b9d91ddbee7a769d908e20ac059434fee24bdcc87bca29b5ad7a1d"
+ },
+ {
+  "id": "arxiv-10",
+  "source": "arxiv",
+  "split": "dev",
+  "url": "http://arxiv.org/abs/2611.27874v1",
+  "date": "2026-11-20",
+  "chars": 1586,
+  "sha256": "7e0e4724f82c4ccf06c22059df9762e88ba336ca88baaa9a96a5f22f05865ea9"
+ },
+ {
+  "id": "arxiv-11",
+  "source": "arxiv",
+  "split": "test",
+  "url": "http://arxiv.org/abs/2611.29982v1",
+  "date": "2026-11-23",
+  "chars": 1716,
+  "sha256": "217b51337711fbda7fc586cfd9173f3007d4344947ffff078368ed0840a95b09"
+ },
+ {
+  "id": "wikipedia-00",
+  "source": "wikipedia",
+  "split": "dev",
+  "url": "https://en.wikipedia.org/?curid=84886401",
+  "date": "2026-11-24",
+  "chars": 1059,
+  "sha256": "85865036d65d14a6f392c72eb95a8757bb3cc63a2e14eecfe437724ae8614dde"
+ },
+ {
+  "id": "wikipedia-01",
+  "source": "wikipedia",
+  "split": "test",
+  "url": "https://en.wikipedia.org/?curid=84886053",
+  "date": "2026-11-24",
+  "chars": 1317,
+  "sha256": "6e05af2d92356911dc32eec6a618d7e4528ebb8366a8ac9b4c2afd2175cfc91a"
+ },
+ {
+  "id": "wikipedia-02",
+  "source": "wikipedia",
+  "split": "dev",
+  "url": "https://en.wikipedia.org/?curid=84881394",
+  "date": "2026-11-24",
+  "chars": 2316,
+  "sha256": "9c408cb8bbff94f96db955bfbd408b5d6d9790ab5e00b4ee7c0ff2895c0f1180"
+ },
+ {
+  "id": "wikipedia-03",
+  "source": "wikipedia",
+  "split": "test",
+  "url": "https://en.wikipedia.org/?curid=84879871",
+  "date": "2026-11-23",
+  "chars": 1131,
+  "sha256": "d837a568c0507d0abe6832c594ac21ed47adb97dfc4d57bb7b67132ed3cdd314"
+ },
+ {
+  "id": "wikipedia-04",
+  "source": "wikipedia",
+  "split": "dev",
+  "url": "https://en.wikipedia.org/?curid=84885615",
+  "date": "2026-11-24",
+  "chars": 1124,
+  "sha256": "9fa24f58e157391f467948ab6c1452341371a0b4b49524ceae26555ebb74bc89"
+ },
+ {
+  "id": "wikipedia-05",
+  "source": "wikipedia",
+  "split": "test",
+  "url": "https://en.wikipedia.org/?curid=84885342",
+  "date": "2026-11-24",
+  "chars": 1815,
+  "sha256": "c331abdfe4f098f7ac98be7add0c3ad27c554f7ea97871247661a83d1dff91fd"
+ },
+ {
+  "id": "wikipedia-06",
+  "source": "wikipedia",
+  "split": "dev",
+  "url": "https://en.wikipedia.org/?curid=84879703",
+  "date": "2026-11-23",
+  "chars": 1142,
+  "sha256": "47b1738971bc650964d4325c4f7fcd38e8abb313f5f6ffa83a9ebc09b20467e7"
+ },
+ {
+  "id": "wikipedia-07",
+  "source": "wikipedia",
+  "split": "test",
+  "url": "https://en.wikipedia.org/?curid=84881476",
+  "date": "2026-11-24",
+  "chars": 1845,
+  "sha256": "75b6f6632c68c97233fee825648e5938785e1280b7c3e16a2bd184e50c205a0b"
+ },
+ {
+  "id": "wikipedia-08",
+  "source": "wikipedia",
+  "split": "dev",
+  "url": "https://en.wikipedia.org/?curid=84887015",
+  "date": "2026-11-25",
+  "chars": 1284,
+  "sha256": "05c5cabbe13ab3d75904952241b9816d6c93f407dbe44a10cb4b9c91119f1863"
+ },
+ {
+  "id": "wikipedia-09",
+  "source": "wikipedia",
+  "split": "test",
+  "url": "https://en.wikipedia.org/?curid=84881758",
+  "date": "2026-11-24",
+  "chars": 1626,
+  "sha256": "6b1533143fb36f778e319f2edc31101aa690be023b8748942250ff1809fc927e"
+ },
+ {
+  "id": "wikipedia-10",
+  "source": "wikipedia",
+  "split": "dev",
+  "url": "https://en.wikipedia.org/?curid=84886939",
+  "date": "2026-11-25",
+  "chars": 1532,
+  "sha256": "eb26e50cc8d544f34391e2ed59353599fcf8f8a7635db940c6c1ef31d832e212"
+ },
+ {
+  "id": "wikipedia-11",
+  "source": "wikipedia",
+  "split": "test",
+  "url": "https://en.wikipedia.org/?curid=84881607",
+  "date": "2026-11-24",
+  "chars": 1165,
+  "sha256": "94ba9682bec2e1321c2045b8564850356f4bfaa9a04c34306de047d4bb49bddc"
+ },
+ {
+  "id": "hackernews-00",
+  "source": "hackernews",
+  "split": "dev",
+  "url": "https://news.ycombinator.com/item?id=50636396",
+  "date": "2026-11-24",
+  "chars": 1179,
+  "sha256": "08f3abc817841444620c6615f29e744042420c7324c29dc7074557911f98350b"
+ },
+ {
+  "id": "hackernews-01",
+  "source": "hackernews",
+  "split": "test",
+  "url": "https://news.ycombinator.com/item?id=50636126",
+  "date": "2026-11-24",
+  "chars": 1261,
+  "sha256": "d02b1ebf7dbfb800b6fc4d3a5134270a8e05a81cc5ad5ce2d42f1341302b0adf"
+ },
+ {
+  "id": "hackernews-02",
+  "source": "hackernews",
+  "split": "dev",
+  "url": "https://news.ycombinator.com/item?id=50636948",
+  "date": "2026-11-25",
+  "chars": 1133,
+  "sha256": "7589296cac2ee58c82aad6a3c43da430f8879c263a70ae1a0f5760bc5d3141dc"
+ },
+ {
+  "id": "hackernews-03",
+  "source": "hackernews",
+  "split": "test",
+  "url": "https://news.ycombinator.com/item?id=50637364",
+  "date": "2026-11-25",
+  "chars": 2574,
+  "sha256": "c9b92b5d802c5f9f7396756b99dc20015be2aeaf5748f6ca635f0d9beb70679a"
+ },
+ {
+  "id": "hackernews-04",
+  "source": "hackernews",
+  "split": "dev",
+  "url": "https://news.ycombinator.com/item?id=50636640",
+  "date": "2026-11-25",
+  "chars": 1182,
+  "sha256": "300552fe2c2491f996c1d0879b11804b5fabd8441b9be9705ee44d7804b1016e"
+ },
+ {
+  "id": "hackernews-05",
+  "source": "hackernews",
+  "split": "test",
+  "url": "https://news.ycombinator.com/item?id=50636511",
+  "date": "2026-11-24",
+  "chars": 2805,
+  "sha256": "140847062e4f88a46a22429b207e6b237cfee0cbe488566dda5fd1ffb4549325"
+ },
+ {
+  "id": "hackernews-06",
+  "source": "hackernews",
+  "split": "dev",
+  "url": "https://news.ycombinator.com/item?id=50636580",
+  "date": "2026-11-24",
+  "chars": 1183,
+  "sha256": "74a7a1f8ad02e0e2a0dda65c707ebce3f1d80c5a06e4ab7f7129cb68e12cc8e4"
+ },
+ {
+  "id": "hackernews-07",
+  "source": "hackernews",
+  "split": "test",
+  "url": "https://news.ycombinator.com/item?id=50636426",
+  "date": "2026-11-24",
+  "chars": 1191,
+  "sha256": "7dad20ad310417db4c2e7769621d627307f075c3dfdfba205162515cd7e3acbf"
+ },
+ {
+  "id": "hackernews-08",
+  "source": "hackernews",
+  "split": "dev",
+  "url": "https://news.ycombinator.com/item?id=50637319",
+  "date": "2026-11-25",
+  "chars": 1234,
+  "sha256": "8ff02fd4dc1a5e7538411b57ea52e8b3783900c59e205c55a5ef4b508ff6ed3d"
+ },
+ {
+  "id": "hackernews-09",
+  "source": "hackernews",
+  "split": "test",
+  "url": "https://news.ycombinator.com/item?id=50636711",
+  "date": "2026-11-25",
+  "chars": 1757,
+  "sha256": "e3b73a75d2e1485584b56722f8a2d9a429f8f51f07c2f44ec1f1f5d444cfab86"
+ },
+ {
+  "id": "hackernews-10",
+  "source": "hackernews",
+  "split": "dev",
+  "url": "https://news.ycombinator.com/item?id=50637212",
+  "date": "2026-11-25",
+  "chars": 1000,
+  "sha256": "378851fe4a4c5af57cba56a12a7c1c69fc8ad1cc0f3e5a7f3f9d6926b1ba368a"
+ },
+ {
+  "id": "hackernews-11",
+  "source": "hackernews",
+  "split": "test",
+  "url": "https://news.ycombinator.com/item?id=50637356",
+  "date": "2026-11-25",
+  "chars": 1415,
+  "sha256": "36bfc43d3e0319a66540349e1595740d0c27a4ff49a4ce39904c0600257273b5"
+ },
+ {
+  "id": "lesswrong-00",
+  "source": "lesswrong",
+  "split": "dev",
+  "url": "https://www.lesswrong.com/posts/axLNrhyh5PjfNsz4y/latent-communication-is-not-communication",
+  "date": "2026-11-24",
+  "chars": 2897,
+  "sha256": "3bc0138a8e8cea327a84a7427f497d80b80fd4d738e8255d279a9aa5904d54c3"
+ },
+ {
+  "id": "lesswrong-01",
+  "source": "lesswrong",
+  "split": "test",
+  "url": "https://www.lesswrong.com/posts/jA4amFWxznNHFC3ZG/open-weight-models-are-not-the-immediate-problem",
+  "date": "2026-11-24",
+  "chars": 2991,
+  "sha256": "08dde435f9dd76e108f6ce3f91e474f87ab272d77699b5f891e73bd5d9d7b63f"
+ },
+ {
+  "id": "lesswrong-02",
+  "source": "lesswrong",
+  "split": "dev",
+  "url": "https://www.lesswrong.com/posts/uovDC22en2iirta4h/persona-space-seems-blind-to-cheating",
+  "date": "2026-11-23",
+  "chars": 2936,
+  "sha256": "cd52ffb5f7e6cbbfdba8241000dc51f368be9b23dbae51d06d68f09747265444"
+ },
+ {
+  "id": "lesswrong-03",
+  "source": "lesswrong",
+  "split": "test",
+  "url": "https://www.lesswrong.com/posts/AKtycrAwH3oe8WwJQ/we-need-commitments-for-25-compute-for-safety-by-205-eci",
+  "date": "2026-11-19",
+  "chars": 2603,
+  "sha256": "3390b1bf817e4a24980a242fbe24a60029c82c7fa62830174771f87cf02c25b0"
+ },
+ {
+  "id": "lesswrong-04",
+  "source": "lesswrong",
+  "split": "dev",
+  "url": "https://www.lesswrong.com/posts/chCiZKcRZtndu58AD/the-obsolescence-of-the-horse-1",
+  "date": "2026-11-22",
+  "chars": 2978,
+  "sha256": "1b6ab547415560e567639f25b95a9c81cf05c7df17b24a26849b5dfe46a9a314"
+ },
+ {
+  "id": "lesswrong-05",
+  "source": "lesswrong",
+  "split": "test",
+  "url": "https://www.lesswrong.com/posts/gqa7aTPom56HvtfnB/two-cultures-of-causal-modeling-and-why-one-of-them-is",
+  "date": "2026-11-23",
+  "chars": 2976,
+  "sha256": "c3e0670093cbc6a4c90db08aca83682ebdbd57729a9ba497aefb15775e9bf9bd"
+ },
+ {
+  "id": "lesswrong-06",
+  "source": "lesswrong",
+  "split": "dev",
+  "url": "https://www.lesswrong.com/posts/wBTaEGxNTGAHxCcbD/weird-neurons-mimic-weird-data",
+  "date": "2026-11-24",
+  "chars": 2896,
+  "sha256": "37d8221db1d05dbba021a9a25ed8e27cc1d9b38b18006c2131f5ada548ef1b38"
+ },
+ {
+  "id": "lesswrong-07",
+  "source": "lesswrong",
+  "split": "test",
+  "url": "https://www.lesswrong.com/posts/mENw8pznQANekHoz5/can-forced-refusals-make-models-snap-out-of-a-jailbreak",
+  "date": "2026-11-24",
+  "chars": 2728,
+  "sha256": "f43ca5b43b94f3166620e47d9c33bd7a5e52f5fd814d055c37699a2193a0e690"
+ },
+ {
+  "id": "lesswrong-08",
+  "source": "lesswrong",
+  "split": "dev",
+  "url": "https://www.lesswrong.com/posts/xCJXtMqDu35vsuoCL/how-to-be-less-awkward",
+  "date": "2026-11-20",
+  "chars": 2966,
+  "sha256": "e4ba5098a36748eaa852e5504827e6038c3bf47521fcd2acee59bdca861a714f"
+ },
+ {
+  "id": "lesswrong-09",
+  "source": "lesswrong",
+  "split": "test",
+  "url": "https://www.lesswrong.com/posts/TGq5mnsWFWz5i2ATD/heroism-in-ai-safety",
+  "date": "2026-11-23",
+  "chars": 2973,
+  "sha256": "1200ad286a58a7d4c4e4834da442374d29e10e2b7a61c4be0a9c64ce917f0cd6"
+ },
+ {
+  "id": "lesswrong-10",
+  "source": "lesswrong",
+  "split": "dev",
+  "url": "https://www.lesswrong.com/posts/RtojdvxhDwbX6FKgx/why-do-intense-writing",
+  "date": "2026-11-24",
+  "chars": 2749,
+  "sha256": "f91e0ff488336d89dfa92881a3b8205a4f8fe3ed8fc24ffca80e7d59999b94fd"
+ },
+ {
+  "id": "lesswrong-11",
+  "source": "lesswrong",
+  "split": "test",
+  "url": "https://www.lesswrong.com/posts/NdAXizPHX64tJDkC2/stop-boycotting-alignment-roles",
+  "date": "2026-11-24",
+  "chars": 2511,
+  "sha256": "6833eeb33b2d5226fecb534b214b7f9d874a81edc403b1e1f64bb50f00e9b83d"
+ },
+ {
+  "id": "blogs-00",
+  "source": "blogs",
+  "split": "dev",
+  "url": "https://simonwillison.net/2026/Nov/24/llm-inflection-points/",
+  "date": "2026-11-24",
+  "chars": 2767,
+  "sha256": "aab3860154e024801290b39fd8bcc1de9f56ac0d3986280a9f1ac681daeb19c1"
+ },
+ {
+  "id": "blogs-01",
+  "source": "blogs",
+  "split": "test",
+  "url": "https://scottaaronson.blog/?p=10344",
+  "date": "2026-11-20",
+  "chars": 2909,
+  "sha256": "9bdebe649ddcd9cac21249c7794fd89429d03923f4a7f26a8a00dfe6bda6467c"
+ },
+ {
+  "id": "blogs-02",
+  "source": "blogs",
+  "split": "dev",
+  "url": "https://scottaaronson.blog/?p=10321",
+  "date": "2026-11-15",
+  "chars": 1030,
+  "sha256": "91a7fb1a5cda8514ac3285c121ad3c02c42670214e2004cd6faf7a0aa3ad3a8d"
+ },
+ {
+  "id": "blogs-03",
+  "source": "blogs",
+  "split": "test",
+  "url": "https://www.noahpinion.blog/p/roundup-91-rocketing-into-the-technofuture",
+  "date": "2026-11-18",
+  "chars": 2970,
+  "sha256": "1c67f7883d8e86f4f2d390c0e476ac737267839703185b1c86edd3af1ec97be5"
+ },
+ {
+  "id": "blogs-04",
+  "source": "blogs",
+  "split": "dev",
+  "url": "https://thezvi.substack.com/p/gpt-62-astra-and-sol-the-system-card",
+  "date": "2026-11-21",
+  "chars": 2942,
+  "sha256": "76f210c75dd27ecca986834798644ad55f2152316667108171c4a2d6c1757a2a"
+ },
+ {
+  "id": "blogs-05",
+  "source": "blogs",
+  "split": "test",
+  "url": "https://thezvi.substack.com/p/fable-52-is-the-new-bazooka",
+  "date": "2026-11-16",
+  "chars": 2964,
+  "sha256": "060cb6297c6850b22e7c323bfb636b8eb2ac7f6d9dc642c65b5332499367cfb9"
+ },
+ {
+  "id": "blogs-06",
+  "source": "blogs",
+  "split": "dev",
+  "url": "https://marginalrevolution.com/marginalrevolution/2026/11/gambling-for-goals.html?utm_source=rss&utm_medium=rss&utm_campaign=gambling-for-goals",
+  "date": "2026-11-24",
+  "chars": 1211,
+  "sha256": "65daee5306caf8e8c799d2a3c71c25393e613a71d2d0722a0fcba4f7e6593207"
+ },
+ {
+  "id": "blogs-07",
+  "source": "blogs",
+  "split": "test",
+  "url": "https://www.astralcodexten.com/p/the-ai-forecasting-agenda",
+  "date": "2026-11-19",
+  "chars": 2941,
+  "sha256": "9f5f43d4c6c0e4e26aba5f3f342fef8bf64c90bfc536d4c15695493271fb31cf"
+ },
+ {
+  "id": "blogs-08",
+  "source": "blogs",
+  "split": "dev",
+  "url": "https://www.noahpinion.blog/p/india-is-quietly-doing-great",
+  "date": "2026-11-11",
+  "chars": 2928,
+  "sha256": "b04c02d6c672b569ef0af18d03c0dcf60a3fbbf9054cc8b597ce493360e5405c"
+ },
+ {
+  "id": "blogs-09",
+  "source": "blogs",
+  "split": "test",
+  "url": "https://www.astralcodexten.com/p/varieties-of-discourseposting",
+  "date": "2026-11-18",
+  "chars": 2988,
+  "sha256": "5b62fb6ae495c00b423cc2ac5bb4c3b19116c1578dc0006e43ccd255354c4e88"
+ },
+ {
+  "id": "blogs-10",
+  "source": "blogs",
+  "split": "dev",
+  "url": "https://www.construction-physics.com/p/technology-as-a-search-problem",
+  "date": "2026-11-12",
+  "chars": 2927,
+  "sha256": "97f49e80efc16df06c02e973cd7efce7e7ec1b75d7e76dd7105d202c24249e3c"
+ },
+ {
+  "id": "blogs-11",
+  "source": "blogs",
+  "split": "test",
+  "url": "https://www.overcomingbias.com/p/cultural-scope",
+  "date": "2026-11-23",
+  "chars": 2873,
+  "sha256": "b8004d6e6fefa84271eed8d0b6875a256ba7753ab5cf91a0673e8cf2c1d42896"
+ }
+]
