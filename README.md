@@ -76,3 +76,4 @@ under "settings and privacy"; it is stored only in their browser.
   - Docs for code libraries
   - Guides/how-tos for products such as consumer electronics
   - Ben Kuhn
+  - Books not freely viewable on the Internet (nonfiction, fiction, maybe poetry)
