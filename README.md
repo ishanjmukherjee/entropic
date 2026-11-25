@@ -75,3 +75,4 @@ under "settings and privacy"; it is stored only in their browser.
   - Aaron Swartz
   - Docs for code libraries
   - Guides/how-tos for products such as consumer electronics
+  - Ben Kuhn
