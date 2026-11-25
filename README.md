@@ -81,3 +81,4 @@ under "settings and privacy"; it is stored only in their browser.
   - Lecture notes or transcripts (from MIT OCW, Coursera, etc)
   - Textbooks
   - Tyler Cowen (see especially if his signature writing style is also predictble)
+  - Scott Alexander
