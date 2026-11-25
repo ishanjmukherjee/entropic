@@ -73,3 +73,5 @@ under "settings and privacy"; it is stored only in their browser.
   - Wikipedia and other encyclopedia articles
   - Andrej Karpathy's X posts
   - Aaron Swartz
+  - Docs for code libraries
+  - Guides/how-tos for products such as consumer electronics
