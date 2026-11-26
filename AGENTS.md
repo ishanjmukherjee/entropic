@@ -12,8 +12,14 @@ Read `README.md` for the product and `baselines/PLAN.md` for the study design.
   outside the repo and in the Worker's secret store.
 - Never delete collected source texts, raw downloads or collection scripts
   until the owner says the project is finished. They are needed to reproduce
-  the numbers. They are also never committed: the repository holds metadata
-  and scores only, plus the texts generated for this study.
+  the numbers. They live in the private repository
+  `ishanjmukherjee/entropic-corpus` and are never committed here. This
+  repository holds metadata, scores and the texts generated for the study,
+  plus the texts on the page's shelf: the owner allows reproducing writing by
+  people when it is public domain or published without a paywall, for
+  heatmaps. `baselines/library.json` is that list.
+- Green means more surprising and red means less. The owner set this; do not
+  flip it back.
 - Model and prompt choices are settled by evaluations whose candidates,
   metric and selection rule are committed before anything is scored, and the
   simplest option within noise wins. Do not drop or replace a document because
@@ -25,10 +31,20 @@ Read `README.md` for the product and `baselines/PLAN.md` for the study design.
 
 ## How the site works
 
-- `index.html`, `style.css`, `main.js`, `score.js`, `samples.js`: the page.
+- `index.html`, `style.css`, `main.js`, `score.js`: the page.
   `score.js` holds the pure helpers (token alignment, windowing, sentence and
-  passage grouping) and is also loaded by the Node scripts in `baselines/`,
-  so the study measures exactly what the page shows.
+  passage grouping, the opening excerpt) and is also loaded by the Node
+  scripts in `baselines/`, so the study measures exactly what the page shows.
+- `data/`: written by `baselines/build_site.mjs`, never by hand.
+  `baselines.js` has, for each kind of writing, the rows of the "where texts
+  land" chart (one value per reference text) and the passage colour scale
+  derived from them. `library.js` lists the shelf, and `library/<id>.json`
+  holds each shelf text's tokens and log-probabilities, which the page loads
+  instead of calling the scoring service. A shelf text opens at
+  `#shelf/<id>`.
+- A pasted text is compared on its opening 3,000 characters, cut the same way
+  as the reference texts, with the first token left out. `guessKind` in
+  `main.js` picks the tab; it is a rough rule.
 - `worker/`: the Cloudflare Worker at
   `https://entropic-proxy.ishanjmukherjee.workers.dev/score`. It holds the
   Featherless key as the secret `FEATHERLESS_KEY`, accepts `{model, prompt}`
@@ -82,18 +98,21 @@ Pipeline, all under `baselines/`:
 5. `node baselines/metrics.mjs --roots <corpus>,baselines/generated --cache
    <corpus>/scores --out baselines/results/docs.jsonl`, then
    `node baselines/analyze.mjs` prints the tables.
+6. `node baselines/build_site.mjs --roots <corpus>,baselines/generated --cache
+   <corpus>/scores` rebuilds `data/` for the page. Rerun it whenever scores or
+   `library.json` change, then load the page and look at each tab.
 
 ### Where the corpus is
 
-The corpus was collected on the exe.dev VM `fire-lightrail`. A copy of
-everything needed (texts, manifests, score cache, collection scripts, raw
-downloads) is at `~/entropic-corpus-2026-11-25.tar.gz` on that VM; the working
-copy is under `/tmp` there and a reboot clears `/tmp`. To work elsewhere, copy
-the archive over, unpack it, and use the unpacked `bl/` directory as the
-corpus. Raw downloads for the groups collected first (`blogs-tech`,
-`blogs-biz`, `indist`, `transcripts`, `code-human`, and the early parts of
-`lw-ea` and `news-mags`) were deleted before the keep-everything rule; their
-scripts and source URLs remain.
+In the private repository `ishanjmukherjee/entropic-corpus`, as plain files
+under `bl/`: texts, manifests, the score cache, collection scripts and the raw
+downloads that were kept. Clone it and use its `bl/` directory as the corpus
+(`BL_ROOT`, `--root`, `--cache bl/scores`). Commit new texts and new cached
+scores there. Left out because they can be reinstalled: the collectors'
+virtualenv and vendored copies of PyMuPDF and Tesseract. Raw downloads for the
+groups collected first (`blogs-tech`, `blogs-biz`, `indist`, `transcripts`,
+`code-human`, and the early parts of `lw-ea` and `news-mags`) were deleted
+before the keep-everything rule; their scripts and source URLs remain.
 
 ### State on 2026-11-25
 
@@ -156,13 +175,21 @@ many near 0.1.
    questions in `PLAN.md`, with what is and is not shown. Extend `analyze.mjs`
    where a question has no table yet (scorer self-preference, matched topics,
    prized against routine AI writing, passage-level spread).
-7. Rebuild the page's ruler and passage colour scale from the results:
-   replace `REFERENCES` in `samples.js` and `SCALES.passage` in `main.js`,
-   retire the "human pitch" sample, and update the "how to read this" copy.
-   `scripts/measure.mjs` re-measures the sample texts.
-8. The comparison against a pretrained model promised in `eval/RESULTS.md` is
+7. The page's chart, colour scales and shelf are built from the results as
+   they stood on 2026-11-26 (875 documents). After more scoring, rerun
+   `build_site.mjs`; new kinds such as papers appear as tabs once they have a
+   row of new human texts and a row of model texts. Then update the paragraph
+   in `index.html` ("about the reference texts") that says which groups are
+   not scored yet, and add matched essays and closed-model texts to
+   `library.json`.
+8. The shelf shows only the opening 3,000 characters of each text, because
+   that is all that has been scored. The owner allows full texts of
+   non-paywalled human writing; scoring a full essay costs about $0.02 to
+   $0.05. `score_corpus.mjs --chars` sets the length; `build_site.mjs`
+   reads only the `c3000` cache and needs changing to match.
+9. The comparison against a pretrained model promised in `eval/RESULTS.md` is
    still owed; `google/gemma-4-26B-A4B` never had capacity.
-9. More human writing, listed under "To do" in `README.md`.
+10. More human writing, listed under "To do" in `README.md`.
 
 ### Gaps a browser session can fill
 
@@ -203,5 +230,6 @@ Collectors ran without a browser and were blocked in places:
 - Featherless: about $0.40 left on the owner's key on 2026-11-25. The public
   page spends from the same balance through the Worker.
 - OpenRouter: the owner's key has a $50 limit; generation used about $7.
+- GitHub: the corpus repository is private and about 240 MB.
 - On the VM the keys are in `~/.featherless_token`, `~/.openrouter_token` and
   `~/.cloudflare_token`. Read them into environment variables at run time.

@@ -215,5 +215,25 @@ node:vm, by scripts.
     return out;
   }
 
-  root.Entropic = { alignTokens, planWindows, segmentSentences, groupPassages, PASSAGE };
+  // Where the opening of a text ends for comparison with the baselines, which
+  // were all measured on an opening of at most `max` characters cut back to a
+  // paragraph break, line break or sentence end when one falls in its last
+  // third. Keep in step with baselines/excerpt.mjs.
+  function excerptEnd(text, max) {
+    if (text.length <= max) return text.length;
+    const head = text.slice(0, max);
+    const lo = Math.floor((max * 2) / 3);
+    let cut = head.lastIndexOf("\n\n");
+    if (cut < lo) cut = head.lastIndexOf("\n");
+    if (cut < lo) {
+      const ends = [...head.matchAll(/[.!?]["'”’)\]]*\s/g)];
+      const m = ends[ends.length - 1];
+      cut = m ? m.index + m[0].length : -1;
+    }
+    if (cut < lo) cut = head.lastIndexOf(" ");
+    if (cut < lo) cut = max;
+    return cut;
+  }
+
+  root.Entropic = { alignTokens, planWindows, segmentSentences, groupPassages, excerptEnd, PASSAGE };
 })(typeof window !== "undefined" ? window : globalThis);
