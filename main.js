@@ -437,7 +437,9 @@ function renderVerdict(tab, x) {
   } else {
     const s = state.summary;
     const whose = state.item ? "This text" : "Your text";
-    kids.push(s.partial ? `${whose}'s opening ${s.openingWords.toLocaleString()} words average ` : `${whose} averages `,
+    const e = state.item;
+    const partial = s.partial || (e && e.position !== "interior" && e.total_chars > e.chars + 20);
+    kids.push(partial ? `${whose}'s opening ${s.openingWords.toLocaleString()} words average ` : `${whose} averages `,
       el("b", null, `${x.toFixed(2)} bits per token`), ".");
     if (people && bare) {
       const lower = people.docs.filter((d) => d[0] > x).length, higher = bare.docs.filter((d) => d[0] < x).length;
