@@ -4,8 +4,8 @@
 //
 //   node baselines/build_site.mjs --roots <corpus>,baselines/generated --cache <corpus>/scores
 //
-// Run metrics.mjs first; this reads results/docs.jsonl. The shelf is the list
-// in library.json, and only those texts are copied into the site.
+// Run metrics.mjs first; this reads results/docs.jsonl. Every scored text goes
+// on the shelf and is copied into the site, except those library.json withholds.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -121,27 +121,22 @@ function buildTab(tab) {
   return { key: tab.key, label: tab.label, scale, max: Math.max(3, Math.ceil(top + 0.25)), rows };
 }
 
-// The shelf.
+const tabs = TABS.map(buildTab).filter(Boolean);
+
+// The shelf: every scored text that belongs to a tab on the page, except the
+// commercial works that library.json withholds.
 const spec = JSON.parse(fs.readFileSync(new URL("library.json", here), "utf8"));
 const byKey = new Map(docs.map((d) => [`${d.group}/${d.id}`, d]));
-const chosen = [];
-for (const key of spec.texts) {
-  const d = byKey.get(key);
-  if (!d) throw new Error(`library.json names an unknown text: ${key}`);
-  chosen.push(d);
-}
-for (const pick of spec.models) {
-  const d = docs.find((x) => x.group === pick.group && x.prompt_id === pick.prompt && x.style === pick.style && x.model === pick.model);
-  if (!d) throw new Error(`library.json names an unknown generated text: ${JSON.stringify(pick)}`);
-  chosen.push(d);
-}
-for (const group of spec.spread) {
-  const members = scored.filter((d) => d.group === group);
-  for (const style of [...new Set(members.map((d) => d.style))]) {
-    const s = members.filter((d) => d.style === style).sort((a, b) => bits(a) - bits(b));
-    for (const d of new Set([s[0], s[Math.floor(s.length / 4)], s[Math.floor(s.length / 2)], s[Math.floor((3 * s.length) / 4)], s[s.length - 1]])) chosen.push(d);
+const withheld = new Map();
+for (const [reason, { texts }] of Object.entries(spec.withheld)) {
+  for (const key of texts) {
+    if (!byKey.has(key)) throw new Error(`library.json names an unknown text: ${key}`);
+    if (isGen(byKey.get(key)) || isPrized(byKey.get(key))) throw new Error(`library.json withholds a model text: ${key}`);
+    withheld.set(key, reason);
   }
 }
+const reasonFor = (d) => withheld.get(`${d.group}/${d.id}`);
+const chosen = scored.filter((d) => !reasonFor(d) && tabs.some((t) => t.key === tabOf(d.kind)));
 
 const roots = (args.roots || "").split(",").filter(Boolean);
 fs.rmSync(path.join(out, "library"), { recursive: true, force: true });
@@ -154,8 +149,9 @@ for (const d of chosen) {
   const text = cached.tokens.map((t) => t[0]).join("");
   const source = roots.map((r) => path.join(r, "texts", d.group, `${d.id}.txt`)).find((p) => fs.existsSync(p));
   if (source && !fs.readFileSync(source, "utf8").startsWith(text.slice(0, 200))) throw new Error(`${d.id}: cached tokens do not match the text`);
-  fs.writeFileSync(path.join(out, "library", `${d.id}.json`),
-    JSON.stringify({ tokens: cached.tokens.map(([t, lp, first]) => [t, lp == null ? null : round(lp, 4), first]) }));
+  const file = { tokens: cached.tokens.map(([t, lp, first]) => [t, lp == null ? null : round(lp, 4), first]) };
+  if (isGen(d)) file.prompt = rawPrompt(d);
+  fs.writeFileSync(path.join(out, "library", `${d.id}.json`), JSON.stringify(file));
   shelfIds.set(d.id, true);
   const s = d.scores[SCORER.key];
   const entry = {
@@ -166,22 +162,31 @@ for (const d of chosen) {
   if (isPerson(d)) { entry.period = d.period; entry.popularity = d.popularity; }
   if (isPrized(d)) entry.prized = true;
   if (d.url) entry.url = d.canonical_url || d.url;
-  if (isGen(d)) { entry.prompt = rawPrompt(d); entry.style = d.style; }
+  if (isGen(d)) entry.style = d.style;
   if (d.language) entry.language = d.language;
   library.push(entry);
 }
 library.sort((a, b) => a.bits - b.bits);
 
-const tabs = TABS.map(buildTab).filter(Boolean);
 const label = (d) => `${author(d)}: ${isGen(d) ? subject(d) : d.title}`.slice(0, 90);
-for (const tab of tabs) for (const r of tab.rows) r.docs = r.docs.map((d) => (shelfIds.has(d.id) ? [bits(d), label(d), d.id] : [bits(d), label(d)]));
+// A dot is [bits, label, shelf id], or [bits, label, 0, reason] when withheld.
+for (const tab of tabs) {
+  for (const r of tab.rows) {
+    r.docs = r.docs.map((d) => {
+      if (shelfIds.has(d.id)) return [bits(d), label(d), d.id];
+      if (!reasonFor(d)) throw new Error(`${d.group}/${d.id} is in the chart but neither on the shelf nor withheld`);
+      return [bits(d), label(d), 0, reasonFor(d)];
+    });
+  }
+}
 
 const baselines = {
   scorer: SCORER.id, chars: SCORER.chars, built: new Date().toISOString().slice(0, 10),
-  documents: scored.length, tabs,
+  documents: scored.length,
+  withheld: Object.fromEntries(Object.entries(spec.withheld).map(([k, v]) => [k, v.why])), tabs,
 };
 const banner = "// Written by baselines/build_site.mjs. Do not edit by hand.\n";
 fs.writeFileSync(path.join(out, "baselines.js"), `${banner}window.BASELINES = ${JSON.stringify(baselines)};\n`);
 fs.writeFileSync(path.join(out, "library.js"), `${banner}window.LIBRARY = ${JSON.stringify(library, null, 0).replace(/\},\{/g, "},\n{")};\n`);
 console.log(`${tabs.length} tabs (${tabs.map((t) => `${t.key}: ${t.rows.length} rows, scale ${t.scale.lo}/${t.scale.mid}/${t.scale.hi}`).join("; ")})`);
-console.log(`${library.length} shelf texts, ${library.filter((e) => e.who === "person").length} by people`);
+console.log(`${library.length} shelf texts, ${library.filter((e) => e.who === "person").length} by people; ${withheld.size} withheld`);

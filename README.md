@@ -37,9 +37,11 @@ characters, and the marker for a pasted text uses its opening too. A pasted
 text is assigned a kind by a rough guess, which the tabs overrule.
 
 "The shelf" lists texts scored ahead of time. Opening one shows its heatmap
-without calling the scoring service. Texts by people on the shelf are
-public-domain works and pieces published on the open web without a paywall;
-only the scored opening is reproduced, with a link to the source.
+without calling the scoring service, and so does clicking its dot in the
+chart. Nearly every reference text is there, each as the scored opening with
+a link to its source. Song lyrics from commercial releases, books still in
+copyright and studio screenplays are counted in the chart but not
+reproduced; their dots are hollow.
 
 The study behind this is in [baselines/](baselines/): the plan written before
 scoring ([PLAN.md](baselines/PLAN.md)), the generated texts and their prompts,
@@ -74,7 +76,7 @@ Long texts are split into windows of about 24,000 characters, each sent with
   reference distributions and colour scales, `library.js` the shelf listing,
   and `library/` one file of scored tokens per shelf text. Do not edit by hand.
 - `baselines/`: the reference-text study. `library.json` is the list of texts
-  on the shelf.
+  kept off the shelf.
 - `worker/`: the scoring proxy.
 - `eval/`: the preregistration, corpus builder, runner and results for the
   model and prompt choice.

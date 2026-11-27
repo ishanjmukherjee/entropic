@@ -141,7 +141,8 @@ h2 { font-size: 14px; font-weight: 600; margin: 0; }
 .strip .box { top: 9px; height: 16px; border-radius: 3px; background: currentColor; opacity: 0.16; }
 .strip .med { top: 4px; height: 26px; width: 2px; margin-left: -1px; background: currentColor; pointer-events: none; }
 .strip .d { width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: currentColor; opacity: 0.4; }
-.strip .d.has { opacity: 1; box-shadow: 0 0 0 2px #fffefa; cursor: pointer; z-index: 1; }
+.strip .d.has { cursor: pointer; }
+.strip .d.held { background: none; border: 1.5px solid currentColor; opacity: 0.7; }
 .strip .d.on, .strip .d:hover { opacity: 1; box-shadow: 0 0 0 2px #fffefa, 0 0 0 3.5px currentColor; z-index: 3; }
 .strip .me { top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ink); z-index: 2; pointer-events: none; }
 .crow.gap .strip .me { top: -10px; }

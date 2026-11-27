@@ -393,7 +393,7 @@ function renderChart() {
     box.style.width = `${(((r.p75 - r.p25) / max) * 100).toFixed(2)}%`;
     strip.append(box);
     r.docs.forEach((d, i) => {
-      const dot = el("i", "d" + (d[2] ? " has" : ""));
+      const dot = el("i", "d" + (d[2] ? " has" : " held"));
       dot.style.left = pct(d[0]);
       dot.style.top = `${11 + (((i * 2654435761) >>> 0) % 13)}px`;
       dot.dataset.row = ri;
@@ -479,7 +479,9 @@ function renderShelf() {
     if (!rows.length) { d.append(el("p", "hint", "none yet")); return d; }
     const open = state.expanded[`${state.kind}/${who}`] || rows.length <= 12;
     const ol = el("ol");
-    for (const e of open ? rows : rows.slice(0, 10)) {
+    // Collapsed, a column shows ten texts spread evenly from its lowest score to its highest.
+    const shown = open ? rows : Array.from({ length: 10 }, (_, i) => rows[Math.round((i * (rows.length - 1)) / 9)]);
+    for (const e of shown) {
       const li = el("li");
       const a = el("a", "item" + (state.item && state.item.id === e.id ? " on" : ""));
       a.href = `#shelf/${e.id}`;
@@ -711,7 +713,8 @@ function showDotTip(dot) {
   els.tip.replaceChildren(
     el("div", "tok", hit.doc[1]),
     el("div", "meta", `${hit.doc[0].toFixed(2)} bits per token · ${hit.row.label.toLowerCase()}`
-      + (hit.doc[2] ? " · on the shelf, click to open" : "")));
+      + (hit.doc[2] ? " · click to open" : "")));
+  if (!hit.doc[2] && hit.doc[3]) els.tip.append(el("div", "meta", `Does not open: ${BASE.withheld[hit.doc[3]]}.`));
   els.tip.hidden = false;
   const r = dot.getBoundingClientRect();
   placeTip(r, r.left + r.width / 2);
@@ -768,7 +771,8 @@ async function openShelf(id) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!location.hash.startsWith("#shelf/") || decodeURIComponent(location.hash.slice(7)) !== id) return;
-    show(data.tokens.map(([text, lp, first]) => ({ text, token: text, lp, top: [], first, shelf: true })), BASE.scorer, item);
+    show(data.tokens.map(([text, lp, first]) => ({ text, token: text, lp, top: [], first, shelf: true })), BASE.scorer,
+      data.prompt ? { ...item, prompt: data.prompt } : item);
     setStatus(`scored ahead of time by ${shortModel(BASE.scorer)}.`);
     els.status.scrollIntoView({ block: "start" });
   } catch (err) {
@@ -838,7 +842,7 @@ function init() {
   els.modelName.textContent = shortModel(BASE.scorer || CONFIG.models[0]);
   els.rulerIntro.textContent = "Each dot is one text, placed by the mean surprisal of its opening 500 or so words. "
     + "The bar spans the middle half of each group and the tick is its median. New texts were written after the scoring "
-    + "model was trained, so it cannot have read them; older ones it may have. Ringed dots are on the shelf below.";
+    + "model was trained, so it cannot have read them; older ones it may have. Click a dot to open that text's heatmap; hollow dots are commercial works that are not reproduced here.";
   els.aboutCount.textContent = `The chart and the colour scales rest on ${BASE.documents.toLocaleString()} texts scored by `
     + `${shortModel(BASE.scorer)}, last rebuilt on ${BASE.built}.`;
   const saved = store("entropic:text");

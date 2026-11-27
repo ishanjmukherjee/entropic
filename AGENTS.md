@@ -15,9 +15,12 @@ Read `README.md` for the product and `baselines/PLAN.md` for the study design.
   the numbers. They live in the private repository
   `ishanjmukherjee/entropic-corpus` and are never committed here. This
   repository holds metadata, scores and the texts generated for the study,
-  plus the texts on the page's shelf: the owner allows reproducing writing by
-  people when it is public domain or published without a paywall, for
-  heatmaps. `baselines/library.json` is that list.
+  plus the scored openings shown on the page's shelf. The owner allows
+  reproducing those for heatmaps for every text, including pieces from
+  paywalled outlets, except three sorts of commercial work: song lyrics from
+  commercial releases, books still in copyright and studio screenplays.
+  `baselines/library.json` lists the texts withheld for those reasons; a new
+  text of one of those sorts must be added there before the site is rebuilt.
 - Green means more surprising and red means less. The owner set this; do not
   flip it back.
 - Model and prompt choices are settled by evaluations whose candidates,
@@ -180,11 +183,11 @@ many near 0.1.
    `build_site.mjs`; new kinds such as papers appear as tabs once they have a
    row of new human texts and a row of model texts. Then update the paragraph
    in `index.html` ("about the reference texts") that says which groups are
-   not scored yet, and add matched essays and closed-model texts to
-   `library.json`.
+   not scored yet. Newly scored texts go on the shelf by themselves unless
+   `library.json` withholds them.
 8. The shelf shows only the opening 3,000 characters of each text, because
-   that is all that has been scored. The owner allows full texts of
-   non-paywalled human writing; scoring a full essay costs about $0.02 to
+   that is all that has been scored. The owner allows full texts of the
+   writing on the shelf; scoring a full essay costs about $0.02 to
    $0.05. `score_corpus.mjs --chars` sets the length; `build_site.mjs`
    reads only the `c3000` cache and needs changing to match.
 9. The comparison against a pretrained model promised in `eval/RESULTS.md` is
@@ -196,10 +199,13 @@ many near 0.1.
 Collectors ran without a browser and were blocked in places:
 
 - `archive.ph` was unreachable throughout; the Wayback Machine intermittently.
-- Paywalled or bot-walled sources: Bloomberg (Matt Levine's pre dates come from
-  Hacker News submission URLs), The Atlantic and The New Yorker (texts came
-  from Wayback captures), apnews.com (texts came from syndication partners),
-  science.org, rogerebert.com, the EA Forum, Genius, Harper's.
+- Paywalled or bot-walled sources: Bloomberg (Matt Levine's texts are the
+  first section of the free email edition, from newsletterhunt.com; his pre
+  dates come from Hacker News submission URLs), The Atlantic (the site
+  returned 403, so texts came from Wayback captures), The New Yorker (fetched
+  from newyorker.com, where the article body was in the page HTML or its
+  JSON-LD), apnews.com (texts came from syndication partners), science.org,
+  rogerebert.com, the EA Forum, Genius, Harper's (its free web excerpt).
 - Missing pieces: Asianometry post essays (its site is member-gated), a third
   post piece for Mahajan (paid), Patrick McKenzie post pieces (none exist
   yet), Greg Egan's "Learning to Be Me", lesser-known Wallace pieces from
