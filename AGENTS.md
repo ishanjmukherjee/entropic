@@ -95,7 +95,9 @@ Pipeline, all under `baselines/`:
    truncated output is moved to `generated/failed/` and regenerated once.
 4. Score: `node baselines/score_corpus.mjs --root <corpus or baselines/generated>
    --cache <corpus>/scores --model moonshotai/Kimi-K3 [--groups a,b] --floor 0.4`.
-   Results are cached per document, so reruns only score what is missing. The
+   Results are cached per document, so reruns only score what is missing;
+   `--alts` instead revisits cached documents that lack the model's
+   alternative tokens and adds them. The
    cache contains token text and stays outside the repo. `--floor` stops
    scoring when the Featherless balance falls to that many dollars.
 5. `node baselines/metrics.mjs --roots <corpus>,baselines/generated --cache
@@ -192,7 +194,16 @@ many near 0.1.
    reads only the `c3000` cache and needs changing to match.
 9. The comparison against a pretrained model promised in `eval/RESULTS.md` is
    still owed; `google/gemma-4-26B-A4B` never had capacity.
-10. More human writing, listed under "To do" in `README.md`.
+10. Alternatives on the shelf: hovering a token of a pasted text lists the
+    model's five likeliest tokens, but texts scored before 2026-11-28 were
+    cached without them (the scorer asked for `logprobs: 1` and kept only a
+    first-guess flag), so the shelf says only "not its first guess". Run
+    `score_corpus.mjs` again with `--alts` for the corpus and for
+    `baselines/generated`, then `build_site.mjs`. It costs about what the
+    first scoring did ($0.002 a text) and adds only the alternatives; cached
+    log-probabilities and the study's numbers do not change. `data/library`
+    grows from about 10 MB to roughly 45 MB.
+11. More human writing, listed under "To do" in `README.md`.
 
 ### Gaps a browser session can fill
 

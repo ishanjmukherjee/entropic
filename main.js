@@ -225,10 +225,11 @@ function analyse(tokens) {
   for (const t of tokens) {
     // Rank is known only when the token is among the returned alternatives.
     t.rank = null;
-    // Shelf texts record only whether the token was the first guess.
+    // Shelf texts scored without alternatives record only whether the token
+    // was the first guess.
     if (t.shelf) { if (t.first) t.rank = 1; continue; }
     if (t.lp != null && t.top.some(([s]) => s === t.token)) {
-      const beaten = t.top.filter(([, v]) => v > t.lp + 1e-9).length;
+      const beaten = t.top.filter(([s, v]) => s !== t.token && v > t.lp + 1e-9).length;
       if (beaten < CONFIG.topK) t.rank = beaten + 1;
     }
   }
@@ -771,7 +772,8 @@ async function openShelf(id) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!location.hash.startsWith("#shelf/") || decodeURIComponent(location.hash.slice(7)) !== id) return;
-    show(data.tokens.map(([text, lp, first]) => ({ text, token: text, lp, top: [], first, shelf: true })), BASE.scorer,
+    const bare = !data.tokens.some((t) => t[3]);
+    show(data.tokens.map(([text, lp, first, top]) => ({ text, token: text, lp, top: top || [], first, shelf: bare })), BASE.scorer,
       data.prompt ? { ...item, prompt: data.prompt } : item);
     setStatus(`scored ahead of time by ${shortModel(BASE.scorer)}.`);
     els.status.scrollIntoView({ block: "start" });

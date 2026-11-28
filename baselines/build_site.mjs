@@ -149,7 +149,13 @@ for (const d of chosen) {
   const text = cached.tokens.map((t) => t[0]).join("");
   const source = roots.map((r) => path.join(r, "texts", d.group, `${d.id}.txt`)).find((p) => fs.existsSync(p));
   if (source && !fs.readFileSync(source, "utf8").startsWith(text.slice(0, 200))) throw new Error(`${d.id}: cached tokens do not match the text`);
-  const file = { tokens: cached.tokens.map(([t, lp, first]) => [t, lp == null ? null : round(lp, 4), first]) };
+  // The fourth entry, the model's likeliest tokens at that position, is there
+  // only for documents scored with alternatives (score_corpus.mjs --alts).
+  const file = { tokens: cached.tokens.map(([t, lp, first, top]) => {
+    const row = [t, lp == null ? null : round(lp, 4), first];
+    if (top) row.push(top.map(([s, v]) => [s, round(v, 2)]));
+    return row;
+  }) };
   if (isGen(d)) file.prompt = rawPrompt(d);
   fs.writeFileSync(path.join(out, "library", `${d.id}.json`), JSON.stringify(file));
   shelfIds.set(d.id, true);
@@ -189,4 +195,6 @@ const banner = "// Written by baselines/build_site.mjs. Do not edit by hand.\n";
 fs.writeFileSync(path.join(out, "baselines.js"), `${banner}window.BASELINES = ${JSON.stringify(baselines)};\n`);
 fs.writeFileSync(path.join(out, "library.js"), `${banner}window.LIBRARY = ${JSON.stringify(library, null, 0).replace(/\},\{/g, "},\n{")};\n`);
 console.log(`${tabs.length} tabs (${tabs.map((t) => `${t.key}: ${t.rows.length} rows, scale ${t.scale.lo}/${t.scale.mid}/${t.scale.hi}`).join("; ")})`);
+const bare = chosen.filter((d) => !JSON.parse(fs.readFileSync(path.join(out, "library", `${d.id}.json`), "utf8")).tokens.some((t) => t[3])).length;
+if (bare) console.log(`${bare} shelf texts have no alternatives; run score_corpus.mjs --alts`);
 console.log(`${library.length} shelf texts, ${library.filter((e) => e.who === "person").length} by people; ${withheld.size} withheld`);
